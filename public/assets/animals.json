@@ -1,0 +1,30 @@
+{
+  "modelYaw": 3.14159265,
+  "targetLength": 2.2,
+  "runSpeedRef": 10,
+  "jumpHeight": 0.6,
+  "clips": {
+    "run": ["Gallop"],
+    "walk": ["Walk"],
+    "idle": ["Idle"],
+    "jump": ["Gallop_Jump"],
+    "hitLeft": ["Idle_HitReact_Left"],
+    "hitRight": ["Idle_HitReact_Right", "Idle_HitReact_Left"],
+    "eat": ["Eating"],
+    "celebrate": ["Attack_Headbutt", "Attack"]
+  },
+  "animals": [
+    { "id": "horse", "name": "Ngựa nâu", "emoji": "🐴", "file": "Horse.glb" },
+    { "id": "white-horse", "name": "Ngựa trắng", "emoji": "🦄", "file": "White Horse.glb" },
+    { "id": "donkey", "name": "Lừa", "emoji": "🫏", "file": "Donkey.glb" },
+    { "id": "cow", "name": "Bò sữa", "emoji": "🐄", "file": "Cow.glb" },
+    { "id": "bull", "name": "Bò tót", "emoji": "🐂", "file": "Bull.glb" },
+    { "id": "alpaca", "name": "Lạc đà Alpaca", "emoji": "🦙", "file": "Alpaca.glb" },
+    { "id": "deer", "name": "Nai", "emoji": "🦌", "file": "Deer.glb" },
+    { "id": "stag", "name": "Hươu sừng", "emoji": "🦌", "file": "Stag.glb" },
+    { "id": "fox", "name": "Cáo", "emoji": "🦊", "file": "Fox.glb" },
+    { "id": "wolf", "name": "Sói", "emoji": "🐺", "file": "Wolf.glb" },
+    { "id": "husky", "name": "Chó Husky", "emoji": "🐕", "file": "Husky.glb" },
+    { "id": "shiba", "name": "Chó Shiba", "emoji": "🐶", "file": "Shiba Inu.glb" }
+  ]
+}

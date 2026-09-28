@@ -1,0 +1,15 @@
+services:
+  dua-thu:
+    build: .
+    image: dua-thu
+    container_name: dua-thu
+    restart: unless-stopped
+    ports:
+      # Chỉ mở cho nginx trên cùng máy. Muốn truy cập thẳng từ ngoài thì đổi thành "3000:3000".
+      - "127.0.0.1:3000:3000"
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"

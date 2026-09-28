@@ -1,0 +1,12 @@
+node_modules
+build
+deploy
+.git
+.gitignore
+.DS_Store
+**/.DS_Store
+*.log
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore

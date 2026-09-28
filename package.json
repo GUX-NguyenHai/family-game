@@ -1,0 +1,26 @@
+{
+  "name": "family-animal-race",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Đua thú gia đình: màn hình chung 3D + điện thoại làm tay cầm",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.11"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "models": "node scripts/optimize-models.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1",
+    "three": "~0.170.0"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "^4.1.1",
+    "@gltf-transform/extensions": "^4.1.1",
+    "@gltf-transform/functions": "^4.1.1"
+  }
+}

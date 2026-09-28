@@ -1,0 +1,20 @@
+# Chạy game như một service, tự khởi động lại khi lỗi hoặc khi server reboot.
+# Sửa User và WorkingDirectory cho đúng, rồi copy vào /etc/systemd/system/dua-thu.service
+
+[Unit]
+Description=Dua thu - family animal race
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/family-game
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=127.0.0.1
+ExecStart=/usr/bin/env node server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
