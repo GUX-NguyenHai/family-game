@@ -9,17 +9,20 @@ module.exports = {
   COAST_MS: 4000, // sau khi kết thúc, tiếp tục cho con vật chạy chậm lại rồi dừng loop
 
   BASE_SPEED: 5, // không lắc vẫn chạy chậm
-  BOOST_SPEED: 14, // cộng thêm khi power = 1
+  BOOST_SPEED: 14, // cộng thêm khi power = 1 → tối đa 19 m/s
+  ACCEL: 6.5, // tăng tốc (m/s²): từ 0 lên 19 m/s mất ~3 giây
+  TURBO_ACCEL_MULT: 2, // đang TURBO thì vọt lên nhanh gấp đôi
+  BRAKE: 25, // giảm tốc (m/s²) khi vào bùn / ngừng lắc: chậm lại nhanh
   POWER_TAU: 0.9, // power giảm dần theo hàm mũ với hằng số thời gian này (giây)
   SHAKE_IMPULSE: 0.1,
   SHAKE_IMPULSE_STRENGTH: 0.12, // lắc càng mạnh cộng càng nhiều
   SHAKE_MIN_INTERVAL_MS: 80,
 
-  // Năng lượng (mana) + TURBO: đầy thanh mới bấm PHI! được, bấm là dùng hết.
-  MANA_FILL_MS: 12000, // tự đầy từ 0 → 100% trong bấy nhiêu
+  // Năng lượng (mana) + TURBO: có mana là bấm PHI! được, bấm là dùng hết mana đang có.
+  MANA_FILL_MS: 8000, // tự đầy từ 0 → 100% trong bấy nhiêu
   CARROT_MANA: 0.1, // ăn cà rốt +10%
   FENCE_MANA_LOSS: 0.2, // đâm rào -20%
-  TURBO_MS: 3000,
+  TURBO_MS: 3000, // TURBO kéo dài bấy nhiêu khi mana đầy; ít mana thì ngắn theo tỉ lệ
   TURBO_FACTOR: 1.4, // nhanh hơn 40%, lướt qua bùn
 
   LATERAL_SPEED: 5,
@@ -36,6 +39,8 @@ module.exports = {
   BUMP_PUSH: 0.35, // mỗi tick gỡ bấy nhiêu phần chồng lấn (càng lớn càng bật mạnh)
   TURBO_PUSH_SHARE: 0.85, // con đang TURBO hất con kia: con kia chịu 85% lực đẩy
   BUMP_FX_GAP_MS: 700, // mỗi con tối đa 1 hiệu ứng va chạm trong khoảng này
+  BUMP_SLOW_FACTOR: 0.4, // va nhau thì chậm lại như lội bùn (con đang TURBO không bị)
+  BUMP_SLOW_MS: 500, // chậm tiếp bấy nhiêu sau khi hết chạm nhau
 
   MAX_PLAYERS: 12,
   PLAYER_DROP_MS: 2 * 60 * 1000, // người rời phòng chờ quá lâu thì xoá

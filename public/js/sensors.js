@@ -1,9 +1,11 @@
-// Đọc cảm biến điện thoại: nghiêng trái/phải để lái, lắc để phi.
+// Đọc cảm biến điện thoại: nghiêng trái/phải để lái, lắc LÊN XUỐNG để phi (lắc ngang không tính).
 // Dùng chung cho Android và iPhone; iPhone cần gọi enable() ngay trong sự kiện bấm nút.
 
 const DEADZONE_DEG = 5;
 const FULL_TILT_DEG = 25;
 const SHAKE_GAP_MS = 130;
+const GRAVITY_SMOOTH = 0.05; // lọc thông thấp để biết hướng trọng lực (= phương thẳng đứng)
+const TILT_SMOOTH_MS = 180; // làm mượt góc nghiêng: giật máy nhanh sang ngang không làm đổi làn
 const G = 9.81;
 
 function load(key, fallback) {
@@ -44,10 +46,18 @@ export function createSensors({ onShake }) {
     threshold: load('fg:sens', 12),
   };
   let lastShake = 0;
+  const grav = { x: 0, y: 0, z: 0, ready: false };
+  let smoothTilt = null;
+  let lastTiltAt = 0;
 
+  // Chỉ nghiêng và giữ mới đổi làn; dao động nhanh (lắc) bị lọc bỏ.
   function applyTilt(raw) {
-    s.raw = raw;
-    let t = raw - s.calib;
+    const now = performance.now();
+    const dt = lastTiltAt ? Math.min(200, now - lastTiltAt) : 16;
+    lastTiltAt = now;
+    smoothTilt = smoothTilt == null ? raw : smoothTilt + (raw - smoothTilt) * (1 - Math.exp(-dt / TILT_SMOOTH_MS));
+    s.raw = smoothTilt;
+    let t = smoothTilt - s.calib;
     if (s.invert) t = -t;
     s.tilt = t;
     const a = Math.abs(t);
@@ -63,21 +73,40 @@ export function createSensors({ onShake }) {
   }
 
   function onMotion(e) {
-    s.gotMotion = true;
     const a = e.acceleration;
     const g = e.accelerationIncludingGravity;
-    let mag = null;
-    if (a && a.x != null) mag = Math.hypot(a.x, a.y, a.z);
-    else if (g && g.x != null) mag = Math.abs(Math.hypot(g.x, g.y, g.z) - G);
+    const hasA = a && a.x != null;
+    const hasG = g && g.x != null;
+    if (!hasA && !hasG) return;
+    s.gotMotion = true;
 
-    // Máy không có con quay hồi chuyển: tính góc nghiêng từ trọng lực.
-    if (!s.gotOrientation && g && g.x != null) {
-      const ang = screenAngle();
-      const axis = ang === 90 ? -g.y : ang === 270 ? g.y : ang === 180 ? -g.x : g.x;
-      applyTilt((-Math.asin(Math.max(-1, Math.min(1, axis / G))) * 180) / Math.PI);
+    let mag;
+    if (hasG) {
+      // Hướng trọng lực = phương thẳng đứng, lấy bằng cách làm mượt accelerationIncludingGravity.
+      if (!grav.ready) {
+        Object.assign(grav, { x: g.x, y: g.y, z: g.z, ready: true });
+      } else {
+        grav.x += (g.x - grav.x) * GRAVITY_SMOOTH;
+        grav.y += (g.y - grav.y) * GRAVITY_SMOOTH;
+        grav.z += (g.z - grav.z) * GRAVITY_SMOOTH;
+      }
+      // Gia tốc do tay lắc (đã bỏ trọng lực), chỉ giữ phần theo phương thẳng đứng.
+      // Lấy trị tuyệt đối nên không sợ iPhone/Android ngược dấu nhau.
+      const lin = hasA ? a : { x: g.x - grav.x, y: g.y - grav.y, z: g.z - grav.z };
+      const gn = Math.hypot(grav.x, grav.y, grav.z) || G;
+      mag = Math.abs((lin.x * grav.x + lin.y * grav.y + lin.z * grav.z) / gn);
+
+      // Máy không có con quay hồi chuyển: tính góc nghiêng từ trọng lực.
+      if (!s.gotOrientation) {
+        const ang = screenAngle();
+        const axis = ang === 90 ? -grav.y : ang === 270 ? grav.y : ang === 180 ? -grav.x : grav.x;
+        applyTilt((-Math.asin(Math.max(-1, Math.min(1, axis / G))) * 180) / Math.PI);
+      }
+    } else {
+      // Không biết hướng trọng lực: đành tính lắc mọi hướng.
+      mag = Math.hypot(a.x, a.y, a.z);
     }
 
-    if (mag == null) return;
     s.shake = Math.max(mag, s.shake * 0.92);
     const now = performance.now();
     if (mag > s.threshold && now - lastShake > SHAKE_GAP_MS) {

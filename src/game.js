@@ -7,6 +7,7 @@ const FLAG_JUMP = 2;
 const FLAG_MUD = 4;
 const FLAG_FINISHED = 8;
 const FLAG_TURBO = 16;
+const FLAG_BUMP = 32;
 
 function rand(a, b) {
   return a + Math.random() * (b - a);
@@ -73,6 +74,7 @@ function resetRacer(p, x) {
   p.rank = null;
   p.lastShakeAt = 0;
   p.lastBumpAt = 0;
+  p.bumpSlowUntil = 0;
   p.botPlan = new Map();
   if (p.bot) p.botLane = x;
 }
@@ -106,12 +108,12 @@ function shake(race, p, strength, now) {
   p.power = Math.min(1, p.power + C.SHAKE_IMPULSE + C.SHAKE_IMPULSE_STRENGTH * s);
 }
 
-// Nút PHI!: chỉ dùng được khi mana đầy, dùng hết mana.
+// Nút PHI!: có mana là dùng được, dùng hết mana đang có; mana càng nhiều TURBO càng lâu.
 function turbo(race, p, now) {
   if (!isRunning(race, p, now)) return false;
-  if (p.mana < 1 || now < p.turboUntil) return false;
+  if (p.mana <= 0 || now < p.turboUntil) return false;
+  p.turboUntil = now + C.TURBO_MS * p.mana;
   p.mana = 0;
-  p.turboUntil = now + C.TURBO_MS;
   return true;
 }
 
@@ -147,8 +149,10 @@ function step(race, racers, now, dt) {
     }
     if (!stunned) p.x = clamp(p.x + p.steer * C.LATERAL_SPEED * dt, -halfWidth, halfWidth);
 
-    let speed = stunned ? 0 : C.BASE_SPEED + p.power * C.BOOST_SPEED;
-    if (turboOn) speed *= C.TURBO_FACTOR;
+    // Tốc độ mục tiêu do lắc quyết định; tốc độ thật đuổi dần theo (tăng tốc dần, phanh nhanh).
+    let target = stunned ? 0 : C.BASE_SPEED + p.power * C.BOOST_SPEED;
+    if (turboOn) target *= C.TURBO_FACTOR;
+    let crashed = false;
 
     p.inMud = false;
     for (const o of race.obstacles) {
@@ -166,7 +170,7 @@ function step(race, racers, now, dt) {
           p.stunUntil = now + C.STUN_MS;
           p.power = 0;
           p.mana = Math.max(0, p.mana - C.FENCE_MANA_LOSS);
-          speed = 0;
+          crashed = true;
           events.push({ pid: p.id, type: 'fence', side: p.x < o.x ? 'left' : 'right' });
         }
       } else if (o.type === 'carrot' && !race.taken.has(o.id)) {
@@ -178,9 +182,18 @@ function step(race, racers, now, dt) {
       }
     }
 
-    if (p.inMud) speed *= C.MUD_FACTOR;
-    p.speed = speed;
-    p.z += speed * dt;
+    if (p.inMud) target *= C.MUD_FACTOR;
+    else if (!turboOn && now < p.bumpSlowUntil) target *= C.BUMP_SLOW_FACTOR;
+    if (crashed) {
+      // Đâm rào: dừng hẳn, hết khựng thì tăng tốc lại từ 0.
+      p.speed = 0;
+    } else if (target > p.speed) {
+      const accel = turboOn ? C.ACCEL * C.TURBO_ACCEL_MULT : C.ACCEL;
+      p.speed = Math.min(target, p.speed + accel * dt);
+    } else {
+      p.speed = Math.max(target, p.speed - C.BRAKE * dt);
+    }
+    p.z += p.speed * dt;
 
     if (p.z >= race.trackLen) {
       p.z = race.trackLen;
@@ -215,6 +228,11 @@ function resolveCollisions(race, racers, now, events) {
 
       const key = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
       contacts.add(key);
+
+      // Va nhau: cả hai chậm lại như lội bùn (con đang TURBO thì không).
+      for (const p of [a, b]) {
+        if (now >= p.turboUntil) p.bumpSlowUntil = now + C.BUMP_SLOW_MS;
+      }
 
       const aTurbo = now < a.turboUntil;
       const bTurbo = now < b.turboUntil;
@@ -287,15 +305,18 @@ function flagsOf(p, now) {
   if (p.inMud) f |= FLAG_MUD;
   if (p.finishMs != null) f |= FLAG_FINISHED;
   if (now < p.turboUntil) f |= FLAG_TURBO;
+  if (now < p.bumpSlowUntil) f |= FLAG_BUMP;
   return f;
 }
 
 // Bot đơn giản: lắc theo "tay nghề", né bùn/rào, nhảy rào nếu may mắn, săn cà rốt gần,
-// để dành TURBO cho đoạn nước rút (thỉnh thoảng dùng sớm cho đỡ phí mana).
+// dùng TURBO khi đầy hoặc ngẫu nhiên từ 50% mana, đoạn nước rút thì dùng ngay.
 function botThink(race, p, now, dt, racers = []) {
   if (!isRunning(race, p, now)) return;
   if (Math.random() < p.botSkill * 5 * dt) shake(race, p, 0.3 + Math.random() * 0.5, now);
-  const usedTurbo = p.mana >= 1 && (p.z > race.trackLen * 0.7 || Math.random() < 0.12 * dt) && turbo(race, p, now);
+  const sprint = p.z > race.trackLen * 0.7;
+  const wantTurbo = sprint ? p.mana >= 0.3 : p.mana >= 1 || (p.mana >= 0.5 && Math.random() < 0.3 * dt);
+  const usedTurbo = wantTurbo && turbo(race, p, now);
 
   const halfWidth = race.width / 2 - 0.8;
   let target = p.botLane;
@@ -357,5 +378,5 @@ module.exports = {
   results,
   flagsOf,
   botThink,
-  FLAGS: { STUN: FLAG_STUN, JUMP: FLAG_JUMP, MUD: FLAG_MUD, FINISHED: FLAG_FINISHED, TURBO: FLAG_TURBO },
+  FLAGS: { STUN: FLAG_STUN, JUMP: FLAG_JUMP, MUD: FLAG_MUD, FINISHED: FLAG_FINISHED, TURBO: FLAG_TURBO, BUMP: FLAG_BUMP },
 };

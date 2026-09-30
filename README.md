@@ -11,14 +11,14 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 | Thao tác | Tác dụng |
 |---|---|
 | Nghiêng máy trái/phải (hoặc giữ nút ◀ ▶) | Lái sang trái/phải |
-| **Lắc máy** | Chạy nhanh hơn. Lắc càng mạnh, càng đều thì càng nhanh |
-| Nút **PHI!** (TURBO) | Chỉ bấm được khi **thanh năng lượng đầy**. Bấm là dùng hết năng lượng, nhanh hơn 40% trong 3 giây, lướt qua bùn |
+| **Lắc máy lên xuống** | Chạy nhanh hơn. Lắc càng mạnh, càng đều thì càng nhanh. Lắc ngang không tính. Tốc độ **tăng dần**: từ đứng yên lên tối đa mất ~3 giây |
+| Nút **PHI!** (TURBO) | **Có năng lượng là bấm được.** Bấm là dùng hết năng lượng đang có: nhanh hơn 40% và lướt qua bùn. Đầy 100% thì được 3 giây, 50% thì 1,5 giây… |
 | Bấm nút **NHẢY** | Nhảy qua rào |
-| ⚡ Năng lượng | Tự đầy sau khoảng 12 giây. Đầy thì điện thoại rung và nút PHI! sáng lên |
+| ⚡ Năng lượng | Tự đầy sau 8 giây (không tăng trong lúc TURBO). Đầy thì điện thoại rung và nút PHI! nhấp nháy |
 | 🟫 Bùn | Chạy chậm lại (trừ khi đang TURBO) |
-| 🚧 Rào | Đâm vào thì khựng lại 1 giây và mất 20% năng lượng |
+| 🚧 Rào | Đâm vào thì dừng hẳn, khựng 1 giây, mất 20% năng lượng, rồi tăng tốc lại từ 0 |
 | 🥕 Cà rốt | +10% năng lượng. Ai tới trước người đó ăn |
-| 💥 Va nhau | Hai con chạm nhau bị đẩy sang hai bên. Tông đuôi con phía trước thì không vượt được, phải lái sang bên. Con đang TURBO hất con kia ra và lách qua |
+| 💥 Va nhau | Hai con chạm nhau bị đẩy sang hai bên và **cùng chậm lại như lội bùn**, rồi tăng tốc lại. Tông đuôi con phía trước thì không vượt được, phải lái sang bên. Con đang TURBO không bị chậm, hất con kia ra và lách qua |
 
 Các con số này chỉnh trong `src/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm chỉnh bằng `COLLIDE` (đặt `false` để tắt), `BUMP_PUSH`, `TURBO_PUSH_SHARE`.
 

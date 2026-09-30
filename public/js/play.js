@@ -216,6 +216,7 @@ function onMe(m) {
   else if (f & 1) status = 'Vấp rào! 💫';
   else if (f & 16) status = 'TURBO! 🔥';
   else if (f & 2) status = 'Nhảy! ⤴';
+  else if (f & 32) status = 'Va nhau! 💥';
   else if (f & 4) status = 'Lội bùn… 🟫';
   $('#status').textContent = status;
 
@@ -245,14 +246,18 @@ function onHit(e) {
 // ---------- Năng lượng + nút PHI! (TURBO) ----------
 let manaReady = false;
 
+// Có mana là bấm được (dùng hết mana đang có); đầy 100% thì nhấp nháy.
 function renderMana(mana, turboOn) {
   const btn = $('#btnBoost');
-  const pct = Math.round(Math.max(0, Math.min(1, mana || 0)) * 100);
-  manaReady = pct >= 100 && !turboOn;
+  const value = Math.max(0, Math.min(1, mana || 0));
+  const pct = Math.round(value * 100);
+  const full = pct >= 100;
+  manaReady = value > 0 && !turboOn;
   btn.style.setProperty('--mana', `${turboOn ? 100 : pct}%`);
   btn.classList.toggle('ready', manaReady);
+  btn.classList.toggle('full', full && !turboOn);
   btn.classList.toggle('turbo', turboOn);
-  $('#boostLabel').innerHTML = turboOn ? 'TURBO!' : manaReady ? 'PHI! 🔥' : `PHI!<small>${pct}%</small>`;
+  $('#boostLabel').innerHTML = turboOn ? 'TURBO!' : full ? 'PHI! 🔥' : `PHI!<small>${pct}%</small>`;
 }
 
 // Máy không lắc được thì báo cho người chơi biết.
@@ -299,7 +304,7 @@ $('#btnBoost').addEventListener('pointerdown', e => {
   e.preventDefault();
   const b = $('#btnBoost');
   if (!manaReady) {
-    // Chưa đầy: rung nút báo "chưa được".
+    // Hết mana (hoặc đang TURBO): lắc nút báo "chưa được".
     b.classList.remove('nope');
     void b.offsetWidth;
     b.classList.add('nope');

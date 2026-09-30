@@ -169,7 +169,7 @@ button.ghost { width: 100%; margin-top: 12px; background: transparent; border: 1
 .controls .hold { background: #2b3558; }
 .controls .hold.on { background: var(--accent); color: var(--accent-text); }
 .mid { display: grid; grid-template-rows: 2fr 1fr; gap: 10px; }
-/* Nút PHI! = TURBO: nền tối, năng lượng dâng từ dưới lên; đầy thì sáng và nhấp nháy. */
+/* Nút PHI! = TURBO: năng lượng dâng từ dưới lên; có mana là sáng (bấm được), đầy thì nhấp nháy. */
 .boost {
   --mana: 0%;
   position: relative;
@@ -189,8 +189,10 @@ button.ghost { width: 100%; margin-top: 12px; background: transparent; border: 1
 }
 .boost .lbl { position: relative; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
 .boost .lbl small { font-size: 1rem; font-weight: 700; opacity: 0.85; }
-.boost.ready { color: #fff; animation: ready 0.8s ease-in-out infinite; }
-.boost.ready .mana-fill { background: linear-gradient(0deg, #ff5a5a, #ffb020); }
+.boost.ready { color: #fff; }
+.boost.ready .mana-fill { background: linear-gradient(0deg, rgba(255, 90, 90, 0.85), rgba(255, 176, 32, 0.85)); }
+.boost.full { animation: ready 0.8s ease-in-out infinite; }
+.boost.full .mana-fill { background: linear-gradient(0deg, #ff5a5a, #ffb020); }
 .boost.turbo { color: #fff; }
 .boost.turbo .mana-fill { background: linear-gradient(0deg, #ff3d00, #ffd166); }
 .boost.nope { animation: nope 0.3s; }
