@@ -42,6 +42,11 @@ function lanIps() {
 // Khi màn hình host mở bằng localhost, QR cần IP LAN để điện thoại vào được.
 app.get('/api/lan', (req, res) => res.json({ ips: lanIps() }));
 
+// Mỗi lần server khởi động có mã phiên bản mới. Trang đang mở kết nối lại mà thấy khác mã
+// thì tự tải lại, để không chạy code giao diện cũ sau khi build/deploy.
+const BUILD_ID = Date.now().toString(36);
+io.on('connection', socket => socket.emit('hello', { build: BUILD_ID }));
+
 rooms.attach(io);
 
 server.listen(PORT, HOST, () => {

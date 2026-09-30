@@ -147,6 +147,12 @@ socket.on('connect', () => {
 socket.on('disconnect', () => {
   if (joined) $('#conn').hidden = false;
 });
+// Server vừa được cập nhật (khác phiên bản lúc mở trang) thì tải lại để dùng code mới.
+let buildId = null;
+socket.on('hello', ({ build } = {}) => {
+  if (buildId && build && build !== buildId) location.reload();
+  buildId = build;
+});
 socket.on('kicked', () => leave('Bạn đã được mời ra khỏi phòng.'));
 socket.on('replaced', () => leave('Bạn vừa vào phòng từ một tab/máy khác.'));
 

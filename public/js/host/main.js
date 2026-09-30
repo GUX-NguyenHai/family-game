@@ -78,6 +78,13 @@ socket.on('connect', () => {
 });
 socket.on('disconnect', () => toast('Mất kết nối server, đang nối lại…'));
 
+// Server vừa được cập nhật (khác phiên bản lúc mở trang) thì tải lại; phòng vẫn giữ nhờ sessionStorage.
+let buildId = null;
+socket.on('hello', ({ build } = {}) => {
+  if (buildId && build && build !== buildId) location.reload();
+  buildId = build;
+});
+
 // Mã Pro đã nhập được nhớ trong tab này để tự gắn lại khi tải lại trang / server khởi động lại.
 function savedLicense() {
   return session.get()?.license || '';
