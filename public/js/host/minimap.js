@@ -104,10 +104,10 @@ export class Minimap {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(left, bottom - 1, trackW, 2);
     const cells = 8;
-    const cw = trackW / cells;
+    const cellW = trackW / cells;
     for (let i = 0; i < cells; i++) {
       ctx.fillStyle = i % 2 ? '#111' : '#fff';
-      ctx.fillRect(left + i * cw, top - 4, cw, 4);
+      ctx.fillRect(left + i * cellW, top - 4, cellW, 4);
     }
 
     // Các con vật: con về sau vẽ trước để con dẫn đầu nằm trên cùng.
