@@ -96,9 +96,25 @@ function resetRacer(C, p, x) {
   p.bumpSlowUntil = 0;
   p.botPlan = new Map();
   if (p.bot) {
+    // Mỗi ván random lại để thứ tự về đích không lặp lại.
     p.botLane = x;
+    p.botLaneAt = 0;
     p.botSkill = rand(C.BOT.skillMin, C.BOT.skillMax);
+    p.botDelay = rand(0, 1500); // phản xạ lúc xuất phát
+    p.botStyle = BOT_STYLES[Math.floor(Math.random() * BOT_STYLES.length)];
+    p.botForm = 1; // phong độ lên xuống trong lúc chạy
+    p.botFormAt = 0;
+    p.botSprintAt = rand(0.6, 0.85); // đoạn nào thì bắt đầu nước rút
   }
+}
+
+// starter: xuất phát nhanh rồi đuối; finisher: chậm đầu, bứt tốc cuối; wobbly: phong độ thất thường.
+const BOT_STYLES = ['steady', 'starter', 'finisher', 'wobbly'];
+
+function botPace(p, progress) {
+  if (p.botStyle === 'starter') return progress < 0.4 ? 1.3 : 0.8;
+  if (p.botStyle === 'finisher') return progress < 0.5 ? 0.8 : 1.3;
+  return 1;
 }
 
 function createRace(racers, now, level) {
@@ -275,14 +291,13 @@ function resolveCollisions(race, racers, now, events) {
       a.x = clamp(a.x - dir * push * shareA, -halfWidth, halfWidth);
       b.x = clamp(b.x + dir * push * (1 - shareA), -halfWidth, halfWidth);
 
-      // Tông đuôi: con phía sau rõ ràng (không phải đi song song) và không TURBO thì bị chặn lại.
+      // Tông đuôi: con phía sau rõ ràng (không phải đi song song) và không TURBO thì không được nhanh
+      // hơn con phía trước, phải chờ bị đẩy lệch sang ngang mới vượt được.
+      // Chỉ giới hạn tốc độ, KHÔNG kéo lùi vị trí (kéo lùi nhìn như con vật phi ngược).
       if (Math.abs(dz) > minDz * 0.5) {
         const back = dz > 0 ? a : b;
         const front = dz > 0 ? b : a;
-        if (now >= back.turboUntil) {
-          back.z = Math.min(back.z, front.z - minDz);
-          back.speed = Math.min(back.speed, front.speed);
-        }
+        if (now >= back.turboUntil) back.speed = Math.min(back.speed, front.speed);
       }
 
       if (!race.contacts.has(key)) {
@@ -343,13 +358,30 @@ function flagsOf(p, now) {
 function botThink(race, p, now, dt, racers = []) {
   if (!isRunning(race, p, now)) return false;
   const C = cfgOf(race);
-  if (Math.random() < p.botSkill * 5 * dt) shake(race, p, 0.3 + Math.random() * 0.5, now);
-  const sprint = p.z > race.trackLen * 0.7;
-  const early = p.mana >= C.BOT.turboMin && Math.random() < C.BOT.turboRate * dt;
-  const wantTurbo = sprint ? p.mana >= 0.3 : p.mana >= 1 || early;
-  const usedTurbo = wantTurbo && turbo(race, p, now);
-
   const halfWidth = race.width / 2 - 0.8;
+  const progress = p.z / race.trackLen;
+
+  // Phong độ đổi mỗi 2–4 giây; bot thất thường thì dao động mạnh hơn.
+  if (now >= p.botFormAt) {
+    p.botForm = p.botStyle === 'wobbly' ? rand(0.5, 1.4) : rand(0.8, 1.2);
+    p.botFormAt = now + rand(2000, 4000);
+  }
+  // Thỉnh thoảng đổi làn muốn chạy cho khỏi đi mãi một đường.
+  if (now >= p.botLaneAt) {
+    p.botLane = rand(-halfWidth, halfWidth);
+    p.botLaneAt = now + rand(3000, 7000);
+  }
+
+  let usedTurbo = false;
+  if (now >= race.startAt + p.botDelay) {
+    const rate = p.botSkill * 5 * p.botForm * botPace(p, progress);
+    if (Math.random() < rate * dt) shake(race, p, 0.3 + Math.random() * 0.5, now);
+    const sprint = progress > p.botSprintAt;
+    const early = p.mana >= C.BOT.turboMin && Math.random() < C.BOT.turboRate * dt;
+    const wantTurbo = sprint ? p.mana >= 0.3 : p.mana >= 1 || early;
+    usedTurbo = wantTurbo && turbo(race, p, now);
+  }
+
   let target = p.botLane;
   let nearest = Infinity;
   for (const o of race.obstacles) {
@@ -367,12 +399,17 @@ function botThink(race, p, now, dt, racers = []) {
     nearest = ahead;
 
     if (!p.botPlan.has(o.id)) {
+      // Bot kém thỉnh thoảng không để ý mà đâm thẳng vào.
+      const miss = Math.random() < (1 - p.botSkill) * 0.35;
       const canJump = o.type === 'fence' && Math.random() < p.botSkill;
-      p.botPlan.set(o.id, canJump ? 'jump' : 'dodge');
+      p.botPlan.set(o.id, miss ? 'miss' : canJump ? 'jump' : 'dodge');
     }
-    if (p.botPlan.get(o.id) === 'jump') {
+    const plan = p.botPlan.get(o.id);
+    if (plan === 'miss') {
       target = p.x;
-      if (ahead < 2.4) jump(race, p, now);
+    } else if (plan === 'jump') {
+      target = p.x;
+      if (ahead < rand(1.8, 3)) jump(race, p, now);
     } else {
       target = p.x < o.x ? o.x - o.w - 1.3 : o.x + o.w + 1.3;
     }

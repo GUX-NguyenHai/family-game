@@ -1,11 +1,11 @@
 // Đọc cảm biến điện thoại: nghiêng trái/phải để lái, lắc LÊN XUỐNG để phi (lắc ngang không tính).
 // Dùng chung cho Android và iPhone; iPhone cần gọi enable() ngay trong sự kiện bấm nút.
 
-const DEADZONE_DEG = 5;
-const FULL_TILT_DEG = 25;
+const DEADZONE_DEG = 3; // nghiêng dưới mức này coi như cầm thẳng
+const FULL_TILT_DEG = 15; // nghiêng tới mức này là lái hết cỡ
 const SHAKE_GAP_MS = 130;
 const GRAVITY_SMOOTH = 0.05; // lọc thông thấp để biết hướng trọng lực (= phương thẳng đứng)
-const TILT_SMOOTH_MS = 180; // làm mượt góc nghiêng: giật máy nhanh sang ngang không làm đổi làn
+const TILT_SMOOTH_MS = 120; // làm mượt góc nghiêng: giật máy nhanh sang ngang không làm đổi làn
 const G = 9.81;
 
 function load(key, fallback) {
@@ -43,7 +43,8 @@ export function createSensors({ onShake }) {
     shake: 0, // độ lắc hiện tại (m/s²) để vẽ thanh đo
     calib: load('fg:calib', 0),
     invert: load('fg:invert', false),
-    threshold: load('fg:sens', 12),
+    // Ngưỡng lắc (m/s², chỉ tính phần lên xuống). Đổi khoá lưu để máy cũ về mặc định mới.
+    threshold: load('fg:sens2', 8),
   };
   let lastShake = 0;
   const grav = { x: 0, y: 0, z: 0, ready: false };
@@ -150,8 +151,8 @@ export function createSensors({ onShake }) {
   };
 
   s.setThreshold = v => {
-    s.threshold = Number(v) || 12;
-    save('fg:sens', s.threshold);
+    s.threshold = Number(v) || 8;
+    save('fg:sens2', s.threshold);
   };
 
   s.decay = () => {

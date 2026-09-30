@@ -411,8 +411,8 @@ updateSensorUi();
 let uiAt = 0;
 function sensorLoop(t) {
   if (current === 'lobby') {
-    const tilt = Math.max(-1, Math.min(1, sensors.tilt / 30));
-    $('#tiltDot').style.left = `${50 + tilt * 45}%`;
+    // Chấm chạm mép = lái hết cỡ.
+    $('#tiltDot').style.left = `${50 + sensors.steer * 45}%`;
     $('#shakeBar').style.width = `${Math.min(1, sensors.shake / 30) * 100}%`;
     $('#shakeMark').style.left = `${Math.min(1, sensors.threshold / 30) * 100}%`;
     if (t - uiAt > 500) {
