@@ -7,11 +7,10 @@ const FULL_TILT_DEG = 15; // nghiêng tới mức này là lái hết cỡ
 const NOISE_FLOOR = 1.0; // m/s²: rung tay khi cầm yên dưới mức này không tính
 const ACTIVITY_TAU_MS = 250; // làm mượt mức lắc: dừng tay thì ~0,5 giây là về 0
 const MAX_LEVEL = 1.5; // cho phép vượt 1 để độ khó cao (phải lắc mạnh hơn) vẫn đạt tối đa
-// Nhảy = "giật cương": hất nhanh đầu máy về phía mình (xoay quanh trục ngang của máy).
-// Khác chạy (dịch chuyển lên xuống, ít xoay) và lái (nghiêng trái/phải, trục khác).
+// Nhảy = "giật cương": hất nhanh đầu máy về phía mình, tức góc ngửa (beta) đổi nhiều trong thời gian ngắn.
+// Khác chạy (dịch chuyển lên xuống, góc gần như không đổi) và lái (nghiêng trái/phải = gamma, trục khác).
 const JUMP_GAP_MS = 700; // 2 lần nhảy cách nhau ít nhất
-const JUMP_DOMINANCE = 1; // tốc độ xoay theo trục ngang phải lớn hơn các trục khác
-const RAD_TO_DEG = 180 / Math.PI;
+const JUMP_WINDOW_MS = 250; // góc ngửa phải đổi đủ nhiều trong khoảng này
 const GRAVITY_SMOOTH = 0.05; // lọc thông thấp để biết hướng trọng lực (= phương thẳng đứng)
 const TILT_SMOOTH_MS = 120; // làm mượt góc nghiêng: giật máy nhanh sang ngang không làm đổi làn
 const G = 9.81;
@@ -54,16 +53,13 @@ export function createSensors({ onJump } = {}) {
     invert: load('fg:invert', false),
     // Độ nhạy: lắc mạnh bao nhiêu (m/s², trên mức rung tay) thì coi là hết cỡ. Nhỏ = nhạy.
     range: load('fg:range', 10),
-    gotRotation: false, // máy có con quay hồi chuyển (nhảy bằng cử chỉ được)
-    pitchRate: 0, // tốc độ "giật cương" gần nhất (độ/giây) để vẽ thanh đo
-    // Ngưỡng nhảy (độ/giây): nhỏ = nhạy. 0 = tắt nhảy bằng cử chỉ, chỉ dùng nút.
-    jumpRate: load('fg:jumpRate2', 200),
-    rotUnit: 'deg', // một số trình duyệt báo radian/giây: tự nhận ra rồi đổi sang độ
+    pitchSwing: 0, // góc ngửa đổi nhiều nhất gần đây (độ) để vẽ thanh đo
+    // Ngưỡng nhảy (độ đổi trong 0,25 giây): nhỏ = nhạy. 0 = tắt nhảy bằng cử chỉ, chỉ dùng nút.
+    jumpDeg: load('fg:jumpDeg', 20),
   };
   let lastMotionAt = 0;
   let lastJumpAt = 0;
-  let rotSamples = 0;
-  let rotMaxRaw = 0;
+  let pitchHistory = []; // [{t, v}] góc ngửa trong JUMP_WINDOW_MS gần nhất
   const grav = { x: 0, y: 0, z: 0, ready: false };
   let smoothTilt = null;
   let lastTiltAt = 0;
@@ -88,6 +84,26 @@ export function createSensors({ onJump } = {}) {
     const ang = screenAngle();
     const raw = ang === 90 ? e.beta : ang === 270 ? -e.beta : ang === 180 ? -e.gamma : e.gamma;
     applyTilt(raw);
+    detectJump(ang === 90 || ang === 270 ? e.gamma : e.beta, performance.now());
+  }
+
+  // Góc ngửa đổi >= jumpDeg trong JUMP_WINDOW_MS (chiều nào cũng được) thì nhảy.
+  function detectJump(pitch, now) {
+    pitchHistory.push({ t: now, v: pitch });
+    while (pitchHistory.length && now - pitchHistory[0].t > JUMP_WINDOW_MS) pitchHistory.shift();
+    let min = Infinity;
+    let max = -Infinity;
+    for (const h of pitchHistory) {
+      if (h.v < min) min = h.v;
+      if (h.v > max) max = h.v;
+    }
+    const swing = max - min;
+    if (swing > 120) return; // nhảy vọt do góc quấn vòng (máy lật úp), bỏ qua
+    s.pitchSwing = Math.max(swing, s.pitchSwing);
+    if (!s.jumpDeg || swing < s.jumpDeg || now - lastJumpAt < JUMP_GAP_MS) return;
+    lastJumpAt = now;
+    pitchHistory = []; // tránh 1 cú hất tính 2 lần
+    onJump?.();
   }
 
   function onMotion(e) {
@@ -130,36 +146,6 @@ export function createSensors({ onJump } = {}) {
     lastMotionAt = now;
     s.activity += (mag - s.activity) * (1 - Math.exp(-dt / ACTIVITY_TAU_MS));
     updateLevel();
-    detectJump(e.rotationRate, now);
-  }
-
-  // rotationRate: alpha quanh trục vuông góc màn hình, beta quanh trục ngang, gamma quanh trục dọc (độ/giây).
-  // Cầm dọc: "giật cương" = beta. Cầm ngang thì trục ngang/dọc đổi chỗ.
-  function detectJump(r, now) {
-    if (!r || r.beta == null || r.gamma == null) return;
-    s.gotRotation = true;
-
-    // Tự nhận đơn vị: tay cầm lắc lư mà số xoay lớn nhất vẫn rất nhỏ (< 12) thì đó là radian/giây.
-    const rawMax = Math.max(Math.abs(r.alpha || 0), Math.abs(r.beta), Math.abs(r.gamma));
-    if (s.rotUnit === 'deg' && rotSamples < 600) {
-      rotSamples++;
-      rotMaxRaw = Math.max(rotMaxRaw, rawMax);
-      if (rotSamples >= 300 && s.activity > 2 && rotMaxRaw < 12) s.rotUnit = 'rad';
-    }
-    const k = s.rotUnit === 'rad' ? RAD_TO_DEG : 1;
-    const alpha = Math.abs(r.alpha || 0) * k;
-    const beta = Math.abs(r.beta) * k;
-    const gamma = Math.abs(r.gamma) * k;
-
-    const ang = screenAngle();
-    const landscape = ang === 90 || ang === 270;
-    const pitch = landscape ? gamma : beta;
-    const other = Math.max(landscape ? beta : gamma, alpha);
-    s.pitchRate = Math.max(pitch, s.pitchRate * 0.9);
-    if (!s.jumpRate || pitch < s.jumpRate || pitch < other * JUMP_DOMINANCE) return;
-    if (now - lastJumpAt < JUMP_GAP_MS) return;
-    lastJumpAt = now;
-    onJump?.();
   }
 
   function updateLevel() {
@@ -206,14 +192,14 @@ export function createSensors({ onJump } = {}) {
     updateLevel();
   };
 
-  s.setJumpRate = v => {
-    s.jumpRate = Number(v) || 0;
-    save('fg:jumpRate2', s.jumpRate);
+  s.setJumpDeg = v => {
+    s.jumpDeg = Number(v) || 0;
+    save('fg:jumpDeg', s.jumpDeg);
   };
 
   // Gọi mỗi khung hình: nếu trình duyệt ngừng gửi sự kiện chuyển động thì cho mức lắc về 0.
   s.decay = () => {
-    s.pitchRate *= 0.92;
+    s.pitchSwing *= 0.93;
     if (performance.now() - lastMotionAt > 200) {
       s.activity *= 0.85;
       updateLevel();

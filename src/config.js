@@ -19,7 +19,8 @@ module.exports = {
   BRAKE: 25, // giảm tốc (m/s²): ngừng lắc / vào bùn thì chậm lại nhanh (~0,8 giây là dừng)
 
   // Năng lượng (mana) + TURBO: có mana là bấm PHI! được, bấm là dùng hết mana đang có.
-  MANA_FILL_MS: 12000, // tự đầy từ 0 → 100% trong bấy nhiêu
+  MANA_FILL_MS: 12000, // đầy từ 0 → 100% trong bấy nhiêu khi đang chạy đủ nhanh
+  MANA_FULL_RATE_AT: 0.6, // chạy từ 60% tốc độ tối đa trở lên thì mana tăng đủ tốc; chậm hơn tăng chậm theo tỉ lệ, đứng yên không tăng
   CARROT_MANA: 0.1, // ăn cà rốt +10%
   FENCE_MANA_LOSS: 0.2, // đâm rào -20%
   TURBO_MS: 5000, // bấm PHI! 1 lần là TURBO, mana tụt dần: đầy 100% thì cạn sau bấy nhiêu (ít mana thì ngắn hơn)

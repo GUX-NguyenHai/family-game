@@ -421,8 +421,8 @@ function updateSensorUi() {
   $('#btnSensor').hidden = !needButton;
   $('#btnSensor2').hidden = !needButton;
 
-  const noGyro = sensors.enabled && sensors.gotMotion && !sensors.gotRotation;
-  $('#jumpNote').textContent = noGyro ? 'Máy không có con quay hồi chuyển nên không nhảy bằng cử chỉ được, hãy bấm nút NHẢY.' : '';
+  const noGyro = sensors.enabled && sensors.gotMotion && !sensors.gotOrientation;
+  $('#jumpNote').textContent = noGyro ? 'Máy không báo được góc nghiêng nên không nhảy bằng cử chỉ được, hãy bấm nút NHẢY.' : '';
   $('#jumpNote').hidden = !noGyro;
 }
 
@@ -433,8 +433,8 @@ $('#chkInvert').checked = sensors.invert;
 $('#chkInvert').onchange = e => sensors.setInvert(e.target.checked);
 $('#selSens').value = String(sensors.range);
 $('#selSens').onchange = e => sensors.setRange(e.target.value);
-$('#selJump').value = String(sensors.jumpRate);
-$('#selJump').onchange = e => sensors.setJumpRate(e.target.value);
+$('#selJump').value = String(sensors.jumpDeg);
+$('#selJump').onchange = e => sensors.setJumpDeg(e.target.value);
 
 // Android không cần xin quyền: bật luôn.
 if (sensors.secure && !sensors.needsPermission) enableSensors();
@@ -448,13 +448,13 @@ function sensorLoop(t) {
     // Thanh "Lắc ↕" = tốc độ con vật sẽ chạy (đầy = tối đa ở độ khó Trung bình).
     $('#shakeBar').style.width = `${Math.min(1, sensors.level) * 100}%`;
     // Thanh "Nhảy ⤴": đầy = đủ mạnh để nhảy.
-    const jr = sensors.jumpRate || 200;
-    $('#jumpBar').style.width = `${Math.min(1, sensors.pitchRate / jr) * 100}%`;
+    const jd = sensors.jumpDeg || 20;
+    $('#jumpBar').style.width = `${Math.min(1, sensors.pitchSwing / jd) * 100}%`;
     if (t - uiAt > 150) {
-      // Số đo để chỉnh: hất máy xem số lên bao nhiêu, vượt ngưỡng là nhảy.
-      $('#jumpDbg').textContent = !sensors.gotRotation
-        ? 'Chưa nhận được dữ liệu xoay của máy.'
-        : `Hất máy: ${Math.round(sensors.pitchRate)}°/s · cần vượt ${sensors.jumpRate || '(đang tắt)'}${sensors.rotUnit === 'rad' ? ' · đơn vị rad' : ''}`;
+      // Số đo để chỉnh: hất máy xem góc đổi bao nhiêu độ, vượt ngưỡng là nhảy.
+      $('#jumpDbg').textContent = !sensors.gotOrientation
+        ? 'Chưa nhận được góc nghiêng của máy.'
+        : `Hất máy: ${Math.round(sensors.pitchSwing)}° · cần ${sensors.jumpDeg ? sensors.jumpDeg + '°' : '(đang tắt)'}`;
     }
     if (t - uiAt > 500) {
       uiAt = t;

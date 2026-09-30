@@ -196,9 +196,13 @@ function step(race, racers, now, dt) {
         p.mana = 0;
         p.turboOn = false;
       }
-    } else if (p.mana < 1) {
-      p.mana = Math.min(1, p.mana + (dt * 1000) / C.MANA_FILL_MS);
-      if (p.mana >= 1) events.push({ pid: p.id, type: 'manaFull' });
+    } else if (p.mana < 1 && !stunned) {
+      // Chỉ tăng khi đang chạy: nhanh (≥ MANA_FULL_RATE_AT tốc độ tối đa) thì tăng đủ tốc, chậm thì tăng chậm, đứng yên thì không.
+      const runFactor = Math.min(1, p.speed / (C.MAX_SPEED * C.MANA_FULL_RATE_AT));
+      if (runFactor > 0) {
+        p.mana = Math.min(1, p.mana + ((dt * 1000) / C.MANA_FILL_MS) * runFactor);
+        if (p.mana >= 1) events.push({ pid: p.id, type: 'manaFull' });
+      }
     }
     if (!stunned) p.x = clamp(p.x + p.steer * C.LATERAL_SPEED * dt, -halfWidth, halfWidth);
 
