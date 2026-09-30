@@ -6,7 +6,7 @@ const FLAG_STUN = 1;
 const FLAG_JUMP = 2;
 const FLAG_MUD = 4;
 const FLAG_FINISHED = 8;
-const FLAG_CARROT = 16;
+const FLAG_TURBO = 16;
 
 function rand(a, b) {
   return a + Math.random() * (b - a);
@@ -65,12 +65,14 @@ function resetRacer(p, x) {
   p.stunUntil = 0;
   p.jumpUntil = 0;
   p.nextJumpAt = 0;
-  p.boostUntil = 0;
+  p.mana = 0;
+  p.turboUntil = 0;
   p.inMud = false;
   p.hits = new Set();
   p.finishMs = null;
   p.rank = null;
-  p.lastBoostAt = 0;
+  p.lastShakeAt = 0;
+  p.lastBumpAt = 0;
   p.botPlan = new Map();
   if (p.bot) p.botLane = x;
 }
@@ -84,6 +86,7 @@ function createRace(racers, now) {
     trackLen: C.TRACK_LEN,
     obstacles: createObstacles(width),
     taken: new Set(),
+    contacts: new Set(), // các cặp đang chạm nhau ở tick trước
     startAt: now + C.COUNTDOWN_MS,
     firstFinishAt: null,
     finishCount: 0,
@@ -95,13 +98,21 @@ function isRunning(race, p, now) {
   return race && !race.endedAt && now >= race.startAt && p.finishMs == null;
 }
 
-function boost(race, p, kind, strength, now) {
+function shake(race, p, strength, now) {
   if (!isRunning(race, p, now)) return;
-  if (now - p.lastBoostAt < C.BOOST_MIN_INTERVAL_MS) return;
-  p.lastBoostAt = now;
+  if (now - p.lastShakeAt < C.SHAKE_MIN_INTERVAL_MS) return;
+  p.lastShakeAt = now;
   const s = clamp(Number(strength) || 0, 0, 1);
-  const impulse = kind === 'shake' ? C.SHAKE_IMPULSE + C.SHAKE_IMPULSE_STRENGTH * s : C.TAP_IMPULSE;
-  p.power = Math.min(1, p.power + impulse);
+  p.power = Math.min(1, p.power + C.SHAKE_IMPULSE + C.SHAKE_IMPULSE_STRENGTH * s);
+}
+
+// Nút PHI!: chỉ dùng được khi mana đầy, dùng hết mana.
+function turbo(race, p, now) {
+  if (!isRunning(race, p, now)) return false;
+  if (p.mana < 1 || now < p.turboUntil) return false;
+  p.mana = 0;
+  p.turboUntil = now + C.TURBO_MS;
+  return true;
 }
 
 function jump(race, p, now) {
@@ -129,10 +140,15 @@ function step(race, racers, now, dt) {
     p.power *= Math.exp(-dt / C.POWER_TAU);
     const stunned = now < p.stunUntil;
     const jumping = now < p.jumpUntil;
+    const turboOn = now < p.turboUntil;
+    if (!turboOn && p.mana < 1) {
+      p.mana = Math.min(1, p.mana + (dt * 1000) / C.MANA_FILL_MS);
+      if (p.mana >= 1) events.push({ pid: p.id, type: 'manaFull' });
+    }
     if (!stunned) p.x = clamp(p.x + p.steer * C.LATERAL_SPEED * dt, -halfWidth, halfWidth);
 
     let speed = stunned ? 0 : C.BASE_SPEED + p.power * C.BOOST_SPEED;
-    if (!stunned && now < p.boostUntil) speed += C.CARROT_BONUS;
+    if (turboOn) speed *= C.TURBO_FACTOR;
 
     p.inMud = false;
     for (const o of race.obstacles) {
@@ -140,7 +156,7 @@ function step(race, racers, now, dt) {
       if (Math.abs(p.x - o.x) > o.w + C.BODY_HALF_WIDTH) continue;
 
       if (o.type === 'mud') {
-        if (!jumping) p.inMud = true;
+        if (!jumping && !turboOn) p.inMud = true;
       } else if (o.type === 'fence') {
         if (p.hits.has(o.id)) continue;
         p.hits.add(o.id);
@@ -149,14 +165,16 @@ function step(race, racers, now, dt) {
         } else {
           p.stunUntil = now + C.STUN_MS;
           p.power = 0;
+          p.mana = Math.max(0, p.mana - C.FENCE_MANA_LOSS);
           speed = 0;
           events.push({ pid: p.id, type: 'fence', side: p.x < o.x ? 'left' : 'right' });
         }
       } else if (o.type === 'carrot' && !race.taken.has(o.id)) {
         race.taken.add(o.id);
-        p.power = 1;
-        p.boostUntil = now + C.CARROT_BOOST_MS;
+        const wasFull = p.mana >= 1;
+        p.mana = Math.min(1, p.mana + C.CARROT_MANA);
         events.push({ pid: p.id, type: 'carrot', oid: o.id });
+        if (!wasFull && p.mana >= 1) events.push({ pid: p.id, type: 'manaFull' });
       }
     }
 
@@ -172,7 +190,64 @@ function step(race, racers, now, dt) {
       events.push({ pid: p.id, type: 'finish', rank: p.rank });
     }
   }
+  if (C.COLLIDE && !race.endedAt) resolveCollisions(race, racers, now, events);
   return events;
+}
+
+// Mỗi cặp chồng lên nhau: đẩy ra hai bên (con TURBO hất mạnh hơn).
+// Con phía sau đang tông đuôi thì không cho xuyên qua, phải lách sang bên mới vượt được.
+function resolveCollisions(race, racers, now, events) {
+  const active = racers.filter(p => p.finishMs == null);
+  const minDx = C.BODY_HALF_WIDTH * 2;
+  const minDz = C.BODY_HALF_LEN * 2;
+  const halfWidth = race.width / 2 - 0.6;
+  const contacts = new Set();
+
+  for (let i = 0; i < active.length; i++) {
+    for (let j = i + 1; j < active.length; j++) {
+      const a = active[i];
+      const b = active[j];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const overlapX = minDx - Math.abs(dx);
+      const overlapZ = minDz - Math.abs(dz);
+      if (overlapX <= 0 || overlapZ <= 0) continue;
+
+      const key = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
+      contacts.add(key);
+
+      const aTurbo = now < a.turboUntil;
+      const bTurbo = now < b.turboUntil;
+      let shareA = 0.5;
+      if (aTurbo && !bTurbo) shareA = 1 - C.TURBO_PUSH_SHARE;
+      else if (bTurbo && !aTurbo) shareA = C.TURBO_PUSH_SHARE;
+
+      // Đẩy ngang. Đứng thẳng hàng thì chọn hướng ngẫu nhiên nhưng cố định theo cặp.
+      const dir = Math.abs(dx) > 0.01 ? Math.sign(dx) : key.length % 2 ? 1 : -1;
+      const push = overlapX * C.BUMP_PUSH;
+      a.x = clamp(a.x - dir * push * shareA, -halfWidth, halfWidth);
+      b.x = clamp(b.x + dir * push * (1 - shareA), -halfWidth, halfWidth);
+
+      // Tông đuôi: con phía sau rõ ràng (không phải đi song song) và không TURBO thì bị chặn lại.
+      if (Math.abs(dz) > minDz * 0.5) {
+        const back = dz > 0 ? a : b;
+        const front = dz > 0 ? b : a;
+        if (now >= back.turboUntil) {
+          back.z = Math.min(back.z, front.z - minDz);
+          back.speed = Math.min(back.speed, front.speed);
+        }
+      }
+
+      if (!race.contacts.has(key)) {
+        for (const p of [a, b]) {
+          if (now - p.lastBumpAt < C.BUMP_FX_GAP_MS) continue;
+          p.lastBumpAt = now;
+          events.push({ pid: p.id, type: 'bump' });
+        }
+      }
+    }
+  }
+  race.contacts = contacts;
 }
 
 function isOver(race, racers, now) {
@@ -211,14 +286,16 @@ function flagsOf(p, now) {
   if (now < p.jumpUntil) f |= FLAG_JUMP;
   if (p.inMud) f |= FLAG_MUD;
   if (p.finishMs != null) f |= FLAG_FINISHED;
-  if (now < p.boostUntil) f |= FLAG_CARROT;
+  if (now < p.turboUntil) f |= FLAG_TURBO;
   return f;
 }
 
-// Bot đơn giản: lắc theo "tay nghề", né bùn/rào, nhảy rào nếu may mắn, săn cà rốt gần.
-function botThink(race, p, now, dt) {
+// Bot đơn giản: lắc theo "tay nghề", né bùn/rào, nhảy rào nếu may mắn, săn cà rốt gần,
+// để dành TURBO cho đoạn nước rút (thỉnh thoảng dùng sớm cho đỡ phí mana).
+function botThink(race, p, now, dt, racers = []) {
   if (!isRunning(race, p, now)) return;
-  if (Math.random() < p.botSkill * 5 * dt) boost(race, p, 'shake', 0.3 + Math.random() * 0.5, now);
+  if (Math.random() < p.botSkill * 5 * dt) shake(race, p, 0.3 + Math.random() * 0.5, now);
+  const usedTurbo = p.mana >= 1 && (p.z > race.trackLen * 0.7 || Math.random() < 0.12 * dt) && turbo(race, p, now);
 
   const halfWidth = race.width / 2 - 0.8;
   let target = p.botLane;
@@ -248,19 +325,37 @@ function botThink(race, p, now, dt) {
       target = p.x < o.x ? o.x - o.w - 1.3 : o.x + o.w + 1.3;
     }
   }
+
+  // Có con chậm hơn chắn ngay phía trước (và gần hơn vật cản) thì lách sang bên còn chỗ.
+  for (const q of racers) {
+    if (q === p || q.finishMs != null) continue;
+    const ahead = q.z - p.z;
+    if (ahead <= 0 || ahead > 6 || ahead >= nearest) continue;
+    if (Math.abs(q.x - p.x) > C.BODY_HALF_WIDTH * 2 + 0.3 || q.speed >= p.speed) continue;
+    nearest = ahead;
+    const left = q.x - 1.4;
+    const right = q.x + 1.4;
+    const preferLeft = p.x <= q.x;
+    if (preferLeft && left >= -halfWidth) target = left;
+    else if (!preferLeft && right <= halfWidth) target = right;
+    else target = left >= -halfWidth ? left : right;
+  }
+
   target = clamp(target, -halfWidth, halfWidth);
   p.steer = clamp((target - p.x) * 1.5, -1, 1);
+  return usedTurbo;
 }
 
 module.exports = {
   createRace,
   step,
-  boost,
+  shake,
+  turbo,
   jump,
   isOver,
   standings,
   results,
   flagsOf,
   botThink,
-  FLAGS: { STUN: FLAG_STUN, JUMP: FLAG_JUMP, MUD: FLAG_MUD, FINISHED: FLAG_FINISHED, CARROT: FLAG_CARROT },
+  FLAGS: { STUN: FLAG_STUN, JUMP: FLAG_JUMP, MUD: FLAG_MUD, FINISHED: FLAG_FINISHED, TURBO: FLAG_TURBO },
 };

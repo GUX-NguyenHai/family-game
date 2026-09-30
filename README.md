@@ -11,11 +11,16 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 | Thao tác | Tác dụng |
 |---|---|
 | Nghiêng máy trái/phải (hoặc giữ nút ◀ ▶) | Lái sang trái/phải |
-| **Lắc máy** (hoặc bấm liên tục nút PHI!) | Chạy nhanh hơn. Lắc được cộng nhiều hơn bấm nút |
+| **Lắc máy** | Chạy nhanh hơn. Lắc càng mạnh, càng đều thì càng nhanh |
+| Nút **PHI!** (TURBO) | Chỉ bấm được khi **thanh năng lượng đầy**. Bấm là dùng hết năng lượng, nhanh hơn 40% trong 3 giây, lướt qua bùn |
 | Bấm nút **NHẢY** | Nhảy qua rào |
-| 🟫 Bùn | Chạy chậm lại |
-| 🚧 Rào | Đâm vào thì khựng lại 1 giây |
-| 🥕 Cà rốt | Tăng tốc. Ai tới trước người đó ăn |
+| ⚡ Năng lượng | Tự đầy sau khoảng 12 giây. Đầy thì điện thoại rung và nút PHI! sáng lên |
+| 🟫 Bùn | Chạy chậm lại (trừ khi đang TURBO) |
+| 🚧 Rào | Đâm vào thì khựng lại 1 giây và mất 20% năng lượng |
+| 🥕 Cà rốt | +10% năng lượng. Ai tới trước người đó ăn |
+| 💥 Va nhau | Hai con chạm nhau bị đẩy sang hai bên. Tông đuôi con phía trước thì không vượt được, phải lái sang bên. Con đang TURBO hất con kia ra và lách qua |
+
+Các con số này chỉnh trong `src/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm chỉnh bằng `COLLIDE` (đặt `false` để tắt), `BUMP_PUSH`, `TURBO_PUSH_SHARE`.
 
 ## Cài đặt (lần đầu)
 
@@ -83,6 +88,7 @@ Code lấy từ GitHub: `GUX-NguyenHai/family-game`. Gốc repo chính là thư 
    nginx -t && systemctl reload nginx
    certbot --nginx -d 103-185-185-188.sslip.io --redirect
    ```
+   ⚠️ Certbot sửa trực tiếp file `/etc/nginx/sites-available/dua-thu` để thêm HTTPS. Sau đó **đừng chép đè `deploy/nginx.conf`** lên file này nữa. Lỡ chép đè thì chạy lại lệnh certbot ở trên.
 5. Mở `https://103-185-185-188.sslip.io/host` trên TV hoặc laptop.
 
 **Cập nhật code sau này:** trên Mac chạy `git push`, rồi trên server chạy:

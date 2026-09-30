@@ -227,7 +227,7 @@ function renderHud(s) {
       const pl = players.get(p.id);
       return `<li style="--c:${pl?.color || '#fff'}">
         <span class="pos">${i + 1}.</span><span class="dot"></span>
-        <span>${esc(pl?.name || '?')}</span>${p.r ? '<span class="fin">🏁</span>' : ''}
+        <span>${esc(pl?.name || '?')}</span>${p.r ? '<span class="fin">🏁</span>' : p.f & 16 ? '<span class="fin">🔥</span>' : ''}
       </li>`;
     })
     .join('');
@@ -256,8 +256,13 @@ function onFx(ev) {
     toast(`${name} vấp rào! 💥`);
     beep(140, 0.2, 'sawtooth', 0.05);
   } else if (ev.type === 'carrot') {
-    toast(`${name} ăn cà rốt! 🥕`);
+    toast(`${name} ăn cà rốt! +10% năng lượng 🥕`);
     beep(990, 0.12, 'triangle');
+  } else if (ev.type === 'turbo') {
+    toast(`${name} dùng TURBO! 🔥`);
+    beep(220, 0.1, 'sawtooth', 0.05);
+    setTimeout(() => beep(440, 0.12, 'sawtooth', 0.05), 90);
+    setTimeout(() => beep(880, 0.18, 'sawtooth', 0.05), 180);
   } else if (ev.type === 'finish') {
     toast(`${name} về đích hạng ${ev.rank}! 🏁`);
     if (ev.rank === 1) fanfare();

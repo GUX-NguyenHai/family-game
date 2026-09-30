@@ -183,6 +183,7 @@ function onRoom(info) {
     if (current !== 'race') {
       $('#status').textContent = '';
       $('#powerBar').style.width = '0%';
+      renderMana(0, false);
     }
     show('race');
     return;
@@ -207,11 +208,14 @@ function onMe(m) {
   $('#powerBar').style.width = `${m.pw * 100}%`;
 
   const f = m.f;
+  renderMana(m.mn, !!(f & 16));
+  updateNoShake();
+
   let status = '';
   if (f & 8) status = `Về đích hạng ${m.rank}! 🏁`;
   else if (f & 1) status = 'Vấp rào! 💫';
+  else if (f & 16) status = 'TURBO! 🔥';
   else if (f & 2) status = 'Nhảy! ⤴';
-  else if (f & 16) status = 'Cà rốt! Tăng tốc 🥕';
   else if (f & 4) status = 'Lội bùn… 🟫';
   $('#status').textContent = status;
 
@@ -233,7 +237,36 @@ function vibrate(pattern) {
 function onHit(e) {
   if (e.type === 'fence') vibrate([200, 80, 200]);
   else if (e.type === 'carrot') vibrate(60);
+  else if (e.type === 'manaFull') vibrate([40, 60, 40]);
+  else if (e.type === 'bump') vibrate(35);
   else if (e.type === 'finish') vibrate([100, 50, 100, 50, 300]);
+}
+
+// ---------- Năng lượng + nút PHI! (TURBO) ----------
+let manaReady = false;
+
+function renderMana(mana, turboOn) {
+  const btn = $('#btnBoost');
+  const pct = Math.round(Math.max(0, Math.min(1, mana || 0)) * 100);
+  manaReady = pct >= 100 && !turboOn;
+  btn.style.setProperty('--mana', `${turboOn ? 100 : pct}%`);
+  btn.classList.toggle('ready', manaReady);
+  btn.classList.toggle('turbo', turboOn);
+  $('#boostLabel').innerHTML = turboOn ? 'TURBO!' : manaReady ? 'PHI! 🔥' : `PHI!<small>${pct}%</small>`;
+}
+
+// Máy không lắc được thì báo cho người chơi biết.
+function updateNoShake() {
+  const el = $('#noShake');
+  if (sensors.enabled && sensors.gotMotion) {
+    el.hidden = true;
+    return;
+  }
+  const canEnable = sensors.secure && !sensors.enabled && sensorErr?.message !== 'unsupported';
+  el.textContent = canEnable
+    ? 'Chưa bật cảm biến nên chưa lắc để chạy nhanh được. Bấm "Bật cảm biến" ở dưới.'
+    : 'Máy không có cảm biến lắc, không lắc để chạy nhanh được. Vẫn dùng được PHI! khi đầy năng lượng.';
+  el.hidden = false;
 }
 
 // ---------- Điều khiển ----------
@@ -262,17 +295,26 @@ function bindHold(btn, dir) {
 bindHold($('#btnLeft'), -1);
 bindHold($('#btnRight'), 1);
 
-function flashBoost() {
-  const b = $('#btnBoost');
-  b.classList.add('flash');
-  setTimeout(() => b.classList.remove('flash'), 90);
-}
-
 $('#btnBoost').addEventListener('pointerdown', e => {
   e.preventDefault();
-  socket.emit('boost', { k: 'tap' });
-  flashBoost();
+  const b = $('#btnBoost');
+  if (!manaReady) {
+    // Chưa đầy: rung nút báo "chưa được".
+    b.classList.remove('nope');
+    void b.offsetWidth;
+    b.classList.add('nope');
+    return;
+  }
+  socket.emit('turbo');
+  vibrate(40);
+  renderMana(0, true); // hiển thị ngay, server sẽ xác nhận qua 'me'
 });
+
+function flashPower() {
+  const bar = $('#powerBar');
+  bar.classList.add('flash');
+  setTimeout(() => bar.classList.remove('flash'), 90);
+}
 
 $('#btnJump').addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -282,8 +324,8 @@ $('#btnJump').addEventListener('pointerdown', e => {
 
 function onShake(strength) {
   if (current !== 'race') return;
-  socket.emit('boost', { k: 'shake', s: strength });
-  flashBoost();
+  socket.emit('shake', strength);
+  flashPower();
 }
 
 // Chặn cuộn/zoom khi đang đua.
@@ -321,14 +363,14 @@ function updateSensorUi() {
   let text;
   let needButton = false;
   if (!sensors.secure) {
-    text = 'Trang chưa có HTTPS nên không đọc được cảm biến. Dùng nút bấm để chơi.';
+    text = 'Trang chưa có HTTPS nên không đọc được cảm biến. Dùng nút ◀ ▶ để lái, không lắc để chạy nhanh được.';
   } else if (sensors.enabled) {
-    text = sensors.gotOrientation || sensors.gotMotion ? '✅ Cảm biến đang hoạt động' : 'Đang chờ dữ liệu cảm biến… Nếu lâu không có, máy không hỗ trợ, hãy dùng nút bấm.';
+    text = sensors.gotOrientation || sensors.gotMotion ? '✅ Cảm biến đang hoạt động' : 'Đang chờ dữ liệu cảm biến… Nếu lâu không có thì máy không hỗ trợ: dùng nút ◀ ▶ để lái.';
   } else if (sensorErr?.message === 'denied') {
-    text = 'Bạn đã từ chối quyền cảm biến. Bấm nút để thử lại, hoặc dùng nút bấm.';
+    text = 'Bạn đã từ chối quyền cảm biến. Bấm nút để thử lại, nếu không sẽ không lắc để chạy nhanh được.';
     needButton = true;
   } else if (sensorErr?.message === 'unsupported') {
-    text = 'Trình duyệt không hỗ trợ cảm biến. Dùng nút bấm để chơi.';
+    text = 'Trình duyệt không hỗ trợ cảm biến. Dùng nút ◀ ▶ để lái, không lắc để chạy nhanh được.';
   } else {
     text = 'Cảm biến chưa bật.';
     needButton = true;

@@ -166,11 +166,13 @@ function tick(io, room) {
     broadcastRoom(io, room);
   }
 
-  for (const p of racers) if (p.bot) game.botThink(race, p, now, dt);
+  for (const p of racers) {
+    if (p.bot && game.botThink(race, p, now, dt, racers)) io.to(`h:${room.code}`).emit('fx', { pid: p.id, type: 'turbo' });
+  }
 
   const events = game.step(race, racers, now, dt);
   for (const e of events) {
-    io.to(`h:${room.code}`).emit('fx', e);
+    if (e.type !== 'manaFull') io.to(`h:${room.code}`).emit('fx', e);
     const p = room.players.get(e.pid);
     if (p && p.socketId) io.to(p.socketId).emit('hit', e);
   }
@@ -203,6 +205,7 @@ function tick(io, room) {
         total: order.length,
         prog: Math.min(1, p.z / race.trackLen),
         pw: Math.round(p.power * 100) / 100,
+        mn: Math.round(p.mana * 100) / 100,
         f: game.flagsOf(p, now),
         rank: p.rank,
       });
@@ -341,10 +344,16 @@ function attach(io) {
       p.steer = Number.isFinite(n) ? Math.max(-1, Math.min(1, n)) : 0;
     });
 
-    socket.on('boost', payload => {
+    socket.on('shake', strength => {
       const { room, p } = playerCtx();
       if (!p || !p.inRace) return;
-      game.boost(room.race, p, payload?.k === 'shake' ? 'shake' : 'tap', payload?.s, Date.now());
+      game.shake(room.race, p, strength, Date.now());
+    });
+
+    socket.on('turbo', () => {
+      const { room, p } = playerCtx();
+      if (!p || !p.inRace) return;
+      if (game.turbo(room.race, p, Date.now())) io.to(`h:${room.code}`).emit('fx', { pid: p.id, type: 'turbo' });
     });
 
     socket.on('jump', () => {

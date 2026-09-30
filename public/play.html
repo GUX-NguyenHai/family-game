@@ -56,7 +56,7 @@
           <option value="9">Cao</option>
         </select>
       </label>
-      <p class="hint">Cầm máy dọc, bấm "Hiệu chỉnh" khi đang cầm thẳng. Nghiêng trái/phải để lái, lắc mạnh để phi nhanh.</p>
+      <p class="hint">Cầm máy dọc, bấm "Hiệu chỉnh" khi đang cầm thẳng. Nghiêng trái/phải để lái, lắc mạnh để chạy nhanh. Thanh năng lượng đầy thì bấm <b>PHI!</b> để tăng tốc 3 giây.</p>
     </div>
 
     <button id="btnChange" class="ghost">Đổi tên / con vật</button>
@@ -69,10 +69,14 @@
     </div>
     <div id="status" class="status"></div>
     <div class="bar power"><i id="powerBar"></i></div>
+    <p id="noShake" class="noshake" hidden></p>
     <div class="controls">
       <button id="btnLeft" class="hold" aria-label="Sang trái">◀</button>
       <div class="mid">
-        <button id="btnBoost" class="boost">PHI!</button>
+        <button id="btnBoost" class="boost" aria-label="Tăng tốc">
+          <span class="mana-fill"></span>
+          <span id="boostLabel" class="lbl">PHI!<small>0%</small></span>
+        </button>
         <button id="btnJump" class="jump">NHẢY ⤴</button>
       </div>
       <button id="btnRight" class="hold" aria-label="Sang phải">▶</button>

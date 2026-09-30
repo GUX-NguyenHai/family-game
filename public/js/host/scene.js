@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
-export const FLAG = { STUN: 1, JUMP: 2, MUD: 4, FINISHED: 8, CARROT: 16 };
+export const FLAG = { STUN: 1, JUMP: 2, MUD: 4, FINISHED: 8, TURBO: 16 };
 
 const INTERP_DELAY_MS = 100;
 const TRACK_EXTRA_BEFORE = 40;
@@ -378,7 +378,7 @@ class Runner {
       this.body.position.y = damp(this.body.position.y, 0, 12, dt);
     }
 
-    const pulse = p.f & FLAG.CARROT ? 1 + 0.15 * Math.sin(now / 60) : 1;
+    const pulse = p.f & FLAG.TURBO ? 1.2 + 0.2 * Math.sin(now / 50) : 1;
     this.ring.scale.setScalar(pulse);
 
     this.chooseAnim(p, state, jumpMs);
@@ -805,6 +805,12 @@ export class RaceScene {
       this.hideCarrot(ev.oid);
       pos.y = 1.2;
       this.particles.burst(pos, ['#ff8a1e', '#ffd166', '#3fae3f'], { count: 22, speed: 2.5, up: 4 });
+    } else if (ev.type === 'bump') {
+      pos.y = 0.6;
+      this.particles.burst(pos, ['#c89f6d', '#e8d8b0', '#ffffff'], { count: 8, speed: 2.5, up: 2, life: 0.5 });
+    } else if (ev.type === 'turbo') {
+      pos.y = 1;
+      this.particles.burst(pos, ['#ff3d00', '#ffb020', '#ffd166'], { count: 30, speed: 4, up: 3, life: 0.8 });
     } else if (ev.type === 'clear') {
       pos.y = 0.5;
       this.particles.burst(pos, ['#ffffff', '#e8d8b0'], { count: 10, speed: 2, up: 2, life: 0.6 });
@@ -878,6 +884,13 @@ export class RaceScene {
       seen.add(p.id);
       const behind = p.z < minZ ? this.focus - p.z : 0;
       r.placeRace(p, Math.max(p.z, minZ), behind, dt, now, s.state, this.jumpMs);
+      if (p.f & FLAG.TURBO && Math.random() < (this.high ? 0.5 : 0.25)) {
+        // Vệt lửa phía sau khi đang TURBO.
+        const tail = r.group.position.clone();
+        tail.y = 0.4 + Math.random() * 0.6;
+        tail.z += 1.1;
+        this.particles.burst(tail, ['#ff3d00', '#ffb020', '#ffd166'], { count: 1, speed: 0.8, up: 1.2, life: 0.45 });
+      }
     }
     for (const [id, r] of this.runners) if (!seen.has(id)) r.group.visible = false;
   }

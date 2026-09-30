@@ -13,19 +13,29 @@ module.exports = {
   POWER_TAU: 0.9, // power giảm dần theo hàm mũ với hằng số thời gian này (giây)
   SHAKE_IMPULSE: 0.1,
   SHAKE_IMPULSE_STRENGTH: 0.12, // lắc càng mạnh cộng càng nhiều
-  TAP_IMPULSE: 0.06, // bấm nút PHI cộng ít hơn lắc
-  BOOST_MIN_INTERVAL_MS: 80,
+  SHAKE_MIN_INTERVAL_MS: 80,
+
+  // Năng lượng (mana) + TURBO: đầy thanh mới bấm PHI! được, bấm là dùng hết.
+  MANA_FILL_MS: 12000, // tự đầy từ 0 → 100% trong bấy nhiêu
+  CARROT_MANA: 0.1, // ăn cà rốt +10%
+  FENCE_MANA_LOSS: 0.2, // đâm rào -20%
+  TURBO_MS: 3000,
+  TURBO_FACTOR: 1.4, // nhanh hơn 40%, lướt qua bùn
 
   LATERAL_SPEED: 5,
   MUD_FACTOR: 0.4,
   STUN_MS: 1000,
   JUMP_MS: 900,
   JUMP_COOLDOWN_MS: 400,
-  CARROT_BOOST_MS: 1500,
-  CARROT_BONUS: 4,
 
   BODY_HALF_WIDTH: 0.45,
   BODY_HALF_LEN: 0.9,
+
+  // Va chạm giữa các con vật: đẩy nhau sang ngang, tông đuôi thì không xuyên qua được.
+  COLLIDE: true,
+  BUMP_PUSH: 0.35, // mỗi tick gỡ bấy nhiêu phần chồng lấn (càng lớn càng bật mạnh)
+  TURBO_PUSH_SHARE: 0.85, // con đang TURBO hất con kia: con kia chịu 85% lực đẩy
+  BUMP_FX_GAP_MS: 700, // mỗi con tối đa 1 hiệu ứng va chạm trong khoảng này
 
   MAX_PLAYERS: 12,
   PLAYER_DROP_MS: 2 * 60 * 1000, // người rời phòng chờ quá lâu thì xoá
