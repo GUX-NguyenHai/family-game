@@ -36,8 +36,27 @@
     </div>
     <div class="players">
       <h2>Người chơi <span id="playerCount">0</span></h2>
+      <div class="tier">
+        <div class="tier-row">
+          <span id="tierBadge" class="badge">🆓 Miễn phí · tối đa 4 người</span>
+          <button id="btnShowLicense" class="link">Nhập mã Pro</button>
+          <button id="btnRemoveLicense" class="link" hidden>Gỡ mã</button>
+        </div>
+        <form id="licenseForm" class="license-form" hidden>
+          <input id="licenseInput" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XX" autocomplete="off" spellcheck="false">
+          <button type="submit" class="primary">Kích hoạt</button>
+        </form>
+        <p id="licenseMsg" class="license-msg" hidden></p>
+      </div>
       <ul id="playerList"></ul>
       <p id="emptyHint" class="hint">Chưa có ai. Mời cả nhà quét mã nào!</p>
+      <div class="difficulty" role="radiogroup" aria-label="Độ khó">
+        <span class="label">Độ khó:</span>
+        <button data-level="easy">🟢 Dễ</button>
+        <button data-level="normal">🟡 Trung bình</button>
+        <button data-level="hard">🔴 Khó</button>
+      </div>
+      <p class="difficulty-desc"></p>
       <div class="buttons">
         <button id="btnStart" class="primary" disabled>▶ Bắt đầu đua</button>
         <button id="btnAddBot">+ Thêm bot</button>
@@ -54,6 +73,12 @@
     <div class="results-inner">
       <h1>🏆 Kết quả</h1>
       <ol id="resultList"></ol>
+      <div class="difficulty" role="radiogroup" aria-label="Độ khó">
+        <span class="label">Ván sau:</span>
+        <button data-level="easy">🟢 Dễ</button>
+        <button data-level="normal">🟡 Trung bình</button>
+        <button data-level="hard">🔴 Khó</button>
+      </div>
       <div class="buttons">
         <button id="btnAgain" class="primary">↻ Đua lại</button>
         <button id="btnLobby">Về phòng chờ</button>

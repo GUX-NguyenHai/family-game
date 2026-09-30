@@ -2,6 +2,7 @@
 const crypto = require('crypto');
 const C = require('./config');
 const game = require('./game');
+const license = require('./license');
 const manifest = require('../public/assets/animals.json');
 
 const ANIMAL_IDS = manifest.animals.map(a => a.id);
@@ -9,6 +10,7 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const BOT_NAMES = ['Bot Tèo', 'Bot Tí', 'Bot Sửu', 'Bot Dần', 'Bot Mão', 'Bot Thìn', 'Bot Tỵ', 'Bot Ngọ'];
 
 const rooms = new Map();
+const licenseRooms = new Map(); // mã Pro (id) → mã phòng đang dùng nó; mỗi mã chỉ cho 1 phòng
 
 function makeCode() {
   let code;
@@ -49,9 +51,51 @@ function createRoom(code, token) {
     lastTick: 0,
     finishedAt: 0,
     lastActive: Date.now(),
+    license: null, // { id, expiresAt, players } khi đã nhập mã Pro
+    maxPlayers: C.FREE_MAX_PLAYERS,
+    difficulty: C.DEFAULT_DIFFICULTY,
   };
   rooms.set(code, room);
   return room;
+}
+
+function releaseLicense(room) {
+  if (!room.license) return;
+  if (licenseRooms.get(room.license.id) === room.code) licenseRooms.delete(room.license.id);
+  room.license = null;
+  room.maxPlayers = C.FREE_MAX_PLAYERS;
+}
+
+// Gắn mã Pro cho phòng. Mã đang ở phòng khác mà màn hình phòng đó vẫn mở thì từ chối;
+// phòng kia đã đóng màn hình thì chuyển mã sang phòng này.
+function applyLicense(io, room, input) {
+  const v = license.verifyCode(input);
+  if (!v.ok) return v;
+  const holder = licenseRooms.get(v.id);
+  if (holder && holder !== room.code) {
+    const other = rooms.get(holder);
+    if (other && hostCount(io, other) > 0) return { ok: false, error: 'in-use' };
+    if (other) {
+      releaseLicense(other);
+      broadcastRoom(io, other);
+    }
+  }
+  if (room.license && room.license.id !== v.id) releaseLicense(room);
+  room.license = { id: v.id, expiresAt: v.expiresAt, players: v.players };
+  room.maxPlayers = Math.min(C.PRO_MAX_PLAYERS, Math.max(C.FREE_MAX_PLAYERS, v.players));
+  licenseRooms.set(v.id, room.code);
+  broadcastRoom(io, room);
+  return { ok: true, code: v.code, expiresAt: v.expiresAt, maxPlayers: room.maxPlayers };
+}
+
+// Mã hết hạn giữa chừng thì phòng trở về bản miễn phí.
+function checkLicenseExpiry(io, room, now = Date.now()) {
+  if (room.license?.expiresAt && now >= room.license.expiresAt) {
+    releaseLicense(room);
+    broadcastRoom(io, room);
+    return true;
+  }
+  return false;
 }
 
 function pickColor(room) {
@@ -75,8 +119,11 @@ function roomInfo(room) {
   return {
     code: room.code,
     state: room.state,
-    trackLen: C.TRACK_LEN,
-    maxPlayers: C.MAX_PLAYERS,
+    trackLen: room.race?.trackLen ?? C.DIFFICULTIES[room.difficulty].TRACK_LEN,
+    difficulty: room.difficulty,
+    maxPlayers: room.maxPlayers,
+    tier: room.license ? 'pro' : 'free',
+    proUntil: room.license?.expiresAt ?? null,
     players: [...room.players.values()].map(publicPlayer),
     results: room.results,
   };
@@ -86,6 +133,7 @@ function raceInfo(room) {
   const r = room.race;
   if (!r) return null;
   return {
+    level: r.level,
     width: r.width,
     trackLen: r.trackLen,
     jumpMs: C.JUMP_MS,
@@ -115,13 +163,15 @@ function stopLoop(room) {
 }
 
 function startRace(io, room) {
-  if (room.state === 'countdown' || room.state === 'racing') return;
+  if (room.state === 'countdown' || room.state === 'racing') return { ok: false, error: 'busy' };
+  checkLicenseExpiry(io, room);
   const racers = [...room.players.values()].filter(p => p.bot || p.connected);
-  if (!racers.length) return;
+  if (!racers.length) return { ok: false, error: 'empty' };
+  if (racers.length > room.maxPlayers) return { ok: false, error: 'too-many', maxPlayers: room.maxPlayers };
 
   for (const p of room.players.values()) p.inRace = false;
   const now = Date.now();
-  room.race = game.createRace(racers, now);
+  room.race = game.createRace(racers, now, room.difficulty);
   room.state = 'countdown';
   room.results = null;
   room.tick = 0;
@@ -131,6 +181,7 @@ function startRace(io, room) {
   broadcastRoom(io, room);
   stopLoop(room);
   room.loop = setInterval(() => tick(io, room), 1000 / C.TICK_HZ);
+  return { ok: true };
 }
 
 function backToLobby(io, room) {
@@ -216,7 +267,7 @@ function tick(io, room) {
 }
 
 function addBot(io, room) {
-  if (room.players.size >= C.MAX_PLAYERS) return;
+  if (room.players.size >= room.maxPlayers) return;
   const used = new Set([...room.players.values()].map(p => p.name));
   const name = BOT_NAMES.find(n => !used.has(n)) || `Bot ${room.players.size + 1}`;
   const id = 'bot-' + crypto.randomUUID();
@@ -257,10 +308,19 @@ function attach(io) {
       return room && p ? { room, p } : {};
     }
 
-    socket.on('host:create', (_payload, ack) => {
+    // Màn hình host đã từng nhập mã Pro (lưu ở trình duyệt) thì gắn lại cho phòng mới/phòng dựng lại.
+    function restoreLicense(room, input) {
+      if (!input || room.license) return null;
+      const r = applyLicense(io, room, input);
+      return r.ok ? null : r.error;
+    }
+
+    socket.on('host:create', (payload, ack) => {
+      if (rooms.size >= C.MAX_ROOMS) return reply(ack, { ok: false, error: 'busy' });
       const room = createRoom(makeCode(), crypto.randomUUID());
       joinAsHost(room);
-      reply(ack, { ok: true, code: room.code, token: room.token, room: roomInfo(room), race: null });
+      const licenseError = restoreLicense(room, payload?.license);
+      reply(ack, { ok: true, code: room.code, token: room.token, room: roomInfo(room), race: null, licenseError });
     });
 
     // Màn hình host tải lại trang, hoặc server vừa khởi động lại: dựng lại phòng với mã cũ.
@@ -270,14 +330,40 @@ function attach(io) {
       if (!code || !token) return reply(ack, { ok: false });
       let room = rooms.get(code);
       if (room && room.token !== token) return reply(ack, { ok: false });
-      if (!room) room = createRoom(code, token);
+      if (!room) {
+        if (rooms.size >= C.MAX_ROOMS) return reply(ack, { ok: false, error: 'busy' });
+        room = createRoom(code, token);
+      }
       joinAsHost(room);
-      reply(ack, { ok: true, code: room.code, token: room.token, room: roomInfo(room), race: raceInfo(room) });
+      const licenseError = restoreLicense(room, payload?.license);
+      reply(ack, { ok: true, code: room.code, token: room.token, room: roomInfo(room), race: raceInfo(room), licenseError });
     });
 
-    socket.on('host:start', () => {
+    // Nhập mã Pro; gửi mã rỗng để gỡ mã (về bản miễn phí).
+    socket.on('host:license', (payload, ack) => {
       const room = hostRoom();
-      if (room) startRace(io, room);
+      if (!room) return reply(ack, { ok: false, error: 'no-room' });
+      const input = String(payload?.code || '').trim();
+      if (!input) {
+        releaseLicense(room);
+        broadcastRoom(io, room);
+        return reply(ack, { ok: true, removed: true });
+      }
+      reply(ack, applyLicense(io, room, input));
+    });
+
+    socket.on('host:start', (_payload, ack) => {
+      const room = hostRoom();
+      reply(ack, room ? startRace(io, room) : { ok: false, error: 'no-room' });
+    });
+
+    // Chủ phòng chọn độ khó (chỉ đổi được ở phòng chờ hoặc lúc xem kết quả).
+    socket.on('host:difficulty', level => {
+      const room = hostRoom();
+      if (!room || !game.isLevel(level)) return;
+      if (room.state === 'countdown' || room.state === 'racing') return;
+      room.difficulty = level;
+      broadcastRoom(io, room);
     });
 
     socket.on('host:lobby', () => {
@@ -317,7 +403,9 @@ function attach(io) {
       let p = room.players.get(id);
 
       if (!p) {
-        if (room.players.size >= C.MAX_PLAYERS) return reply(ack, { ok: false, error: 'full' });
+        if (room.players.size >= room.maxPlayers) {
+          return reply(ack, { ok: false, error: 'full', tier: room.license ? 'pro' : 'free', maxPlayers: room.maxPlayers });
+        }
         p = { id, name, animal, color: pickColor(room), bot: false, inRace: false };
         room.players.set(id, p);
       } else if (!p.inRace || room.state === 'lobby') {
@@ -390,9 +478,11 @@ function attach(io) {
       if (anyone) room.lastActive = now;
       else if (now - room.lastActive > C.ROOM_IDLE_MS) {
         stopLoop(room);
+        releaseLicense(room);
         rooms.delete(room.code);
         continue;
       }
+      if (checkLicenseExpiry(io, room, now)) changed = false; // đã broadcast rồi
       if (changed) broadcastRoom(io, room);
     }
   }, 30000).unref();

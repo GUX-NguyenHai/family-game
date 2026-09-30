@@ -713,7 +713,7 @@ export class RaceScene {
   }
 
   // Dữ liệu phòng thay đổi (vào/ra, đổi con vật...).
-  setPlayers(players, state) {
+  setPlayers(players, state, trackLen = this.trackLen) {
     const ids = new Set(players.map(p => p.id));
     for (const [id, r] of this.runners) {
       if (!ids.has(id)) {
@@ -739,7 +739,7 @@ export class RaceScene {
         this.clearObstacles();
       }
       this.lobbyOrder = players.map(p => p.id);
-      this.buildTrack(trackWidthFor(Math.max(1, players.length)), this.trackLen);
+      this.buildTrack(trackWidthFor(Math.max(1, players.length)), trackLen);
     }
   }
 

@@ -73,21 +73,39 @@ document.addEventListener('pointerdown', unlockAudio);
 // ---------- Kết nối ----------
 socket.on('connect', () => {
   const saved = session.get();
-  if (saved) socket.emit('host:resume', saved, res => (res?.ok ? onJoined(res) : create()));
+  if (saved?.code) socket.emit('host:resume', saved, res => (res?.ok ? onJoined(res) : create()));
   else create();
 });
 socket.on('disconnect', () => toast('Mất kết nối server, đang nối lại…'));
 
+// Mã Pro đã nhập được nhớ trong tab này để tự gắn lại khi tải lại trang / server khởi động lại.
+function savedLicense() {
+  return session.get()?.license || '';
+}
+
 function create() {
-  socket.emit('host:create', null, onJoined);
+  socket.emit('host:create', { license: savedLicense() }, res => {
+    if (res?.error === 'busy') {
+      $('#loading').hidden = false;
+      $('#loading').textContent = 'Server đang có quá nhiều phòng, thử lại sau ít phút…';
+      setTimeout(create, 10000);
+      return;
+    }
+    onJoined(res);
+  });
 }
 
 function onJoined(res) {
   if (!res?.ok) return;
-  session.set({ code: res.code, token: res.token });
+  $('#loading').hidden = true;
+  session.set({ code: res.code, token: res.token, license: savedLicense() });
   setJoinUrl(res.code);
-  if (res.race) scene.setupRace(res.race);
+  if (res.race) onRace(res.race);
   onRoom(res.room);
+  if (res.licenseError) {
+    session.set({ code: res.code, token: res.token, license: '' });
+    showLicenseMsg(LICENSE_ERRORS[res.licenseError] || 'Không gắn lại được mã Pro.', false);
+  }
 }
 
 async function setJoinUrl(code) {
@@ -114,16 +132,22 @@ async function setJoinUrl(code) {
 
 // ---------- Trạng thái phòng ----------
 socket.on('room', onRoom);
-socket.on('race', info => scene.setupRace(info));
+socket.on('race', onRace);
 socket.on('state', onState);
 socket.on('fx', onFx);
+
+function onRace(info) {
+  trackLen = info.trackLen;
+  scene.setupRace(info);
+}
 
 function onRoom(info) {
   room = info;
   trackLen = info.trackLen;
   players = new Map(info.players.map(p => [p.id, p]));
-  scene.setPlayers(info.players, info.state);
+  scene.setPlayers(info.players, info.state, info.trackLen);
   renderLobby();
+  renderDifficulty();
 
   $('#lobby').hidden = info.state !== 'lobby';
   $('#hud').hidden = !(info.state === 'countdown' || info.state === 'racing' || info.state === 'finished');
@@ -141,8 +165,91 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
+// ---------- Độ khó (chủ phòng chọn cho cả phòng) ----------
+const LEVEL_DESC = {
+  easy: 'Đường 300m, ít rào, nhiều cà rốt, đâm rào chỉ khựng nhẹ, bot chậm. Hợp với trẻ nhỏ.',
+  normal: 'Đường 400m, vật cản vừa phải, bot khá.',
+  hard: 'Đường 500m, nhiều rào và bùn to, phạt nặng, bot rất giỏi.',
+};
+
+function renderDifficulty() {
+  for (const b of document.querySelectorAll('.difficulty button[data-level]')) {
+    b.classList.toggle('sel', b.dataset.level === room.difficulty);
+  }
+  for (const el of document.querySelectorAll('.difficulty-desc')) el.textContent = LEVEL_DESC[room.difficulty] || '';
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest?.('.difficulty button[data-level]');
+  if (b) socket.emit('host:difficulty', b.dataset.level);
+});
+
+// ---------- Gói miễn phí / Pro ----------
+const LICENSE_ERRORS = {
+  invalid: 'Mã không đúng. Kiểm tra lại từng ký tự.',
+  expired: 'Mã đã hết hạn.',
+  'in-use': 'Mã đang được dùng ở một phòng khác đang mở.',
+  disabled: 'Server chưa bật tính năng Pro.',
+  'no-room': 'Chưa kết nối được phòng, thử lại.',
+};
+
+function formatDate(ms) {
+  return new Date(ms).toLocaleDateString('vi-VN');
+}
+
+function renderTier() {
+  const pro = room.tier === 'pro';
+  const badge = $('#tierBadge');
+  badge.classList.toggle('pro', pro);
+  badge.textContent = pro
+    ? `⭐ Pro · tối đa ${room.maxPlayers} người${room.proUntil ? ` · hết hạn ${formatDate(room.proUntil)}` : ''}`
+    : `🆓 Miễn phí · tối đa ${room.maxPlayers} người`;
+  $('#btnShowLicense').textContent = pro ? 'Đổi mã' : 'Nhập mã Pro';
+  $('#btnRemoveLicense').hidden = !pro;
+}
+
+function showLicenseMsg(text, ok) {
+  const el = $('#licenseMsg');
+  el.textContent = text;
+  el.classList.toggle('ok', !!ok);
+  el.hidden = !text;
+}
+
+$('#btnShowLicense').onclick = () => {
+  const form = $('#licenseForm');
+  form.hidden = !form.hidden;
+  if (!form.hidden) $('#licenseInput').focus();
+};
+
+$('#licenseForm').onsubmit = e => {
+  e.preventDefault();
+  const code = $('#licenseInput').value.trim();
+  if (!code) return;
+  socket.emit('host:license', { code }, res => {
+    if (res?.ok) {
+      const s = session.get() || {};
+      session.set({ ...s, license: res.code });
+      $('#licenseInput').value = '';
+      $('#licenseForm').hidden = true;
+      showLicenseMsg(`Đã kích hoạt Pro: tối đa ${res.maxPlayers} người${res.expiresAt ? `, hết hạn ${formatDate(res.expiresAt)}` : ''}.`, true);
+    } else {
+      showLicenseMsg(LICENSE_ERRORS[res?.error] || 'Không kích hoạt được mã.', false);
+    }
+  });
+};
+
+$('#btnRemoveLicense').onclick = () => {
+  if (!confirm('Gỡ mã Pro khỏi phòng này? Phòng sẽ về bản miễn phí.')) return;
+  socket.emit('host:license', { code: '' }, () => {
+    const s = session.get() || {};
+    session.set({ ...s, license: '' });
+    showLicenseMsg('Đã gỡ mã, phòng về bản miễn phí.', true);
+  });
+};
+
 function renderLobby() {
   const list = room.players;
+  renderTier();
   $('#playerCount').textContent = `${list.length}/${room.maxPlayers}`;
   $('#emptyHint').hidden = list.length > 0;
   $('#playerList').innerHTML = list
@@ -281,14 +388,17 @@ function toast(text) {
 }
 
 // ---------- Nút bấm ----------
-$('#btnStart').onclick = () => {
+function startRace() {
   unlockAudio();
-  socket.emit('host:start');
-};
-$('#btnAgain').onclick = () => {
-  unlockAudio();
-  socket.emit('host:start');
-};
+  socket.emit('host:start', null, res => {
+    if (res?.error === 'too-many') {
+      toast(`Phòng hiện chỉ cho đua tối đa ${res.maxPlayers} người. Bớt người/bot hoặc nhập mã Pro.`);
+      socket.emit('host:lobby');
+    }
+  });
+}
+$('#btnStart').onclick = startRace;
+$('#btnAgain').onclick = startRace;
 $('#btnLobby').onclick = () => socket.emit('host:lobby');
 $('#btnAddBot').onclick = () => socket.emit('host:addBot');
 $('#btnClearBots').onclick = () => socket.emit('host:clearBots');

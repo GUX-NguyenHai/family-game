@@ -7,6 +7,9 @@ services:
     ports:
       # Chỉ mở cho nginx trên cùng máy. Muốn truy cập thẳng từ ngoài thì đổi thành "3000:3000".
       - "127.0.0.1:3000:3000"
+    environment:
+      # Khoá ký mã Pro, đặt trong file .env cạnh file này (không đưa lên git). Trống = tắt Pro.
+      - LICENSE_SECRET=${LICENSE_SECRET:-}
     mem_limit: 256m
     logging:
       driver: json-file

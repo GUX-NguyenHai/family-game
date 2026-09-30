@@ -22,6 +22,48 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 
 Các con số này chỉnh trong `src/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm chỉnh bằng `COLLIDE` (đặt `false` để tắt), `BUMP_PUSH`, `TURBO_PUSH_SHARE`.
 
+## Độ khó
+
+Chủ phòng chọn ở phòng chờ trên màn hình chung (hoặc ở màn kết quả cho ván sau). **Mặc định: Dễ.** Mọi gói đều dùng được.
+
+| | 🟢 Dễ | 🟡 Trung bình | 🔴 Khó |
+|---|---|---|---|
+| Đường đua | 300m | 400m | 500m |
+| Vật cản | Ít rào, nhiều cà rốt, không có 2 vật cản cạnh nhau | Vừa phải | Nhiều rào, bùn to, hay có 2 vật cản cạnh nhau |
+| Đâm rào | Khựng 0,5s, không mất năng lượng | Khựng 1s, −20% | Khựng 1,5s, −30% |
+| Va nhau | Chậm nhẹ (còn 70%) | Còn 40% | Còn 40%, chậm lâu hơn |
+| Không lắc vẫn chạy | 7 m/s | 5 m/s | 3 m/s |
+| Bot | Chậm, ít nhảy rào, hay phí TURBO | Khá | Nhanh, nhảy rào giỏi, dùng TURBO khôn |
+
+Tốc độ tối đa ở cả 3 mức đều là 19 m/s. Chỉnh các con số trong `DIFFICULTIES` ở `src/config.js`.
+
+## Miễn phí và Pro
+
+| | Miễn phí | Pro |
+|---|---|---|
+| Số người mỗi phòng (tính cả bot) | 4 (`FREE_MAX_PLAYERS`) | Theo mã, tối đa 12 (`PRO_MAX_PLAYERS`) |
+
+- **Mã Pro** chủ phòng nhập trên màn hình chung: phòng chờ → "Nhập mã Pro".
+- **Mỗi mã chỉ dùng cho một phòng tại một thời điểm.** Nếu phòng đang giữ mã đã đóng màn hình, phòng khác nhập mã đó sẽ lấy được mã.
+- Mã được **ký bằng `LICENSE_SECRET`**, chứa sẵn hạn dùng và số người, nên **không cần database**. Việc bán và thanh toán nằm ngoài game.
+- Mã hết hạn thì phòng tự về bản miễn phí.
+- Server tối đa `MAX_ROOMS` = 50 phòng cùng lúc.
+
+**Đặt khoá bí mật (làm một lần trên server):**
+```bash
+cd ~/family-game
+echo "LICENSE_SECRET=$(openssl rand -hex 32)" > .env
+docker compose up -d --build
+```
+Giữ kín file `.env`, **không đưa lên git**. Đổi khoá thì mọi mã cũ mất hiệu lực. Chưa có khoá thì server tắt Pro, mọi phòng là bản miễn phí.
+
+**Tạo mã (trên server, sau khi đã đặt khoá):**
+```bash
+docker compose exec dua-thu node src/license.js --days 30 --players 12
+docker compose exec dua-thu node src/license.js --days 0 --count 5    # 5 mã vĩnh viễn
+```
+Khi chạy trên Mac không có `.env`, `npm run make-code -- --days 30` tạo **mã thử**. Mã này chỉ dùng được với server cũng chưa đặt khoá.
+
 ## Cài đặt (lần đầu)
 
 ```bash

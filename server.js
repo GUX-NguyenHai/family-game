@@ -5,6 +5,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const QRCode = require('qrcode');
 const rooms = require('./src/rooms');
+const license = require('./src/license');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -47,4 +48,11 @@ server.listen(PORT, HOST, () => {
   console.log(`Đua thú đang chạy:`);
   console.log(`  Màn hình chung: http://localhost:${PORT}/host`);
   for (const ip of lanIps()) console.log(`  Trong mạng LAN:  http://${ip}:${PORT}/host`);
+  if (!license.hasSecret()) {
+    console.warn(
+      license.enabled()
+        ? '⚠️  Chưa đặt LICENSE_SECRET: mã Pro đang dùng khoá thử (chỉ nên dùng khi phát triển).'
+        : '⚠️  Chưa đặt LICENSE_SECRET: tắt mã Pro, mọi phòng là bản miễn phí.',
+    );
+  }
 });

@@ -128,7 +128,15 @@ function join() {
     wantJoin = false;
     store.set('fg:joined', null);
     show('join');
-    msg(res?.error === 'full' ? 'Phòng đã đủ người.' : 'Không tìm thấy phòng. Kiểm tra lại mã hoặc quét lại QR.');
+    if (res?.error === 'full') {
+      msg(
+        res.tier === 'free'
+          ? `Phòng miễn phí chỉ tối đa ${res.maxPlayers} người và đã đủ. Nhờ chủ phòng nhập mã Pro để thêm người.`
+          : `Phòng đã đủ ${res.maxPlayers} người.`,
+      );
+    } else {
+      msg('Không tìm thấy phòng. Kiểm tra lại mã hoặc quét lại QR.');
+    }
   });
 }
 
@@ -174,7 +182,10 @@ function onRoom(info) {
 
   if (info.state === 'lobby' || !me.inRace) {
     if (editing && info.state === 'lobby') return;
-    $('#lobbyMsg').textContent = info.state === 'lobby' ? 'Chờ chủ phòng bắt đầu…' : 'Đang có lượt đua, bạn chờ lượt sau nhé!';
+    const level = { easy: '🟢 Dễ', normal: '🟡 Trung bình', hard: '🔴 Khó' }[info.difficulty] || '';
+    $('#lobbyMsg').textContent =
+      (info.state === 'lobby' ? 'Chờ chủ phòng bắt đầu…' : 'Đang có lượt đua, bạn chờ lượt sau nhé!') +
+      (level ? ` · Độ khó: ${level}` : '');
     show('lobby');
     return;
   }

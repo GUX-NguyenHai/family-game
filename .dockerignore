@@ -6,6 +6,7 @@ deploy
 .DS_Store
 **/.DS_Store
 *.log
+.env
 README.md
 Dockerfile
 docker-compose.yml

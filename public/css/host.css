@@ -99,6 +99,51 @@ button.primary:hover:not(:disabled) { background: #ffc34d; }
   background: rgba(255, 255, 255, 0.15);
   text-align: center;
 }
+/* Độ khó */
+.difficulty { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+.difficulty .label { color: var(--muted); margin-right: 4px; }
+.difficulty button { padding: 8px 12px; font-size: 0.95rem; border: 2px solid transparent; }
+.difficulty button.sel { border-color: var(--accent); background: rgba(255, 176, 32, 0.18); }
+.difficulty-desc { margin: 6px 0 0; color: var(--muted); font-size: 0.85rem; min-height: 1.2em; }
+#results .difficulty { justify-content: center; }
+
+/* Gói miễn phí / Pro */
+.tier { margin-bottom: 12px; }
+.tier-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.badge {
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.badge.pro { background: linear-gradient(90deg, #ffb020, #ff7a3d); color: #1b1300; }
+button.link {
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--accent);
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+button.link:hover:not(:disabled) { background: transparent; color: #ffc34d; }
+.license-form { display: flex; gap: 8px; margin-top: 10px; }
+.license-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font: inherit;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.license-form button { padding: 10px 14px; font-size: 1rem; }
+.license-msg { margin: 8px 0 0; font-size: 0.9rem; color: #ffd166; }
+.license-msg.ok { color: #7ee08a; }
+
 #playerList {
   list-style: none;
   margin: 0;
