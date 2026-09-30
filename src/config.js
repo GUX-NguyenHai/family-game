@@ -20,10 +20,10 @@ module.exports = {
   SHAKE_MIN_INTERVAL_MS: 80,
 
   // Năng lượng (mana) + TURBO: có mana là bấm PHI! được, bấm là dùng hết mana đang có.
-  MANA_FILL_MS: 8000, // tự đầy từ 0 → 100% trong bấy nhiêu
+  MANA_FILL_MS: 12000, // tự đầy từ 0 → 100% trong bấy nhiêu
   CARROT_MANA: 0.1, // ăn cà rốt +10%
   FENCE_MANA_LOSS: 0.2, // đâm rào -20%
-  TURBO_MS: 3000, // TURBO kéo dài bấy nhiêu khi mana đầy; ít mana thì ngắn theo tỉ lệ
+  TURBO_MS: 5000, // bấm PHI! 1 lần là TURBO, mana tụt dần: đầy 100% thì cạn sau bấy nhiêu (ít mana thì ngắn hơn)
   TURBO_FACTOR: 1.4, // nhanh hơn 40%, lướt qua bùn
 
   LATERAL_SPEED: 5,

@@ -257,18 +257,24 @@ function onHit(e) {
 // ---------- Năng lượng + nút PHI! (TURBO) ----------
 let manaReady = false;
 
-// Có mana là bấm được (dùng hết mana đang có); đầy 100% thì nhấp nháy.
+// Có mana là bấm được; trong lúc TURBO thanh mana tụt dần tới 0. Đầy 100% thì nhấp nháy.
+let lastMana = 0;
 function renderMana(mana, turboOn) {
   const btn = $('#btnBoost');
   const value = Math.max(0, Math.min(1, mana || 0));
+  lastMana = value;
   const pct = Math.round(value * 100);
   const full = pct >= 100;
   manaReady = value > 0 && !turboOn;
-  btn.style.setProperty('--mana', `${turboOn ? 100 : pct}%`);
+  btn.style.setProperty('--mana', `${pct}%`);
   btn.classList.toggle('ready', manaReady);
   btn.classList.toggle('full', full && !turboOn);
   btn.classList.toggle('turbo', turboOn);
-  $('#boostLabel').innerHTML = turboOn ? 'TURBO!' : full ? 'PHI! 🔥' : `PHI!<small>${pct}%</small>`;
+  $('#boostLabel').innerHTML = turboOn
+    ? `TURBO!<small>${pct}%</small>`
+    : full
+      ? 'PHI! 🔥'
+      : `PHI!<small>${pct}%</small>`;
 }
 
 // Máy không lắc được thì báo cho người chơi biết.
@@ -323,7 +329,7 @@ $('#btnBoost').addEventListener('pointerdown', e => {
   }
   socket.emit('turbo');
   vibrate(40);
-  renderMana(0, true); // hiển thị ngay, server sẽ xác nhận qua 'me'
+  renderMana(lastMana, true); // hiển thị ngay, server sẽ cập nhật mana tụt dần qua 'me'
 });
 
 function flashPower() {

@@ -12,9 +12,9 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 |---|---|
 | Nghiêng máy trái/phải (hoặc giữ nút ◀ ▶) | Lái sang trái/phải |
 | **Lắc máy lên xuống** | Chạy nhanh hơn. Lắc càng mạnh, càng đều thì càng nhanh. Lắc ngang không tính. Tốc độ **tăng dần**: từ đứng yên lên tối đa mất ~3 giây |
-| Nút **PHI!** (TURBO) | **Có năng lượng là bấm được.** Bấm là dùng hết năng lượng đang có: nhanh hơn 40% và lướt qua bùn. Đầy 100% thì được 3 giây, 50% thì 1,5 giây… |
+| Nút **PHI!** (TURBO) | **Có năng lượng là bấm được.** Nhanh hơn 40% và lướt qua bùn. Trong lúc TURBO, thanh năng lượng **tụt dần**, cạn thì hết TURBO: đầy 100% dùng được 5 giây, 50% dùng được 2,5 giây… Chỉ cần bấm 1 lần, không cần giữ. Đang TURBO mà ăn cà rốt thì được kéo dài. Đâm rào thì mất TURBO |
 | Bấm nút **NHẢY** | Nhảy qua rào |
-| ⚡ Năng lượng | Tự đầy sau 8 giây (không tăng trong lúc TURBO). Đầy thì điện thoại rung và nút PHI! nhấp nháy |
+| ⚡ Năng lượng | Tự đầy sau 12 giây (không tăng trong lúc TURBO). Đầy thì điện thoại rung và nút PHI! nhấp nháy |
 | 🟫 Bùn | Chạy chậm lại (trừ khi đang TURBO) |
 | 🚧 Rào | Đâm vào thì dừng hẳn, khựng 1 giây, mất 20% năng lượng, rồi tăng tốc lại từ 0 |
 | 🥕 Cà rốt | +10% năng lượng. Ai tới trước người đó ăn |

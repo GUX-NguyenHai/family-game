@@ -86,7 +86,7 @@ function resetRacer(C, p, x) {
   p.jumpUntil = 0;
   p.nextJumpAt = 0;
   p.mana = 0;
-  p.turboUntil = 0;
+  p.turboOn = false;
   p.inMud = false;
   p.hits = new Set();
   p.finishMs = null;
@@ -150,12 +150,12 @@ function shake(race, p, strength, now) {
   p.power = Math.min(1, p.power + C.SHAKE_IMPULSE + C.SHAKE_IMPULSE_STRENGTH * s);
 }
 
-// Nút PHI!: có mana là dùng được, dùng hết mana đang có; mana càng nhiều TURBO càng lâu.
+// Nút PHI!: có mana là bật TURBO; trong lúc TURBO mana giảm dần, hết mana thì hết TURBO.
+// (Đầy 100% thì được TURBO_MS; ít mana thì ngắn theo tỉ lệ.)
 function turbo(race, p, now) {
   if (!isRunning(race, p, now)) return false;
-  if (p.mana <= 0 || now < p.turboUntil) return false;
-  p.turboUntil = now + cfgOf(race).TURBO_MS * p.mana;
-  p.mana = 0;
+  if (p.mana <= 0 || p.turboOn) return false;
+  p.turboOn = true;
   return true;
 }
 
@@ -181,13 +181,23 @@ function step(race, racers, now, dt) {
       p.z += p.speed * dt;
       continue;
     }
-    if (race.endedAt) continue;
+    if (race.endedAt) {
+      p.turboOn = false;
+      continue;
+    }
 
     p.power *= Math.exp(-dt / C.POWER_TAU);
     const stunned = now < p.stunUntil;
     const jumping = now < p.jumpUntil;
-    const turboOn = now < p.turboUntil;
-    if (!turboOn && p.mana < 1) {
+    const turboOn = p.turboOn;
+    if (turboOn) {
+      // Đang TURBO: tiêu mana dần.
+      p.mana -= (dt * 1000) / C.TURBO_MS;
+      if (p.mana <= 0) {
+        p.mana = 0;
+        p.turboOn = false;
+      }
+    } else if (p.mana < 1) {
       p.mana = Math.min(1, p.mana + (dt * 1000) / C.MANA_FILL_MS);
       if (p.mana >= 1) events.push({ pid: p.id, type: 'manaFull' });
     }
@@ -214,6 +224,7 @@ function step(race, racers, now, dt) {
           p.stunUntil = now + C.STUN_MS;
           p.power = 0;
           p.mana = Math.max(0, p.mana - C.FENCE_MANA_LOSS);
+          p.turboOn = false; // đâm rào thì mất TURBO, mana còn lại vẫn giữ
           crashed = true;
           events.push({ pid: p.id, type: 'fence', side: p.x < o.x ? 'left' : 'right' });
         }
@@ -241,6 +252,7 @@ function step(race, racers, now, dt) {
 
     if (p.z >= race.trackLen) {
       p.z = race.trackLen;
+      p.turboOn = false;
       p.finishMs = now - race.startAt;
       p.rank = ++race.finishCount;
       if (!race.firstFinishAt) race.firstFinishAt = now;
@@ -276,11 +288,11 @@ function resolveCollisions(race, racers, now, events) {
 
       // Va nhau: cả hai chậm lại (con đang TURBO thì không).
       for (const p of [a, b]) {
-        if (now >= p.turboUntil) p.bumpSlowUntil = now + C.BUMP_SLOW_MS;
+        if (!p.turboOn) p.bumpSlowUntil = now + C.BUMP_SLOW_MS;
       }
 
-      const aTurbo = now < a.turboUntil;
-      const bTurbo = now < b.turboUntil;
+      const aTurbo = a.turboOn;
+      const bTurbo = b.turboOn;
       let shareA = 0.5;
       if (aTurbo && !bTurbo) shareA = 1 - C.TURBO_PUSH_SHARE;
       else if (bTurbo && !aTurbo) shareA = C.TURBO_PUSH_SHARE;
@@ -297,7 +309,7 @@ function resolveCollisions(race, racers, now, events) {
       if (Math.abs(dz) > minDz * 0.5) {
         const back = dz > 0 ? a : b;
         const front = dz > 0 ? b : a;
-        if (now >= back.turboUntil) back.speed = Math.min(back.speed, front.speed);
+        if (!back.turboOn) back.speed = Math.min(back.speed, front.speed);
       }
 
       if (!race.contacts.has(key)) {
@@ -348,7 +360,7 @@ function flagsOf(p, now) {
   if (now < p.jumpUntil) f |= FLAG_JUMP;
   if (p.inMud) f |= FLAG_MUD;
   if (p.finishMs != null) f |= FLAG_FINISHED;
-  if (now < p.turboUntil) f |= FLAG_TURBO;
+  if (p.turboOn) f |= FLAG_TURBO;
   if (now < p.bumpSlowUntil) f |= FLAG_BUMP;
   return f;
 }
