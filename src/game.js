@@ -198,7 +198,7 @@ function step(race, racers, now, dt) {
       }
     } else if (p.mana < 1 && !stunned) {
       // Chỉ tăng khi đang chạy: nhanh (≥ MANA_FULL_RATE_AT tốc độ tối đa) thì tăng đủ tốc, chậm thì tăng chậm, đứng yên thì không.
-      const runFactor = Math.min(1, p.speed / (C.MAX_SPEED * C.MANA_FULL_RATE_AT));
+      const runFactor = p.speed < C.MANA_MIN_SPEED ? 0 : Math.min(1, p.speed / (C.MAX_SPEED * C.MANA_FULL_RATE_AT));
       if (runFactor > 0) {
         p.mana = Math.min(1, p.mana + ((dt * 1000) / C.MANA_FILL_MS) * runFactor);
         if (p.mana >= 1) events.push({ pid: p.id, type: 'manaFull' });
@@ -208,7 +208,8 @@ function step(race, racers, now, dt) {
 
     // Tốc độ mục tiêu = mức lắc × tốc độ tối đa (không lắc thì 0); tốc độ thật đuổi dần theo.
     const fresh = now - p.driveAt <= C.MOVE_STALE_MS;
-    const drive = fresh ? Math.min(1, p.drive * C.DRIVE_GAIN) : 0;
+    const raw = fresh ? p.drive * C.DRIVE_GAIN : 0;
+    const drive = raw < C.MIN_DRIVE ? 0 : Math.min(1, raw); // vùng chết: rung tay nhẹ = đứng yên
     p.driveEff = drive;
     let target = 0;
     if (!stunned) {

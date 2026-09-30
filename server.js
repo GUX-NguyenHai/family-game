@@ -51,7 +51,8 @@ app.get('/api/lan', (req, res) => res.json({ ips: lanIps() }));
 // Mỗi lần server khởi động có mã phiên bản mới. Trang đang mở kết nối lại mà thấy khác mã
 // thì tự tải lại, để không chạy code giao diện cũ sau khi build/deploy.
 const BUILD_ID = Date.now().toString(36);
-io.on('connection', socket => socket.emit('hello', { build: BUILD_ID }));
+const { APP_VERSION } = require('./src/config');
+io.on('connection', socket => socket.emit('hello', { build: BUILD_ID, version: APP_VERSION }));
 
 rooms.attach(io);
 

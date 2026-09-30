@@ -1,6 +1,9 @@
 // Tham số luật chơi. Đơn vị: mét, giây, mili-giây.
 // Lưu ý: các tham số có trong DIFFICULTIES (cuối file) sẽ bị ghi đè theo độ khó phòng chọn.
 module.exports = {
+  // Tăng mỗi lần sửa; hiện ở góc màn hình chính và điện thoại để biết đang chạy đúng bản chưa.
+  APP_VERSION: '2026-09-30.8',
+
   TICK_HZ: 30,
   PLAYER_UPDATE_EVERY: 3, // gửi 'me' cho điện thoại mỗi 3 tick (~10 lần/giây)
 
@@ -14,6 +17,8 @@ module.exports = {
   MAX_SPEED: 19, // m/s khi lắc hết cỡ
   DRIVE_GAIN: 1, // nhân mức lắc (độ khó chỉnh: dễ thì lắc nhẹ đã nhanh)
   MOVE_STALE_MS: 400, // quá lâu không nhận mức lắc (mất mạng, tắt màn hình) thì coi như dừng
+  MIN_DRIVE: 0.12, // lắc nhẹ hơn mức này (rung tay khi cầm yên) coi như đứng yên hẳn
+  MANA_MIN_SPEED: 1.5, // m/s: chạy chậm hơn mức này thì mana không tăng
   ACCEL: 8, // tăng tốc (m/s²): từ 0 lên tối đa ~2,4 giây
   TURBO_ACCEL_MULT: 2, // đang TURBO thì vọt lên nhanh gấp đôi
   BRAKE: 25, // giảm tốc (m/s²): ngừng lắc / vào bùn thì chậm lại nhanh (~0,8 giây là dừng)

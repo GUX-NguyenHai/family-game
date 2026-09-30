@@ -149,9 +149,11 @@ socket.on('disconnect', () => {
 });
 // Server vừa được cập nhật (khác phiên bản lúc mở trang) thì tải lại để dùng code mới.
 let buildId = null;
-socket.on('hello', ({ build } = {}) => {
+socket.on('hello', ({ build, version } = {}) => {
   if (buildId && build && build !== buildId) location.reload();
   buildId = build;
+  const v = $('#appVersion');
+  if (v) v.textContent = version ? `Phiên bản ${version}` : '';
 });
 socket.on('kicked', () => leave('Bạn đã được mời ra khỏi phòng.'));
 socket.on('replaced', () => leave('Bạn vừa vào phòng từ một tab/máy khác.'));

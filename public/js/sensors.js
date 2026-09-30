@@ -4,13 +4,13 @@
 
 const DEADZONE_DEG = 3; // nghiêng dưới mức này coi như cầm thẳng
 const FULL_TILT_DEG = 15; // nghiêng tới mức này là lái hết cỡ
-const NOISE_FLOOR = 1.0; // m/s²: rung tay khi cầm yên dưới mức này không tính
+const NOISE_FLOOR = 1.5; // m/s²: rung tay khi cầm yên dưới mức này không tính
 const ACTIVITY_TAU_MS = 250; // làm mượt mức lắc: dừng tay thì ~0,5 giây là về 0
 const MAX_LEVEL = 1.5; // cho phép vượt 1 để độ khó cao (phải lắc mạnh hơn) vẫn đạt tối đa
 // Nhảy = "giật cương": hất nhanh đầu máy về phía mình, tức góc ngửa (beta) đổi nhiều trong thời gian ngắn.
 // Khác chạy (dịch chuyển lên xuống, góc gần như không đổi) và lái (nghiêng trái/phải = gamma, trục khác).
 const JUMP_GAP_MS = 700; // 2 lần nhảy cách nhau ít nhất
-const JUMP_WINDOW_MS = 250; // góc ngửa phải đổi đủ nhiều trong khoảng này
+const JUMP_WINDOW_MS = 350; // góc ngửa phải đổi đủ nhiều trong khoảng này
 const GRAVITY_SMOOTH = 0.05; // lọc thông thấp để biết hướng trọng lực (= phương thẳng đứng)
 const TILT_SMOOTH_MS = 120; // làm mượt góc nghiêng: giật máy nhanh sang ngang không làm đổi làn
 const G = 9.81;
@@ -54,8 +54,8 @@ export function createSensors({ onJump } = {}) {
     // Độ nhạy: lắc mạnh bao nhiêu (m/s², trên mức rung tay) thì coi là hết cỡ. Nhỏ = nhạy.
     range: load('fg:range', 10),
     pitchSwing: 0, // góc ngửa đổi nhiều nhất gần đây (độ) để vẽ thanh đo
-    // Ngưỡng nhảy (độ đổi trong 0,25 giây): nhỏ = nhạy. 0 = tắt nhảy bằng cử chỉ, chỉ dùng nút.
-    jumpDeg: load('fg:jumpDeg', 20),
+    // Ngưỡng nhảy (độ đổi trong 0,35 giây): nhỏ = nhạy. 0 = tắt nhảy bằng cử chỉ, chỉ dùng nút.
+    jumpDeg: load('fg:jumpDeg2', 15),
   };
   let lastMotionAt = 0;
   let lastJumpAt = 0;
@@ -194,7 +194,7 @@ export function createSensors({ onJump } = {}) {
 
   s.setJumpDeg = v => {
     s.jumpDeg = Number(v) || 0;
-    save('fg:jumpDeg', s.jumpDeg);
+    save('fg:jumpDeg2', s.jumpDeg);
   };
 
   // Gọi mỗi khung hình: nếu trình duyệt ngừng gửi sự kiện chuyển động thì cho mức lắc về 0.
