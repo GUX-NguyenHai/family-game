@@ -15,7 +15,13 @@ app.disable('x-powered-by');
 const server = http.createServer(app);
 const io = new Server(server, { pingInterval: 10000, pingTimeout: 8000 });
 
-app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
+// HTML/JS/CSS của game: bắt trình duyệt luôn hỏi lại server (không dùng bản cũ trong bộ nhớ đệm).
+app.use(
+  express.static(path.join(__dirname, 'public'), {
+    extensions: ['html'],
+    setHeaders: res => res.setHeader('Cache-Control', 'no-cache'),
+  }),
+);
 app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules/three'), { maxAge: '1d' }));
 // Ưu tiên model đã tối ưu (npm run models), không có thì dùng file gốc trong animal/.
 app.use('/models', express.static(path.join(__dirname, 'build/models'), { maxAge: '1h' }));

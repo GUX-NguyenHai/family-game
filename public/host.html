@@ -89,6 +89,17 @@
 
   <div id="loading">Đang tải…</div>
 
+  <script>
+    // Có lỗi lúc tải thì hiện lên màn hình thay vì kẹt ở "Đang tải…".
+    (function () {
+      function show(msg) {
+        var el = document.getElementById('loading');
+        if (el && !el.hidden) el.textContent = 'Lỗi: ' + msg + ' (thử Ctrl+Shift+R để tải lại)';
+      }
+      window.addEventListener('error', function (e) { show(e.message || 'không tải được ' + (e.target && e.target.src || 'tệp')); }, true);
+      window.addEventListener('unhandledrejection', function (e) { show(e.reason && e.reason.message || String(e.reason)); });
+    })();
+  </script>
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="/js/host/main.js"></script>
 </body>

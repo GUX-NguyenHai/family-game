@@ -6,7 +6,7 @@ const PAD = 10;
 export class Minimap {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
+    this.ctx = canvas?.getContext('2d') || null; // trang HTML cũ không có khung minimap: bỏ qua, không làm hỏng trang
     this.race = null;
     this.taken = new Set();
     this.colors = new Map();
@@ -15,6 +15,7 @@ export class Minimap {
   }
 
   resize() {
+    if (!this.ctx) return;
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.w = Math.max(1, rect.width);
@@ -40,6 +41,7 @@ export class Minimap {
 
   // players: [{id, x, z, r}] từ snapshot; focus: quãng đường camera đang nhìn (m).
   draw(players, focus) {
+    if (!this.ctx) return;
     // HUD vừa hiện ra (lúc trước bị ẩn nên kích thước = 0) thì đo lại.
     const cw = this.canvas.clientWidth;
     const ch = this.canvas.clientHeight;
