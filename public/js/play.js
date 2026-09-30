@@ -448,8 +448,14 @@ function sensorLoop(t) {
     // Thanh "Lắc ↕" = tốc độ con vật sẽ chạy (đầy = tối đa ở độ khó Trung bình).
     $('#shakeBar').style.width = `${Math.min(1, sensors.level) * 100}%`;
     // Thanh "Nhảy ⤴": đầy = đủ mạnh để nhảy.
-    const jr = sensors.jumpRate || 250;
+    const jr = sensors.jumpRate || 200;
     $('#jumpBar').style.width = `${Math.min(1, sensors.pitchRate / jr) * 100}%`;
+    if (t - uiAt > 150) {
+      // Số đo để chỉnh: hất máy xem số lên bao nhiêu, vượt ngưỡng là nhảy.
+      $('#jumpDbg').textContent = !sensors.gotRotation
+        ? 'Chưa nhận được dữ liệu xoay của máy.'
+        : `Hất máy: ${Math.round(sensors.pitchRate)}°/s · cần vượt ${sensors.jumpRate || '(đang tắt)'}${sensors.rotUnit === 'rad' ? ' · đơn vị rad' : ''}`;
+    }
     if (t - uiAt > 500) {
       uiAt = t;
       updateSensorUi();

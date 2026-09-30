@@ -10,7 +10,8 @@ const MAX_LEVEL = 1.5; // cho phép vượt 1 để độ khó cao (phải lắc
 // Nhảy = "giật cương": hất nhanh đầu máy về phía mình (xoay quanh trục ngang của máy).
 // Khác chạy (dịch chuyển lên xuống, ít xoay) và lái (nghiêng trái/phải, trục khác).
 const JUMP_GAP_MS = 700; // 2 lần nhảy cách nhau ít nhất
-const JUMP_DOMINANCE = 1.3; // tốc độ xoay theo trục ngang phải lớn hơn các trục khác bấy nhiêu lần
+const JUMP_DOMINANCE = 1; // tốc độ xoay theo trục ngang phải lớn hơn các trục khác
+const RAD_TO_DEG = 180 / Math.PI;
 const GRAVITY_SMOOTH = 0.05; // lọc thông thấp để biết hướng trọng lực (= phương thẳng đứng)
 const TILT_SMOOTH_MS = 120; // làm mượt góc nghiêng: giật máy nhanh sang ngang không làm đổi làn
 const G = 9.81;
@@ -56,10 +57,13 @@ export function createSensors({ onJump } = {}) {
     gotRotation: false, // máy có con quay hồi chuyển (nhảy bằng cử chỉ được)
     pitchRate: 0, // tốc độ "giật cương" gần nhất (độ/giây) để vẽ thanh đo
     // Ngưỡng nhảy (độ/giây): nhỏ = nhạy. 0 = tắt nhảy bằng cử chỉ, chỉ dùng nút.
-    jumpRate: load('fg:jumpRate', 250),
+    jumpRate: load('fg:jumpRate2', 200),
+    rotUnit: 'deg', // một số trình duyệt báo radian/giây: tự nhận ra rồi đổi sang độ
   };
   let lastMotionAt = 0;
   let lastJumpAt = 0;
+  let rotSamples = 0;
+  let rotMaxRaw = 0;
   const grav = { x: 0, y: 0, z: 0, ready: false };
   let smoothTilt = null;
   let lastTiltAt = 0;
@@ -134,10 +138,23 @@ export function createSensors({ onJump } = {}) {
   function detectJump(r, now) {
     if (!r || r.beta == null || r.gamma == null) return;
     s.gotRotation = true;
+
+    // Tự nhận đơn vị: tay cầm lắc lư mà số xoay lớn nhất vẫn rất nhỏ (< 12) thì đó là radian/giây.
+    const rawMax = Math.max(Math.abs(r.alpha || 0), Math.abs(r.beta), Math.abs(r.gamma));
+    if (s.rotUnit === 'deg' && rotSamples < 600) {
+      rotSamples++;
+      rotMaxRaw = Math.max(rotMaxRaw, rawMax);
+      if (rotSamples >= 300 && s.activity > 2 && rotMaxRaw < 12) s.rotUnit = 'rad';
+    }
+    const k = s.rotUnit === 'rad' ? RAD_TO_DEG : 1;
+    const alpha = Math.abs(r.alpha || 0) * k;
+    const beta = Math.abs(r.beta) * k;
+    const gamma = Math.abs(r.gamma) * k;
+
     const ang = screenAngle();
     const landscape = ang === 90 || ang === 270;
-    const pitch = Math.abs(landscape ? r.gamma : r.beta);
-    const other = Math.max(Math.abs(landscape ? r.beta : r.gamma), Math.abs(r.alpha || 0));
+    const pitch = landscape ? gamma : beta;
+    const other = Math.max(landscape ? beta : gamma, alpha);
     s.pitchRate = Math.max(pitch, s.pitchRate * 0.9);
     if (!s.jumpRate || pitch < s.jumpRate || pitch < other * JUMP_DOMINANCE) return;
     if (now - lastJumpAt < JUMP_GAP_MS) return;
@@ -191,7 +208,7 @@ export function createSensors({ onJump } = {}) {
 
   s.setJumpRate = v => {
     s.jumpRate = Number(v) || 0;
-    save('fg:jumpRate', s.jumpRate);
+    save('fg:jumpRate2', s.jumpRate);
   };
 
   // Gọi mỗi khung hình: nếu trình duyệt ngừng gửi sự kiện chuyển động thì cho mức lắc về 0.
