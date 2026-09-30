@@ -36,7 +36,7 @@ const manifest = await fetch('/assets/animals.json').then(r => r.json());
 const animalById = new Map(manifest.animals.map(a => [a.id, a]));
 
 const socket = io();
-const sensors = createSensors({ onShake });
+const sensors = createSensors({ onJump: onGestureJump });
 
 let playerId = store.get('fg:pid', null);
 if (!playerId) {
@@ -292,8 +292,8 @@ function updateNoShake() {
   }
   const canEnable = sensors.secure && !sensors.enabled && sensorErr?.message !== 'unsupported';
   el.textContent = canEnable
-    ? 'Chưa bật cảm biến nên chưa lắc để chạy nhanh được. Bấm "Bật cảm biến" ở dưới.'
-    : 'Máy không có cảm biến lắc, không lắc để chạy nhanh được. Vẫn dùng được PHI! khi đầy năng lượng.';
+    ? 'Chưa bật cảm biến nên lắc chưa có tác dụng. Bấm "Bật cảm biến" ở dưới.'
+    : 'Máy không có cảm biến lắc nên con vật chỉ chạy được khi bấm PHI! (TURBO).';
   el.hidden = false;
 }
 
@@ -338,22 +338,30 @@ $('#btnBoost').addEventListener('pointerdown', e => {
   renderMana(lastMana, true); // hiển thị ngay, server sẽ cập nhật mana tụt dần qua 'me'
 });
 
-function flashPower() {
-  const bar = $('#powerBar');
-  bar.classList.add('flash');
-  setTimeout(() => bar.classList.remove('flash'), 90);
+function doJump() {
+  socket.emit('jump');
+  vibrate(20);
+  const b = $('#btnJump');
+  b.classList.add('flash');
+  setTimeout(() => b.classList.remove('flash'), 150);
 }
 
 $('#btnJump').addEventListener('pointerdown', e => {
   e.preventDefault();
-  socket.emit('jump');
-  vibrate(20);
+  doJump();
 });
 
-function onShake(strength) {
-  if (current !== 'race') return;
-  socket.emit('shake', strength);
-  flashPower();
+// "Giật cương" (hất đầu máy về phía mình): đang đua thì nhảy, ở phòng chờ thì báo đã nhận để thử.
+let jumpHitTimer = null;
+function onGestureJump() {
+  if (current === 'race') {
+    doJump();
+  } else if (current === 'lobby') {
+    $('#jumpHit').hidden = false;
+    vibrate(20);
+    clearTimeout(jumpHitTimer);
+    jumpHitTimer = setTimeout(() => ($('#jumpHit').hidden = true), 600);
+  }
 }
 
 // Chặn cuộn/zoom khi đang đua.
@@ -362,6 +370,7 @@ document.addEventListener('touchmove', e => {
 }, { passive: false });
 document.addEventListener('contextmenu', e => e.preventDefault());
 
+let moveTick = 0;
 setInterval(() => {
   const steer = holdSteer || (sensors.enabled ? sensors.steer : 0);
   $('#steerDot').style.left = `${50 + steer * 45}%`;
@@ -372,6 +381,11 @@ setInterval(() => {
     socket.emit('steer', v);
     lastSteer = v;
     lastSteerAt = now;
+  }
+  // Mức lắc gửi đều 10 lần/giây (kể cả 0): server không nhận được nữa thì con vật dừng.
+  if (++moveTick % 2 === 0) {
+    const level = sensors.enabled ? sensors.level : 0;
+    socket.emit('move', Math.round(level * 100) / 100);
   }
 }, 50);
 
@@ -391,14 +405,14 @@ function updateSensorUi() {
   let text;
   let needButton = false;
   if (!sensors.secure) {
-    text = 'Trang chưa có HTTPS nên không đọc được cảm biến. Dùng nút ◀ ▶ để lái, không lắc để chạy nhanh được.';
+    text = 'Trang chưa có HTTPS nên không đọc được cảm biến: con vật chỉ chạy được khi dùng TURBO.';
   } else if (sensors.enabled) {
-    text = sensors.gotOrientation || sensors.gotMotion ? '✅ Cảm biến đang hoạt động' : 'Đang chờ dữ liệu cảm biến… Nếu lâu không có thì máy không hỗ trợ: dùng nút ◀ ▶ để lái.';
+    text = sensors.gotOrientation || sensors.gotMotion ? '✅ Cảm biến đang hoạt động' : 'Đang chờ dữ liệu cảm biến… Nếu lâu không có thì máy không hỗ trợ lắc.';
   } else if (sensorErr?.message === 'denied') {
-    text = 'Bạn đã từ chối quyền cảm biến. Bấm nút để thử lại, nếu không sẽ không lắc để chạy nhanh được.';
+    text = 'Bạn đã từ chối quyền cảm biến. Bấm nút để thử lại, không có cảm biến thì không lắc để chạy được.';
     needButton = true;
   } else if (sensorErr?.message === 'unsupported') {
-    text = 'Trình duyệt không hỗ trợ cảm biến. Dùng nút ◀ ▶ để lái, không lắc để chạy nhanh được.';
+    text = 'Trình duyệt không hỗ trợ cảm biến: con vật chỉ chạy được khi dùng TURBO.';
   } else {
     text = 'Cảm biến chưa bật.';
     needButton = true;
@@ -406,6 +420,10 @@ function updateSensorUi() {
   $('#sensorStatus').textContent = text;
   $('#btnSensor').hidden = !needButton;
   $('#btnSensor2').hidden = !needButton;
+
+  const noGyro = sensors.enabled && sensors.gotMotion && !sensors.gotRotation;
+  $('#jumpNote').textContent = noGyro ? 'Máy không có con quay hồi chuyển nên không nhảy bằng cử chỉ được, hãy bấm nút NHẢY.' : '';
+  $('#jumpNote').hidden = !noGyro;
 }
 
 $('#btnSensor').onclick = enableSensors;
@@ -413,8 +431,10 @@ $('#btnSensor2').onclick = enableSensors;
 $('#btnCalib').onclick = () => sensors.calibrate();
 $('#chkInvert').checked = sensors.invert;
 $('#chkInvert').onchange = e => sensors.setInvert(e.target.checked);
-$('#selSens').value = String(sensors.threshold);
-$('#selSens').onchange = e => sensors.setThreshold(e.target.value);
+$('#selSens').value = String(sensors.range);
+$('#selSens').onchange = e => sensors.setRange(e.target.value);
+$('#selJump').value = String(sensors.jumpRate);
+$('#selJump').onchange = e => sensors.setJumpRate(e.target.value);
 
 // Android không cần xin quyền: bật luôn.
 if (sensors.secure && !sensors.needsPermission) enableSensors();
@@ -425,8 +445,11 @@ function sensorLoop(t) {
   if (current === 'lobby') {
     // Chấm chạm mép = lái hết cỡ.
     $('#tiltDot').style.left = `${50 + sensors.steer * 45}%`;
-    $('#shakeBar').style.width = `${Math.min(1, sensors.shake / 30) * 100}%`;
-    $('#shakeMark').style.left = `${Math.min(1, sensors.threshold / 30) * 100}%`;
+    // Thanh "Lắc ↕" = tốc độ con vật sẽ chạy (đầy = tối đa ở độ khó Trung bình).
+    $('#shakeBar').style.width = `${Math.min(1, sensors.level) * 100}%`;
+    // Thanh "Nhảy ⤴": đầy = đủ mạnh để nhảy.
+    const jr = sensors.jumpRate || 250;
+    $('#jumpBar').style.width = `${Math.min(1, sensors.pitchRate / jr) * 100}%`;
     if (t - uiAt > 500) {
       uiAt = t;
       updateSensorUi();

@@ -9,15 +9,14 @@ module.exports = {
   FINISH_TIMEOUT_MS: 20000, // sau khi con đầu tiên về đích, chờ tối đa bấy nhiêu
   COAST_MS: 4000, // sau khi kết thúc, tiếp tục cho con vật chạy chậm lại rồi dừng loop
 
-  BASE_SPEED: 5, // không lắc vẫn chạy chậm
-  BOOST_SPEED: 14, // cộng thêm khi power = 1 → tối đa 19 m/s
-  ACCEL: 6.5, // tăng tốc (m/s²): từ 0 lên 19 m/s mất ~3 giây
+  // Điều khiển tốc độ: điện thoại gửi liên tục mức lắc lên xuống (0..1). Không lắc = đứng yên,
+  // lắc càng nhanh/mạnh càng chạy nhanh. Tốc độ thật tăng/giảm dần theo tốc độ mục tiêu.
+  MAX_SPEED: 19, // m/s khi lắc hết cỡ
+  DRIVE_GAIN: 1, // nhân mức lắc (độ khó chỉnh: dễ thì lắc nhẹ đã nhanh)
+  MOVE_STALE_MS: 400, // quá lâu không nhận mức lắc (mất mạng, tắt màn hình) thì coi như dừng
+  ACCEL: 8, // tăng tốc (m/s²): từ 0 lên tối đa ~2,4 giây
   TURBO_ACCEL_MULT: 2, // đang TURBO thì vọt lên nhanh gấp đôi
-  BRAKE: 25, // giảm tốc (m/s²) khi vào bùn / ngừng lắc: chậm lại nhanh
-  POWER_TAU: 0.9, // power giảm dần theo hàm mũ với hằng số thời gian này (giây)
-  SHAKE_IMPULSE: 0.1,
-  SHAKE_IMPULSE_STRENGTH: 0.12, // lắc càng mạnh cộng càng nhiều
-  SHAKE_MIN_INTERVAL_MS: 80,
+  BRAKE: 25, // giảm tốc (m/s²): ngừng lắc / vào bùn thì chậm lại nhanh (~0,8 giây là dừng)
 
   // Năng lượng (mana) + TURBO: có mana là bấm PHI! được, bấm là dùng hết mana đang có.
   MANA_FILL_MS: 12000, // tự đầy từ 0 → 100% trong bấy nhiêu
@@ -25,6 +24,7 @@ module.exports = {
   FENCE_MANA_LOSS: 0.2, // đâm rào -20%
   TURBO_MS: 5000, // bấm PHI! 1 lần là TURBO, mana tụt dần: đầy 100% thì cạn sau bấy nhiêu (ít mana thì ngắn hơn)
   TURBO_FACTOR: 1.4, // nhanh hơn 40%, lướt qua bùn
+  TURBO_MIN_DRIVE: 0.7, // đang TURBO thì dù không lắc vẫn chạy ít nhất 70% tốc độ tối đa (rồi ×1,4)
 
   LATERAL_SPEED: 5,
   MUD_FACTOR: 0.4,
@@ -50,14 +50,13 @@ module.exports = {
   ROOM_IDLE_MS: 10 * 60 * 1000, // phòng không còn ai kết nối quá lâu thì xoá
 
   // Độ khó: chủ phòng chọn cho cả phòng. Mỗi mức ghi đè các tham số ở trên.
-  // Tốc độ tối đa luôn 19 m/s (BASE_SPEED + BOOST_SPEED); chỉ tốc độ khi không lắc là khác.
+  // Tốc độ tối đa luôn 19 m/s; DRIVE_GAIN quyết định lắc nặng hay nhẹ tay.
   DEFAULT_DIFFICULTY: 'easy',
   DIFFICULTIES: {
     easy: {
       label: 'Dễ',
       TRACK_LEN: 300,
-      BASE_SPEED: 7,
-      BOOST_SPEED: 12,
+      DRIVE_GAIN: 1.3,
       STUN_MS: 500,
       FENCE_MANA_LOSS: 0,
       BUMP_SLOW_FACTOR: 0.7,
@@ -70,8 +69,7 @@ module.exports = {
     normal: {
       label: 'Trung bình',
       TRACK_LEN: 400,
-      BASE_SPEED: 5,
-      BOOST_SPEED: 14,
+      DRIVE_GAIN: 1,
       STUN_MS: 1000,
       FENCE_MANA_LOSS: 0.2,
       BUMP_SLOW_FACTOR: 0.4,
@@ -82,8 +80,7 @@ module.exports = {
     hard: {
       label: 'Khó',
       TRACK_LEN: 500,
-      BASE_SPEED: 3,
-      BOOST_SPEED: 16,
+      DRIVE_GAIN: 0.8,
       STUN_MS: 1500,
       FENCE_MANA_LOSS: 0.3,
       BUMP_SLOW_FACTOR: 0.4,

@@ -255,7 +255,7 @@ function tick(io, room) {
         pos: i + 1,
         total: order.length,
         prog: Math.min(1, p.z / race.trackLen),
-        pw: Math.round(p.power * 100) / 100,
+        pw: Math.round(p.driveEff * 100) / 100,
         mn: Math.round(p.mana * 100) / 100,
         f: game.flagsOf(p, now),
         rank: p.rank,
@@ -432,10 +432,10 @@ function attach(io) {
       p.steer = Number.isFinite(n) ? Math.max(-1, Math.min(1, n)) : 0;
     });
 
-    socket.on('shake', strength => {
+    socket.on('move', level => {
       const { room, p } = playerCtx();
       if (!p || !p.inRace) return;
-      game.shake(room.race, p, strength, Date.now());
+      game.move(room.race, p, level, Date.now());
     });
 
     socket.on('turbo', () => {

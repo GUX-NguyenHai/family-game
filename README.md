@@ -11,9 +11,9 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 | Thao tác | Tác dụng |
 |---|---|
 | Nghiêng máy trái/phải (hoặc giữ nút ◀ ▶) | Lái sang trái/phải |
-| **Lắc máy lên xuống** | Chạy nhanh hơn. Lắc càng mạnh, càng đều thì càng nhanh. Lắc ngang không tính. Tốc độ **tăng dần**: từ đứng yên lên tối đa mất ~3 giây |
+| **Lắc máy lên xuống** | **Không lắc thì đứng yên.** Lắc thì chạy, lắc càng nhanh và mạnh thì càng nhanh. Dừng tay thì chậm dần rồi dừng trong khoảng 1 giây. Lắc ngang không tính. Tốc độ **tăng dần**: từ đứng yên lên tối đa mất ~2,4 giây |
 | Nút **PHI!** (TURBO) | **Có năng lượng là bấm được.** Nhanh hơn 40% và lướt qua bùn. Trong lúc TURBO, thanh năng lượng **tụt dần**, cạn thì hết TURBO: đầy 100% dùng được 5 giây, 50% dùng được 2,5 giây… Chỉ cần bấm 1 lần, không cần giữ. Đang TURBO mà ăn cà rốt thì được kéo dài. Đâm rào thì mất TURBO |
-| Bấm nút **NHẢY** | Nhảy qua rào |
+| **Giật cương** (hất nhanh đầu máy về phía mình rồi thả về) hoặc bấm nút **NHẢY** | Nhảy qua rào. Chỉnh độ nhạy hoặc tắt cử chỉ ở phòng chờ ("Nhảy bằng cử chỉ"). Máy không có con quay hồi chuyển thì chỉ dùng nút |
 | ⚡ Năng lượng | Tự đầy sau 12 giây (không tăng trong lúc TURBO). Đầy thì điện thoại rung và nút PHI! nhấp nháy |
 | 🟫 Bùn | Chạy chậm lại (trừ khi đang TURBO) |
 | 🚧 Rào | Đâm vào thì dừng hẳn, khựng 1 giây, mất 20% năng lượng, rồi tăng tốc lại từ 0 |
@@ -32,10 +32,10 @@ Chủ phòng chọn ở phòng chờ trên màn hình chung (hoặc ở màn k�
 | Vật cản | Ít rào, nhiều cà rốt, không có 2 vật cản cạnh nhau | Vừa phải | Nhiều rào, bùn to, hay có 2 vật cản cạnh nhau |
 | Đâm rào | Khựng 0,5s, không mất năng lượng | Khựng 1s, −20% | Khựng 1,5s, −30% |
 | Va nhau | Chậm nhẹ (còn 70%) | Còn 40% | Còn 40%, chậm lâu hơn |
-| Không lắc vẫn chạy | 7 m/s | 5 m/s | 3 m/s |
+| Độ nặng tay | Lắc nhẹ đã chạy tối đa | Vừa | Phải lắc mạnh mới chạy tối đa |
 | Bot | Chậm, ít nhảy rào, hay phí TURBO | Khá | Nhanh, nhảy rào giỏi, dùng TURBO khôn |
 
-Tốc độ tối đa ở cả 3 mức đều là 19 m/s. Chỉnh các con số trong `DIFFICULTIES` ở `src/config.js`.
+Tốc độ tối đa ở cả 3 mức đều là 19 m/s. Độ nặng tay là `DRIVE_GAIN` (1.3 / 1 / 0.8). Chỉnh các con số trong `DIFFICULTIES` ở `src/config.js`.
 
 ## Miễn phí và Pro
 

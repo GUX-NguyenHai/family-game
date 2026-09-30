@@ -7,6 +7,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 export const FLAG = { STUN: 1, JUMP: 2, MUD: 4, FINISHED: 8, TURBO: 16, BUMP: 32 };
 
 const INTERP_DELAY_MS = 100;
+const LEAD_VIEW_BEHIND = 16; // camera nhìn từ con dẫn đầu lùi về bấy nhiêu mét
 const TRACK_EXTRA_BEFORE = 40;
 const TRACK_EXTRA_AFTER = 100;
 
@@ -346,8 +347,15 @@ class Runner {
     this.currentKey = key;
   }
 
+  setShown(shown) {
+    this.body.visible = shown;
+    this.ring.visible = shown;
+    this.label.sprite.position.y = shown ? this.height + 0.7 : 1;
+  }
+
   placeLobby(x, dt) {
     this.group.visible = true;
+    this.setShown(true);
     this.group.position.set(x, 0, 0);
     this.body.rotation.y = damp(this.body.rotation.y, 0, 8, dt);
     this.body.position.y = 0;
@@ -355,9 +363,19 @@ class Runner {
     this.showBehind(0);
   }
 
-  // p: {x, z, sp, f, r} đã nội suy; renderZ có thể bị kẹp vào mép màn hình nếu tụt quá xa.
+  // Con bị tụt ra khỏi khung hình: không vẽ con vật, chỉ hiện nhãn "Tên ↓45m" ở mép dưới màn hình.
+  placeStraggler(p, edgeZ, behind) {
+    this.group.visible = true;
+    this.setShown(false);
+    this.group.position.set(p.x, 0, -edgeZ);
+    this.jumping = false;
+    this.showBehind(behind);
+  }
+
+  // p: {x, z, sp, f, r} đã nội suy.
   placeRace(p, renderZ, behind, dt, now, state, jumpMs) {
     this.group.visible = true;
+    this.setShown(true);
     const prevX = this.group.position.x;
     this.group.position.x = p.x;
     this.group.position.z = -renderZ;
@@ -398,7 +416,9 @@ class Runner {
       const clip = this.actions.jump?.getClip();
       return this.setAnim('jump', { once: true, timeScale: clip ? clip.duration / (jumpMs / 1000) : 1 });
     }
-    if (f & FLAG.MUD) return this.setAnim('walk', { timeScale: clamp(p.sp / 2.5, 0.6, 2) });
+    // Không lắc thì đứng yên; chạy chậm thì đi bộ; nhanh thì phi.
+    if (p.sp < 0.5) return this.setAnim('idle');
+    if (f & FLAG.MUD || p.sp < 5) return this.setAnim('walk', { timeScale: clamp(p.sp / 2.5, 0.5, 2) });
     return this.setAnim('run', { timeScale: clamp(p.sp / this.manifest.runSpeedRef, 0.5, 2.2) });
   }
 
@@ -858,32 +878,30 @@ export class RaceScene {
       this.updateCamera(dt, this.focus);
       return;
     }
+    // Con dẫn đầu (chưa về đích); tất cả đã về đích thì lấy con xa nhất.
     let lead = -Infinity;
-    let last = Infinity;
-    for (const p of s.players) {
-      if (p.f & FLAG.FINISHED) continue;
-      lead = Math.max(lead, p.z);
-      last = Math.min(last, p.z);
-    }
-    if (lead === -Infinity) {
-      for (const p of s.players) lead = Math.max(lead, p.z);
-      last = lead;
-    }
-    if (!Number.isFinite(lead)) lead = last = 0;
+    for (const p of s.players) if (!(p.f & FLAG.FINISHED)) lead = Math.max(lead, p.z);
+    if (lead === -Infinity) for (const p of s.players) lead = Math.max(lead, p.z);
+    if (!Number.isFinite(lead)) lead = 0;
 
-    // Camera bám con cuối, nhưng không để con đầu vượt quá 26m phía trước.
-    const target = s.state === 'countdown' ? 0 : clamp(last, lead - 26, lead - 2);
+    // Camera luôn bám nhóm dẫn đầu: con đầu ở khoảng giữa-trên màn hình,
+    // những con bám sát trong ~LEAD_VIEW_BEHIND mét phía sau vẫn thấy rõ.
+    const target = s.state === 'countdown' ? 0 : Math.max(0, lead - LEAD_VIEW_BEHIND);
     this.focus = damp(this.focus, target, 2.5, dt);
     this.updateCamera(dt, this.focus);
 
+    // Tụt ra khỏi mép dưới khung hình thì chỉ hiện nhãn tên ở mép dưới.
     const minZ = this.focus - 2.5;
     const seen = new Set();
     for (const p of s.players) {
       const r = this.runners.get(p.id);
       if (!r) continue;
       seen.add(p.id);
-      const behind = p.z < minZ ? this.focus - p.z : 0;
-      r.placeRace(p, Math.max(p.z, minZ), behind, dt, now, s.state, this.jumpMs);
+      if (p.z < minZ) {
+        r.placeStraggler(p, this.focus - 2, this.focus - p.z);
+        continue;
+      }
+      r.placeRace(p, p.z, 0, dt, now, s.state, this.jumpMs);
       if (p.f & FLAG.TURBO && Math.random() < (this.high ? 0.5 : 0.25)) {
         // Vệt lửa phía sau khi đang TURBO.
         const tail = r.group.position.clone();

@@ -216,6 +216,19 @@ button.ghost { width: 100%; margin-top: 12px; background: transparent; border: 1
   font-size: 0.85rem;
 }
 .jump { background: #42d4f4; color: #06222a; font-size: 1.4rem !important; }
+.jump.flash { background: #a8f0ff; }
+.meter { position: relative; }
+.jump-hit {
+  position: absolute;
+  right: 6px;
+  top: -4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: #42d4f4;
+  color: #06222a;
+  font-size: 0.8rem;
+}
+#jumpBar { background: #42d4f4; }
 
 .steer-indicator {
   position: relative;

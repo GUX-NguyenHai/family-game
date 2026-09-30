@@ -186,7 +186,7 @@ button.link:hover:not(:disabled) { background: transparent; color: #ffc34d; }
   background: var(--panel);
   border-radius: 14px;
   min-width: 200px;
-  max-height: calc(100% - 32px);
+  max-height: calc(100% - 38vh - 60px); /* chừa chỗ cho thanh tiến độ ở góc dưới trái */
   overflow: hidden;
 }
 #standings li {
@@ -200,11 +200,12 @@ button.link:hover:not(:disabled) { background: transparent; color: #ffc34d; }
 #standings .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
 #standings .fin { margin-left: auto; color: var(--accent); }
 
+/* Thanh tiến độ dọc: góc dưới bên trái */
 #progress {
   position: absolute;
-  right: 22px;
-  top: 60px;
-  bottom: 60px;
+  left: 34px;
+  bottom: 24px;
+  height: 32vh;
   width: 10px;
   border-radius: 99px;
   background: rgba(0, 0, 0, 0.3);
@@ -221,6 +222,18 @@ button.link:hover:not(:disabled) { background: transparent; color: #ffc34d; }
   background: var(--c);
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Bản đồ nhỏ: góc dưới bên phải */
+#minimap {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  height: 42vh;
+  width: calc(42vh * 0.42);
+  min-width: 110px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 #countdown {

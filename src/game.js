@@ -80,7 +80,9 @@ function resetRacer(C, p, x) {
   p.x = x;
   p.z = 0;
   p.speed = 0;
-  p.power = 0;
+  p.drive = 0; // mức lắc điện thoại gửi lên (0..1)
+  p.driveAt = 0;
+  p.driveEff = 0; // mức lắc sau khi nhân theo độ khó, để hiển thị
   p.steer = 0;
   p.stunUntil = 0;
   p.jumpUntil = 0;
@@ -91,7 +93,6 @@ function resetRacer(C, p, x) {
   p.hits = new Set();
   p.finishMs = null;
   p.rank = null;
-  p.lastShakeAt = 0;
   p.lastBumpAt = 0;
   p.bumpSlowUntil = 0;
   p.botPlan = new Map();
@@ -141,13 +142,12 @@ function isRunning(race, p, now) {
   return race && !race.endedAt && now >= race.startAt && p.finishMs == null;
 }
 
-function shake(race, p, strength, now) {
+// Điện thoại gửi mức lắc hiện tại (0 = đứng yên, 1 = lắc hết cỡ) khoảng 10 lần/giây.
+// (Được gửi tới 1.5: lắc mạnh hơn mức "đủ" vẫn có ích ở độ khó cao, vì drive = level × DRIVE_GAIN, tối đa 1.)
+function move(race, p, level, now) {
   if (!isRunning(race, p, now)) return;
-  const C = cfgOf(race);
-  if (now - p.lastShakeAt < C.SHAKE_MIN_INTERVAL_MS) return;
-  p.lastShakeAt = now;
-  const s = clamp(Number(strength) || 0, 0, 1);
-  p.power = Math.min(1, p.power + C.SHAKE_IMPULSE + C.SHAKE_IMPULSE_STRENGTH * s);
+  p.drive = clamp(Number(level) || 0, 0, 1.5);
+  p.driveAt = now;
 }
 
 // Nút PHI!: có mana là bật TURBO; trong lúc TURBO mana giảm dần, hết mana thì hết TURBO.
@@ -186,7 +186,6 @@ function step(race, racers, now, dt) {
       continue;
     }
 
-    p.power *= Math.exp(-dt / C.POWER_TAU);
     const stunned = now < p.stunUntil;
     const jumping = now < p.jumpUntil;
     const turboOn = p.turboOn;
@@ -203,9 +202,14 @@ function step(race, racers, now, dt) {
     }
     if (!stunned) p.x = clamp(p.x + p.steer * C.LATERAL_SPEED * dt, -halfWidth, halfWidth);
 
-    // Tốc độ mục tiêu do lắc quyết định; tốc độ thật đuổi dần theo (tăng tốc dần, phanh nhanh).
-    let target = stunned ? 0 : C.BASE_SPEED + p.power * C.BOOST_SPEED;
-    if (turboOn) target *= C.TURBO_FACTOR;
+    // Tốc độ mục tiêu = mức lắc × tốc độ tối đa (không lắc thì 0); tốc độ thật đuổi dần theo.
+    const fresh = now - p.driveAt <= C.MOVE_STALE_MS;
+    const drive = fresh ? Math.min(1, p.drive * C.DRIVE_GAIN) : 0;
+    p.driveEff = drive;
+    let target = 0;
+    if (!stunned) {
+      target = turboOn ? Math.max(drive, C.TURBO_MIN_DRIVE) * C.MAX_SPEED * C.TURBO_FACTOR : drive * C.MAX_SPEED;
+    }
     let crashed = false;
 
     p.inMud = false;
@@ -222,7 +226,6 @@ function step(race, racers, now, dt) {
           events.push({ pid: p.id, type: 'clear' });
         } else {
           p.stunUntil = now + C.STUN_MS;
-          p.power = 0;
           p.mana = Math.max(0, p.mana - C.FENCE_MANA_LOSS);
           p.turboOn = false; // đâm rào thì mất TURBO, mana còn lại vẫn giữ
           crashed = true;
@@ -365,7 +368,7 @@ function flagsOf(p, now) {
   return f;
 }
 
-// Bot: lắc theo "tay nghề" (theo độ khó), né bùn/rào, nhảy rào nếu đủ giỏi, săn cà rốt gần,
+// Bot: "lắc" liên tục theo "tay nghề" (theo độ khó), né bùn/rào, nhảy rào nếu đủ giỏi, săn cà rốt gần,
 // né con chậm phía trước; TURBO khi đầy, thỉnh thoảng dùng sớm (bot dễ hay phí), nước rút thì dùng ngay.
 function botThink(race, p, now, dt, racers = []) {
   if (!isRunning(race, p, now)) return false;
@@ -385,9 +388,14 @@ function botThink(race, p, now, dt, racers = []) {
   }
 
   let usedTurbo = false;
-  if (now >= race.startAt + p.botDelay) {
-    const rate = p.botSkill * 5 * p.botForm * botPace(p, progress);
-    if (Math.random() < rate * dt) shake(race, p, 0.3 + Math.random() * 0.5, now);
+  if (now < race.startAt + p.botDelay) {
+    p.drive = 0; // chưa phản xạ kịp: đứng yên như người chưa lắc
+    p.driveAt = now;
+  } else {
+    // "Lắc" liên tục theo tay nghề, phong độ, kiểu chạy; chia DRIVE_GAIN để độ khó chỉ ảnh hưởng người chơi.
+    const desired = (0.35 + 0.6 * p.botSkill) * p.botForm * botPace(p, progress) * rand(0.92, 1.05);
+    p.drive = clamp(desired, 0, 1) / C.DRIVE_GAIN;
+    p.driveAt = now;
     const sprint = progress > p.botSprintAt;
     const early = p.mana >= C.BOT.turboMin && Math.random() < C.BOT.turboRate * dt;
     const wantTurbo = sprint ? p.mana >= 0.3 : p.mana >= 1 || early;
@@ -452,7 +460,7 @@ module.exports = {
   settingsFor,
   isLevel,
   step,
-  shake,
+  move,
   turbo,
   jump,
   isOver,

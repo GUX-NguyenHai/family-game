@@ -1,9 +1,16 @@
-// Đọc cảm biến điện thoại: nghiêng trái/phải để lái, lắc LÊN XUỐNG để phi (lắc ngang không tính).
+// Đọc cảm biến điện thoại: nghiêng trái/phải để lái; lắc LÊN XUỐNG để chạy (lắc ngang không tính).
+// Mức lắc đo liên tục: đứng yên = 0 (con vật dừng), lắc càng nhanh/mạnh càng lớn (chạy càng nhanh).
 // Dùng chung cho Android và iPhone; iPhone cần gọi enable() ngay trong sự kiện bấm nút.
 
 const DEADZONE_DEG = 3; // nghiêng dưới mức này coi như cầm thẳng
 const FULL_TILT_DEG = 15; // nghiêng tới mức này là lái hết cỡ
-const SHAKE_GAP_MS = 130;
+const NOISE_FLOOR = 1.0; // m/s²: rung tay khi cầm yên dưới mức này không tính
+const ACTIVITY_TAU_MS = 250; // làm mượt mức lắc: dừng tay thì ~0,5 giây là về 0
+const MAX_LEVEL = 1.5; // cho phép vượt 1 để độ khó cao (phải lắc mạnh hơn) vẫn đạt tối đa
+// Nhảy = "giật cương": hất nhanh đầu máy về phía mình (xoay quanh trục ngang của máy).
+// Khác chạy (dịch chuyển lên xuống, ít xoay) và lái (nghiêng trái/phải, trục khác).
+const JUMP_GAP_MS = 700; // 2 lần nhảy cách nhau ít nhất
+const JUMP_DOMINANCE = 1.3; // tốc độ xoay theo trục ngang phải lớn hơn các trục khác bấy nhiêu lần
 const GRAVITY_SMOOTH = 0.05; // lọc thông thấp để biết hướng trọng lực (= phương thẳng đứng)
 const TILT_SMOOTH_MS = 120; // làm mượt góc nghiêng: giật máy nhanh sang ngang không làm đổi làn
 const G = 9.81;
@@ -28,7 +35,7 @@ function screenAngle() {
   return ((a % 360) + 360) % 360;
 }
 
-export function createSensors({ onShake }) {
+export function createSensors({ onJump } = {}) {
   const s = {
     enabled: false,
     needsPermission:
@@ -40,13 +47,19 @@ export function createSensors({ onShake }) {
     raw: 0, // góc nghiêng thô (độ)
     tilt: 0, // sau hiệu chỉnh/đảo chiều
     steer: 0, // -1..1
-    shake: 0, // độ lắc hiện tại (m/s²) để vẽ thanh đo
+    activity: 0, // độ lắc lên xuống đã làm mượt (m/s²)
+    level: 0, // mức lắc gửi lên server: 0 = đứng yên, 1 = lắc đủ mạnh (tối đa MAX_LEVEL)
     calib: load('fg:calib', 0),
     invert: load('fg:invert', false),
-    // Ngưỡng lắc (m/s², chỉ tính phần lên xuống). Đổi khoá lưu để máy cũ về mặc định mới.
-    threshold: load('fg:sens2', 8),
+    // Độ nhạy: lắc mạnh bao nhiêu (m/s², trên mức rung tay) thì coi là hết cỡ. Nhỏ = nhạy.
+    range: load('fg:range', 10),
+    gotRotation: false, // máy có con quay hồi chuyển (nhảy bằng cử chỉ được)
+    pitchRate: 0, // tốc độ "giật cương" gần nhất (độ/giây) để vẽ thanh đo
+    // Ngưỡng nhảy (độ/giây): nhỏ = nhạy. 0 = tắt nhảy bằng cử chỉ, chỉ dùng nút.
+    jumpRate: load('fg:jumpRate', 250),
   };
-  let lastShake = 0;
+  let lastMotionAt = 0;
+  let lastJumpAt = 0;
   const grav = { x: 0, y: 0, z: 0, ready: false };
   let smoothTilt = null;
   let lastTiltAt = 0;
@@ -108,12 +121,32 @@ export function createSensors({ onShake }) {
       mag = Math.hypot(a.x, a.y, a.z);
     }
 
-    s.shake = Math.max(mag, s.shake * 0.92);
     const now = performance.now();
-    if (mag > s.threshold && now - lastShake > SHAKE_GAP_MS) {
-      lastShake = now;
-      onShake(Math.min(1, (mag - s.threshold) / 15));
-    }
+    const dt = lastMotionAt ? Math.min(100, now - lastMotionAt) : 16;
+    lastMotionAt = now;
+    s.activity += (mag - s.activity) * (1 - Math.exp(-dt / ACTIVITY_TAU_MS));
+    updateLevel();
+    detectJump(e.rotationRate, now);
+  }
+
+  // rotationRate: alpha quanh trục vuông góc màn hình, beta quanh trục ngang, gamma quanh trục dọc (độ/giây).
+  // Cầm dọc: "giật cương" = beta. Cầm ngang thì trục ngang/dọc đổi chỗ.
+  function detectJump(r, now) {
+    if (!r || r.beta == null || r.gamma == null) return;
+    s.gotRotation = true;
+    const ang = screenAngle();
+    const landscape = ang === 90 || ang === 270;
+    const pitch = Math.abs(landscape ? r.gamma : r.beta);
+    const other = Math.max(Math.abs(landscape ? r.beta : r.gamma), Math.abs(r.alpha || 0));
+    s.pitchRate = Math.max(pitch, s.pitchRate * 0.9);
+    if (!s.jumpRate || pitch < s.jumpRate || pitch < other * JUMP_DOMINANCE) return;
+    if (now - lastJumpAt < JUMP_GAP_MS) return;
+    lastJumpAt = now;
+    onJump?.();
+  }
+
+  function updateLevel() {
+    s.level = Math.max(0, Math.min(MAX_LEVEL, (s.activity - NOISE_FLOOR) / s.range));
   }
 
   function attach() {
@@ -150,13 +183,24 @@ export function createSensors({ onShake }) {
     applyTilt(s.raw);
   };
 
-  s.setThreshold = v => {
-    s.threshold = Number(v) || 8;
-    save('fg:sens2', s.threshold);
+  s.setRange = v => {
+    s.range = Number(v) || 10;
+    save('fg:range', s.range);
+    updateLevel();
   };
 
+  s.setJumpRate = v => {
+    s.jumpRate = Number(v) || 0;
+    save('fg:jumpRate', s.jumpRate);
+  };
+
+  // Gọi mỗi khung hình: nếu trình duyệt ngừng gửi sự kiện chuyển động thì cho mức lắc về 0.
   s.decay = () => {
-    s.shake *= 0.9;
+    s.pitchRate *= 0.92;
+    if (performance.now() - lastMotionAt > 200) {
+      s.activity *= 0.85;
+      updateLevel();
+    }
   };
 
   return s;

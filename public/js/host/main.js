@@ -1,4 +1,5 @@
 import { RaceScene } from './scene.js';
+import { Minimap } from './minimap.js';
 
 const $ = sel => document.querySelector(sel);
 const store = {
@@ -35,6 +36,8 @@ const manifest = await fetch('/assets/animals.json').then(r => r.json());
 const animalById = new Map(manifest.animals.map(a => [a.id, a]));
 const quality = store.get('fg:quality', 'high');
 const scene = new RaceScene($('#scene'), manifest, quality);
+const minimap = new Minimap($('#minimap'));
+let minimapAt = 0;
 $('#loading').hidden = true;
 
 const socket = io();
@@ -146,12 +149,14 @@ socket.on('fx', onFx);
 function onRace(info) {
   trackLen = info.trackLen;
   scene.setupRace(info);
+  minimap.setRace(info);
 }
 
 function onRoom(info) {
   room = info;
   trackLen = info.trackLen;
   players = new Map(info.players.map(p => [p.id, p]));
+  minimap.setColors(info.players);
   scene.setPlayers(info.players, info.state, info.trackLen);
   renderLobby();
   renderDifficulty();
@@ -174,9 +179,9 @@ function esc(s) {
 
 // ---------- Độ khó (chủ phòng chọn cho cả phòng) ----------
 const LEVEL_DESC = {
-  easy: 'Đường 300m, ít rào, nhiều cà rốt, đâm rào chỉ khựng nhẹ, bot chậm. Hợp với trẻ nhỏ.',
+  easy: 'Đường 300m, lắc nhẹ đã chạy nhanh, ít rào, nhiều cà rốt, bot chậm. Hợp với trẻ nhỏ.',
   normal: 'Đường 400m, vật cản vừa phải, bot khá.',
-  hard: 'Đường 500m, nhiều rào và bùn to, phạt nặng, bot rất giỏi.',
+  hard: 'Đường 500m, phải lắc mạnh, nhiều rào và bùn to, phạt nặng, bot rất giỏi.',
 };
 
 function renderDifficulty() {
@@ -297,6 +302,14 @@ function renderResults(results) {
 // ---------- Trong lúc đua ----------
 function onState(s) {
   scene.pushSnapshot(s);
+
+  // Bản đồ nhỏ vẽ lại ~10 lần/giây.
+  if (s.taken) for (const id of s.taken) minimap.markTaken(id);
+  const t = performance.now();
+  if (t - minimapAt > 100) {
+    minimapAt = t;
+    minimap.draw(s.p, scene.focus);
+  }
 
   if (s.state === 'countdown') {
     const n = Math.ceil(s.cd / 1000);
