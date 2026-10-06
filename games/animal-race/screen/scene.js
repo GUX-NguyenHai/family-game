@@ -586,9 +586,21 @@ export class RaceScene {
     this.clock = new THREE.Clock();
 
     this.buildTrack(trackWidthFor(1), this.trackLen);
-    window.addEventListener('resize', () => this.resize());
+    this.onResize = () => this.resize();
+    window.addEventListener('resize', this.onResize);
     this.resize();
     this.renderer.setAnimationLoop(() => this.frame());
+  }
+
+  // Đổi sang game khác: dừng vẽ, giải phóng bộ nhớ GPU.
+  destroy() {
+    this.renderer.setAnimationLoop(null);
+    window.removeEventListener('resize', this.onResize);
+    for (const r of this.runners.values()) r.dispose();
+    this.runners.clear();
+    this.clearObstacles();
+    if (this.trackGroup) disposeTree(this.trackGroup);
+    this.renderer.dispose();
   }
 
   resize() {

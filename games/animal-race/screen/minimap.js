@@ -10,8 +10,13 @@ export class Minimap {
     this.race = null;
     this.taken = new Set();
     this.colors = new Map();
-    window.addEventListener('resize', () => this.resize());
+    this.onResize = () => this.resize();
+    window.addEventListener('resize', this.onResize);
     this.resize();
+  }
+
+  destroy() {
+    window.removeEventListener('resize', this.onResize);
   }
 
   resize() {

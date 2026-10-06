@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#141a2a">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Đua thú – Tay cầm</title>
+  <title>Party Game – Tay cầm</title>
   <link rel="stylesheet" href="/css/play.css">
 </head>
 <body>
   <section id="scr-join" class="screen">
-    <h1>🏁 Đua thú</h1>
+    <h1>🎮 Party Game</h1>
     <label class="field">
       <span>Mã phòng</span>
       <input id="code" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABCD">
@@ -30,88 +30,39 @@
       <span id="meEmoji" class="big-emoji">🐴</span>
       <b id="meName"></b>
     </div>
+    <p id="gameTitle" class="game-title"></p>
     <p id="lobbyMsg" class="center">Chờ chủ phòng bắt đầu…</p>
 
-    <div class="box">
+    <!-- Chỉ hiện khi game cần cảm biến -->
+    <div id="sensorBox" class="box" hidden>
       <h3>🎮 Cảm biến</h3>
       <p id="sensorStatus" class="msg"></p>
       <button id="btnSensor" class="primary" hidden>Bật cảm biến</button>
-      <div class="meter">
-        <span>Nghiêng</span>
-        <div class="tilt"><i id="tiltDot"></i></div>
-      </div>
-      <div class="meter">
-        <span>Lắc ↕</span>
-        <div class="bar"><i id="shakeBar"></i></div>
-      </div>
-      <div class="meter">
-        <span>Nhảy ⤴</span>
-        <div class="bar"><i id="jumpBar"></i></div>
-        <b id="jumpHit" class="jump-hit" hidden>NHẢY!</b>
-      </div>
-      <div class="row">
-        <button id="btnCalib">Hiệu chỉnh</button>
-        <label class="check"><input type="checkbox" id="chkInvert"> Đảo chiều</label>
-      </div>
-      <label class="row">
-        <span>Độ nhạy lắc</span>
-        <select id="selSens">
-          <option value="14">Thấp</option>
-          <option value="10">Vừa</option>
-          <option value="7">Cao</option>
-        </select>
-      </label>
-      <label class="row">
-        <span>Nhảy bằng cử chỉ</span>
-        <select id="selJump">
-          <option value="0">Tắt (chỉ dùng nút)</option>
-          <option value="22">Thấp</option>
-          <option value="15">Vừa</option>
-          <option value="10">Cao</option>
-        </select>
-      </label>
-      <p id="jumpDbg" class="hint"></p>
-      <p id="jumpNote" class="hint" hidden></p>
-      <p class="hint">Cầm máy dọc, bấm "Hiệu chỉnh" khi đang cầm thẳng. Nghiêng trái/phải để lái. <b>Lắc lên xuống</b> để chạy: không lắc là đứng yên, lắc càng nhanh càng chạy nhanh (lắc ngang không tính). Thanh "Lắc ↕" cho biết con vật sẽ chạy nhanh cỡ nào. <b>Nhảy</b>: hất nhanh đầu máy về phía mình rồi thả về (như giật cương), hoặc bấm nút NHẢY. Bấm <b>PHI!</b> 1 lần để tăng tốc, năng lượng tụt dần tới hết (đầy 100% thì được 5 giây).</p>
     </div>
+
+    <!-- Phần riêng của game ở phòng chờ (VD thử lắc, chỉnh độ nhạy) -->
+    <div id="gameLobby"></div>
 
     <button id="btnChange" class="ghost">Đổi tên / con vật</button>
     <p id="appVersion" class="hint center"></p>
   </section>
 
-  <section id="scr-race" class="screen race" hidden>
-    <div class="race-top">
-      <div id="pos" class="pos">–</div>
-      <div class="bar prog"><i id="progBar"></i></div>
-    </div>
-    <div id="status" class="status"></div>
-    <div class="bar power"><i id="powerBar"></i></div>
-    <p id="noShake" class="noshake" hidden></p>
-    <div class="controls">
-      <button id="btnLeft" class="hold" aria-label="Sang trái">◀</button>
-      <div class="mid">
-        <button id="btnBoost" class="boost" aria-label="Tăng tốc">
-          <span class="mana-fill"></span>
-          <span id="boostLabel" class="lbl">PHI!<small>0%</small></span>
-        </button>
-        <button id="btnJump" class="jump">NHẢY ⤴</button>
-      </div>
-      <button id="btnRight" class="hold" aria-label="Sang phải">▶</button>
-    </div>
-    <div class="steer-indicator"><i id="steerDot"></i></div>
+  <section id="scr-game" class="screen" hidden>
+    <!-- Tay cầm của game -->
+    <div id="game"></div>
     <button id="btnSensor2" class="primary small" hidden>Bật cảm biến</button>
   </section>
 
   <section id="scr-done" class="screen center" hidden>
     <div id="doneBig" class="done-big"></div>
     <p id="doneText"></p>
-    <p class="hint">Chờ chủ phòng cho đua lại…</p>
+    <p class="hint">Chờ chủ phòng cho chơi lại…</p>
   </section>
 
   <div id="cd" class="cd" hidden></div>
   <div id="conn" class="conn" hidden>Mất kết nối, đang nối lại…</div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="/js/play.js"></script>
+  <script type="module" src="/js/core/play.js"></script>
 </body>
 </html>

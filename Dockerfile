@@ -24,6 +24,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY package.json server.js ./
 COPY src ./src
+COPY games ./games
 COPY public ./public
 
 USER node

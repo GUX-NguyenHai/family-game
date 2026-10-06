@@ -1,13 +1,18 @@
-// Quản lý phòng + sự kiện socket. Mọi dữ liệu chỉ nằm trong RAM, tắt server là mất.
+// Quản lý phòng + sự kiện socket, dùng chung cho mọi game. Mọi dữ liệu chỉ nằm trong RAM, tắt server là mất.
+// Luật chơi nằm trong games/<id>/logic; ở đây chỉ chạy vòng lặp và chuyển tin giữa game, màn hình chung và điện thoại:
+//   điện thoại → 'game:input' (type, data) → match.input()
+//   match.hostState() → 'game:state' (màn hình chung), match.playerState() → 'game:me' (từng điện thoại)
+//   api.toHost()/api.toPlayer() → 'game:event'; api.finish(results) → kết thúc ván
 const crypto = require('crypto');
 const C = require('./config');
-const game = require('./game');
+const games = require('./games');
 const license = require('./license');
 const manifest = require('../public/assets/animals.json');
 
 const ANIMAL_IDS = manifest.animals.map(a => a.id);
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const BOT_NAMES = ['Bot Tèo', 'Bot Tí', 'Bot Sửu', 'Bot Dần', 'Bot Mão', 'Bot Thìn', 'Bot Tỵ', 'Bot Ngọ'];
+const PLAYING = new Set(['countdown', 'playing']);
 
 const rooms = new Map();
 const licenseRooms = new Map(); // mã Pro (id) → mã phòng đang dùng nó; mỗi mã chỉ cho 1 phòng
@@ -42,9 +47,14 @@ function createRoom(code, token) {
   const room = {
     code,
     token,
-    state: 'lobby', // lobby | countdown | racing | finished
+    state: 'lobby', // lobby | countdown | playing | finished
     players: new Map(),
-    race: null,
+    gameId: games.defaultId(),
+    options: {}, // tuỳ chọn đã chọn cho từng game: { race: { difficulty: 'easy' }, ... }
+    match: null, // ván đang chơi (do game tạo)
+    matchGame: null,
+    matchSeq: 0, // tăng mỗi ván, để tin nhắn của ván cũ không lọt sang ván mới
+    startAt: 0,
     results: null,
     loop: null,
     tick: 0,
@@ -52,18 +62,30 @@ function createRoom(code, token) {
     finishedAt: 0,
     lastActive: Date.now(),
     license: null, // { id, expiresAt, players } khi đã nhập mã Pro
-    maxPlayers: C.FREE_MAX_PLAYERS,
-    difficulty: C.DEFAULT_DIFFICULTY,
+    tierMax: C.FREE_MAX_PLAYERS, // giới hạn theo gói; giới hạn thật = min(gói, game)
   };
   rooms.set(code, room);
   return room;
+}
+
+function gameOf(room) {
+  return games.get(room.gameId);
+}
+
+function optionsOf(room) {
+  room.options[room.gameId] ??= games.defaultOptions(gameOf(room));
+  return room.options[room.gameId];
+}
+
+function maxPlayersOf(room) {
+  return Math.min(room.tierMax, gameOf(room).maxPlayers || C.PRO_MAX_PLAYERS);
 }
 
 function releaseLicense(room) {
   if (!room.license) return;
   if (licenseRooms.get(room.license.id) === room.code) licenseRooms.delete(room.license.id);
   room.license = null;
-  room.maxPlayers = C.FREE_MAX_PLAYERS;
+  room.tierMax = C.FREE_MAX_PLAYERS;
 }
 
 // Gắn mã Pro cho phòng. Mã đang ở phòng khác mà màn hình phòng đó vẫn mở thì từ chối;
@@ -82,10 +104,10 @@ function applyLicense(io, room, input) {
   }
   if (room.license && room.license.id !== v.id) releaseLicense(room);
   room.license = { id: v.id, expiresAt: v.expiresAt, players: v.players };
-  room.maxPlayers = Math.min(C.PRO_MAX_PLAYERS, Math.max(C.FREE_MAX_PLAYERS, v.players));
+  room.tierMax = Math.min(C.PRO_MAX_PLAYERS, Math.max(C.FREE_MAX_PLAYERS, v.players));
   licenseRooms.set(v.id, room.code);
   broadcastRoom(io, room);
-  return { ok: true, code: v.code, expiresAt: v.expiresAt, maxPlayers: room.maxPlayers };
+  return { ok: true, code: v.code, expiresAt: v.expiresAt, maxPlayers: room.tierMax };
 }
 
 // Mã hết hạn giữa chừng thì phòng trở về bản miễn phí.
@@ -111,40 +133,31 @@ function publicPlayer(p) {
     color: p.color,
     bot: !!p.bot,
     connected: !!(p.bot || p.connected),
-    inRace: !!p.inRace,
+    inGame: !!p.inGame,
   };
 }
 
 function roomInfo(room) {
+  const game = gameOf(room);
+  const options = optionsOf(room);
   return {
     code: room.code,
     state: room.state,
-    trackLen: room.race?.trackLen ?? C.DIFFICULTIES[room.difficulty].TRACK_LEN,
-    difficulty: room.difficulty,
-    maxPlayers: room.maxPlayers,
+    game: game.id,
+    gameName: game.name,
+    gameEmoji: game.emoji || '🎮',
+    sensors: !!game.sensors,
+    goText: game.goText || 'BẮT ĐẦU!',
+    options,
+    optionsText: games.optionsText(game, options),
+    preview: game.preview ? game.preview(options) : null,
+    startIn: room.state === 'countdown' ? Math.max(0, room.startAt - Date.now()) : 0,
+    maxPlayers: maxPlayersOf(room),
     tier: room.license ? 'pro' : 'free',
     proUntil: room.license?.expiresAt ?? null,
     players: [...room.players.values()].map(publicPlayer),
     results: room.results,
   };
-}
-
-function raceInfo(room) {
-  const r = room.race;
-  if (!r) return null;
-  return {
-    level: r.level,
-    width: r.width,
-    trackLen: r.trackLen,
-    jumpMs: C.JUMP_MS,
-    obstacles: r.obstacles,
-    taken: [...r.taken],
-    racers: racersOf(room).map(p => p.id),
-  };
-}
-
-function racersOf(room) {
-  return [...room.players.values()].filter(p => p.inRace);
 }
 
 function hostCount(io, room) {
@@ -157,117 +170,150 @@ function broadcastRoom(io, room) {
   io.to(`p:${room.code}`).emit('room', info);
 }
 
+// Lỗi trong code của một game không được làm sập cả server.
+function safe(room, what, fn) {
+  try {
+    return fn();
+  } catch (err) {
+    console.error(`[${room.code}] Lỗi game ${room.matchGame?.id || room.gameId} (${what}):`, err);
+    return undefined;
+  }
+}
+
 function stopLoop(room) {
   if (room.loop) clearInterval(room.loop);
   room.loop = null;
 }
 
-function startRace(io, room) {
-  if (room.state === 'countdown' || room.state === 'racing') return { ok: false, error: 'busy' };
-  checkLicenseExpiry(io, room);
-  const racers = [...room.players.values()].filter(p => p.bot || p.connected);
-  if (!racers.length) return { ok: false, error: 'empty' };
-  if (racers.length > room.maxPlayers) return { ok: false, error: 'too-many', maxPlayers: room.maxPlayers };
+function endMatch(room) {
+  stopLoop(room);
+  if (room.match) safe(room, 'stop', () => room.match.stop?.());
+  room.match = null;
+  room.matchGame = null;
+  room.matchSeq++;
+}
 
-  for (const p of room.players.values()) p.inRace = false;
+// Cổng để game gửi tin ra ngoài. Ván đã kết thúc/bị thay thì mọi lời gọi bị bỏ qua.
+function makeApi(io, room, seq) {
+  const live = () => room.matchSeq === seq;
+  return {
+    toHost(msg) {
+      if (live()) io.to(`h:${room.code}`).emit('game:event', msg);
+    },
+    toPlayer(pid, msg) {
+      if (!live()) return;
+      const p = room.players.get(pid);
+      if (p?.socketId) io.to(p.socketId).emit('game:event', msg);
+    },
+    toPlayers(msg) {
+      if (live()) io.to(`p:${room.code}`).emit('game:event', msg);
+    },
+    finish(results) {
+      if (live() && room.state !== 'finished') finishMatch(io, room, results);
+    },
+  };
+}
+
+function startGame(io, room) {
+  if (PLAYING.has(room.state)) return { ok: false, error: 'busy' };
+  checkLicenseExpiry(io, room);
+  const game = gameOf(room);
+  const list = [...room.players.values()].filter(p => p.bot || p.connected);
+  if (!list.length) return { ok: false, error: 'empty' };
+  if (list.length < (game.minPlayers || 1)) return { ok: false, error: 'too-few', minPlayers: game.minPlayers };
+  if (list.length > maxPlayersOf(room)) return { ok: false, error: 'too-many', maxPlayers: maxPlayersOf(room) };
+
+  endMatch(room);
+  for (const p of room.players.values()) p.inGame = false;
+  for (const p of list) p.inGame = true;
   const now = Date.now();
-  room.race = game.createRace(racers, now, room.difficulty);
+  room.startAt = now + (game.countdownMs ?? C.DEFAULT_COUNTDOWN_MS);
   room.state = 'countdown';
   room.results = null;
   room.tick = 0;
   room.lastTick = now;
+  room.matchGame = game;
+  const match = safe(room, 'createMatch', () =>
+    game.createMatch({
+      players: list.map(publicPlayer),
+      options: { ...optionsOf(room) },
+      now,
+      startAt: room.startAt,
+      api: makeApi(io, room, room.matchSeq),
+    }),
+  );
+  if (!match) {
+    backToLobby(io, room);
+    return { ok: false, error: 'game-error' };
+  }
+  room.match = match;
 
-  io.to(`h:${room.code}`).emit('race', raceInfo(room));
+  io.to(`h:${room.code}`).emit('game:setup', safe(room, 'setup', () => match.setup?.()) ?? null);
   broadcastRoom(io, room);
-  stopLoop(room);
-  room.loop = setInterval(() => tick(io, room), 1000 / C.TICK_HZ);
+  room.loop = setInterval(() => tick(io, room), 1000 / (game.tickHz || C.DEFAULT_TICK_HZ));
   return { ok: true };
 }
 
 function backToLobby(io, room) {
-  stopLoop(room);
+  endMatch(room);
   room.state = 'lobby';
-  room.race = null;
   room.results = null;
-  for (const p of room.players.values()) p.inRace = false;
+  for (const p of room.players.values()) p.inGame = false;
   broadcastRoom(io, room);
 }
 
-function finishRace(io, room, now) {
-  const racers = racersOf(room);
-  room.race.endedAt = now;
+function finishMatch(io, room, results) {
+  const now = Date.now();
   room.state = 'finished';
   room.finishedAt = now;
-  room.results = game.results(racers, room.race.trackLen);
+  room.results = (Array.isArray(results) ? results : []).map((r, i) => ({
+    id: r.id,
+    name: r.name,
+    animal: r.animal,
+    color: r.color,
+    bot: !!r.bot,
+    place: r.place ?? i + 1,
+    detail: r.detail ?? '',
+  }));
   broadcastRoom(io, room);
 }
 
 function tick(io, room) {
-  const race = room.race;
-  if (!race) return stopLoop(room);
+  const match = room.match;
+  const game = room.matchGame;
+  if (!match || !game) return stopLoop(room);
 
   const now = Date.now();
   const dt = Math.min(0.1, (now - room.lastTick) / 1000);
   room.lastTick = now;
   room.tick++;
-  const racers = racersOf(room);
 
-  if (room.state === 'countdown' && now >= race.startAt) {
-    room.state = 'racing';
+  if (room.state === 'countdown' && now >= room.startAt) {
+    room.state = 'playing';
+    safe(room, 'begin', () => match.begin?.(now));
     broadcastRoom(io, room);
   }
 
-  for (const p of racers) {
-    if (p.bot && game.botThink(race, p, now, dt, racers)) io.to(`h:${room.code}`).emit('fx', { pid: p.id, type: 'turbo' });
+  safe(room, 'tick', () => match.tick?.(now, dt));
+  if (room.match !== match) return; // ván bị huỷ trong lúc tick
+
+  if (match.hostState && room.tick % (game.hostEvery || 1) === 0) {
+    const s = safe(room, 'hostState', () => match.hostState(now));
+    if (s) io.to(`h:${room.code}`).emit('game:state', s);
+  }
+  if (match.playerState && room.tick % (game.playerEvery || 1) === 0) {
+    for (const p of room.players.values()) {
+      if (!p.inGame || !p.socketId) continue;
+      const m = safe(room, 'playerState', () => match.playerState(p.id, now));
+      if (m) io.to(p.socketId).emit('game:me', m);
+    }
   }
 
-  const events = game.step(race, racers, now, dt);
-  for (const e of events) {
-    if (e.type !== 'manaFull') io.to(`h:${room.code}`).emit('fx', e);
-    const p = room.players.get(e.pid);
-    if (p && p.socketId) io.to(p.socketId).emit('hit', e);
-  }
-
-  if (room.state === 'racing' && game.isOver(race, racers, now)) finishRace(io, room, now);
-
-  io.to(`h:${room.code}`).emit('state', {
-    state: room.state,
-    cd: Math.max(0, race.startAt - now),
-    el: Math.max(0, now - race.startAt),
-    taken: race.taken.size ? [...race.taken] : undefined,
-    p: racers.map(p => ({
-      id: p.id,
-      x: Math.round(p.x * 100) / 100,
-      z: Math.round(p.z * 100) / 100,
-      sp: Math.round(p.speed * 10) / 10,
-      f: game.flagsOf(p, now),
-      r: p.rank,
-    })),
-  });
-
-  if (room.tick % C.PLAYER_UPDATE_EVERY === 0) {
-    const order = game.standings(racers);
-    order.forEach((p, i) => {
-      if (!p.socketId) return;
-      io.to(p.socketId).emit('me', {
-        state: room.state,
-        cd: Math.max(0, race.startAt - now),
-        pos: i + 1,
-        total: order.length,
-        prog: Math.min(1, p.z / race.trackLen),
-        pw: Math.round(p.driveEff * 100) / 100,
-        mn: Math.round(p.mana * 100) / 100,
-        f: game.flagsOf(p, now),
-        rank: p.rank,
-      });
-    });
-  }
-
-  if (room.state === 'finished' && now - room.finishedAt > C.COAST_MS) stopLoop(room);
+  if (room.state === 'finished' && now - room.finishedAt >= (game.coastMs || 0)) stopLoop(room);
 }
 
 function addBot(io, room) {
-  if (room.players.size >= room.maxPlayers) return;
+  if (!gameOf(room).bots || room.players.size >= maxPlayersOf(room)) return;
   const used = new Set([...room.players.values()].map(p => p.name));
   const name = BOT_NAMES.find(n => !used.has(n)) || `Bot ${room.players.size + 1}`;
   const id = 'bot-' + crypto.randomUUID();
@@ -277,13 +323,15 @@ function addBot(io, room) {
     animal: ANIMAL_IDS[Math.floor(Math.random() * ANIMAL_IDS.length)],
     color: pickColor(room),
     bot: true,
-    botSkill: 0.45 + Math.random() * 0.45,
-    botLane: 0,
     connected: true,
     socketId: null,
-    inRace: false,
+    inGame: false,
   });
   broadcastRoom(io, room);
+}
+
+function removeBots(room) {
+  for (const [id, p] of room.players) if (p.bot) room.players.delete(id);
 }
 
 function attach(io) {
@@ -308,6 +356,18 @@ function attach(io) {
       return room && p ? { room, p } : {};
     }
 
+    function hostReply(room, licenseError) {
+      return {
+        ok: true,
+        code: room.code,
+        token: room.token,
+        games: games.catalog(),
+        room: roomInfo(room),
+        setup: room.match ? safe(room, 'setup', () => room.match.setup?.()) ?? null : null,
+        licenseError,
+      };
+    }
+
     // Màn hình host đã từng nhập mã Pro (lưu ở trình duyệt) thì gắn lại cho phòng mới/phòng dựng lại.
     function restoreLicense(room, input) {
       if (!input || room.license) return null;
@@ -318,9 +378,9 @@ function attach(io) {
     socket.on('host:create', (payload, ack) => {
       if (rooms.size >= C.MAX_ROOMS) return reply(ack, { ok: false, error: 'busy' });
       const room = createRoom(makeCode(), crypto.randomUUID());
+      if (games.get(payload?.game)) room.gameId = payload.game;
       joinAsHost(room);
-      const licenseError = restoreLicense(room, payload?.license);
-      reply(ack, { ok: true, code: room.code, token: room.token, room: roomInfo(room), race: null, licenseError });
+      reply(ack, hostReply(room, restoreLicense(room, payload?.license)));
     });
 
     // Màn hình host tải lại trang, hoặc server vừa khởi động lại: dựng lại phòng với mã cũ.
@@ -333,10 +393,10 @@ function attach(io) {
       if (!room) {
         if (rooms.size >= C.MAX_ROOMS) return reply(ack, { ok: false, error: 'busy' });
         room = createRoom(code, token);
+        if (games.get(payload?.game)) room.gameId = payload.game;
       }
       joinAsHost(room);
-      const licenseError = restoreLicense(room, payload?.license);
-      reply(ack, { ok: true, code: room.code, token: room.token, room: roomInfo(room), race: raceInfo(room), licenseError });
+      reply(ack, hostReply(room, restoreLicense(room, payload?.license)));
     });
 
     // Nhập mã Pro; gửi mã rỗng để gỡ mã (về bản miễn phí).
@@ -354,15 +414,27 @@ function attach(io) {
 
     socket.on('host:start', (_payload, ack) => {
       const room = hostRoom();
-      reply(ack, room ? startRace(io, room) : { ok: false, error: 'no-room' });
+      reply(ack, room ? startGame(io, room) : { ok: false, error: 'no-room' });
     });
 
-    // Chủ phòng chọn độ khó (chỉ đổi được ở phòng chờ hoặc lúc xem kết quả).
-    socket.on('host:difficulty', level => {
+    // Chủ phòng chọn game (ở phòng chờ hoặc lúc xem kết quả; đang xem kết quả thì về phòng chờ).
+    socket.on('host:game', id => {
       const room = hostRoom();
-      if (!room || !game.isLevel(level)) return;
-      if (room.state === 'countdown' || room.state === 'racing') return;
-      room.difficulty = level;
+      const game = games.get(String(id));
+      if (!room || !game || PLAYING.has(room.state)) return;
+      if (room.state !== 'lobby') backToLobby(io, room);
+      room.gameId = game.id;
+      if (!game.bots) removeBots(room);
+      broadcastRoom(io, room);
+    });
+
+    // Chủ phòng chọn tuỳ chọn của game (VD độ khó). Không đổi được khi đang chơi.
+    socket.on('host:option', payload => {
+      const room = hostRoom();
+      const key = String(payload?.key || '');
+      const value = String(payload?.value ?? '');
+      if (!room || PLAYING.has(room.state) || !games.isChoice(gameOf(room), key, value)) return;
+      optionsOf(room)[key] = value;
       broadcastRoom(io, room);
     });
 
@@ -379,7 +451,7 @@ function attach(io) {
     socket.on('host:clearBots', () => {
       const room = hostRoom();
       if (!room || room.state !== 'lobby') return;
-      for (const [id, p] of room.players) if (p.bot) room.players.delete(id);
+      removeBots(room);
       broadcastRoom(io, room);
     });
 
@@ -403,12 +475,12 @@ function attach(io) {
       let p = room.players.get(id);
 
       if (!p) {
-        if (room.players.size >= room.maxPlayers) {
-          return reply(ack, { ok: false, error: 'full', tier: room.license ? 'pro' : 'free', maxPlayers: room.maxPlayers });
+        if (room.players.size >= maxPlayersOf(room)) {
+          return reply(ack, { ok: false, error: 'full', tier: room.license ? 'pro' : 'free', maxPlayers: maxPlayersOf(room) });
         }
-        p = { id, name, animal, color: pickColor(room), bot: false, inRace: false };
+        p = { id, name, animal, color: pickColor(room), bot: false, inGame: false };
         room.players.set(id, p);
-      } else if (!p.inRace || room.state === 'lobby') {
+      } else if (!p.inGame || room.state === 'lobby') {
         p.name = name;
         p.animal = animal;
       }
@@ -425,29 +497,12 @@ function attach(io) {
       broadcastRoom(io, room);
     });
 
-    socket.on('steer', v => {
-      const { p } = playerCtx();
-      if (!p || !p.inRace) return;
-      const n = Number(v);
-      p.steer = Number.isFinite(n) ? Math.max(-1, Math.min(1, n)) : 0;
-    });
-
-    socket.on('move', level => {
+    // Mọi thao tác trong game đi qua đây; game tự hiểu type/data.
+    socket.on('game:input', (type, data) => {
       const { room, p } = playerCtx();
-      if (!p || !p.inRace) return;
-      game.move(room.race, p, level, Date.now());
-    });
-
-    socket.on('turbo', () => {
-      const { room, p } = playerCtx();
-      if (!p || !p.inRace) return;
-      if (game.turbo(room.race, p, Date.now())) io.to(`h:${room.code}`).emit('fx', { pid: p.id, type: 'turbo' });
-    });
-
-    socket.on('jump', () => {
-      const { room, p } = playerCtx();
-      if (!p || !p.inRace) return;
-      if (game.jump(room.race, p, Date.now())) io.to(`h:${room.code}`).emit('fx', { pid: p.id, type: 'jump' });
+      if (!p || !p.inGame || !room.match || typeof type !== 'string' || type.length > 24) return;
+      const match = room.match;
+      safe(room, 'input', () => match.input?.(p.id, type, data, Date.now()));
     });
 
     socket.on('disconnect', () => {
@@ -457,8 +512,11 @@ function attach(io) {
       if (!p || p.socketId !== socket.id) return;
       p.socketId = null;
       p.connected = false;
-      p.steer = 0;
       p.leftAt = Date.now();
+      if (p.inGame && room.match) {
+        const match = room.match;
+        safe(room, 'leave', () => match.leave?.(p.id));
+      }
       broadcastRoom(io, room);
     });
   });
@@ -469,7 +527,7 @@ function attach(io) {
     for (const room of rooms.values()) {
       let changed = false;
       for (const [id, p] of room.players) {
-        if (!p.bot && !p.connected && !p.inRace && now - p.leftAt > C.PLAYER_DROP_MS) {
+        if (!p.bot && !p.connected && !p.inGame && now - p.leftAt > C.PLAYER_DROP_MS) {
           room.players.delete(id);
           changed = true;
         }
@@ -477,7 +535,7 @@ function attach(io) {
       const anyone = hostCount(io, room) > 0 || [...room.players.values()].some(p => !p.bot && p.connected);
       if (anyone) room.lastActive = now;
       else if (now - room.lastActive > C.ROOM_IDLE_MS) {
-        stopLoop(room);
+        endMatch(room);
         releaseLicense(room);
         rooms.delete(room.code);
         continue;

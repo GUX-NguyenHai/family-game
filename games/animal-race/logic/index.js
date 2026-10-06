@@ -1,0 +1,138 @@
+// Game Đua thú: khai báo cho nền tảng + nối các sự kiện chung với phần mô phỏng (simulation.js).
+const C = require('./config');
+const simulation = require('./simulation');
+
+function round(v, k) {
+  return Math.round(v * k) / k;
+}
+
+function createMatch({ players, options, now, startAt, api }) {
+  // Bản sao riêng của game; nền tảng giữ đối tượng người chơi gốc.
+  const racers = players.map(p => ({ id: p.id, name: p.name, animal: p.animal, color: p.color, bot: p.bot }));
+  const byId = new Map(racers.map(r => [r.id, r]));
+  const race = simulation.createRace(racers, now, options.difficulty, startAt);
+
+  // Thứ hạng tính 1 lần cho mỗi tick rồi dùng cho mọi điện thoại.
+  let orderAt = -1;
+  let order = new Map();
+
+  function phase(now) {
+    if (now < race.startAt) return 'countdown';
+    return race.endedAt ? 'finished' : 'racing';
+  }
+
+  return {
+    // Gửi cho màn hình chung lúc bắt đầu (và khi màn hình tải lại giữa chừng).
+    setup() {
+      return {
+        level: race.level,
+        width: race.width,
+        trackLen: race.trackLen,
+        jumpMs: race.cfg.JUMP_MS,
+        obstacles: race.obstacles,
+        taken: [...race.taken],
+        racers: racers.map(p => p.id),
+      };
+    },
+
+    input(pid, type, data, now) {
+      const p = byId.get(pid);
+      if (!p) return;
+      if (type === 'steer') {
+        const n = Number(data);
+        p.steer = Number.isFinite(n) ? Math.max(-1, Math.min(1, n)) : 0;
+      } else if (type === 'move') {
+        simulation.move(race, p, data, now);
+      } else if (type === 'turbo') {
+        if (simulation.turbo(race, p, now)) api.toHost({ pid, type: 'turbo' });
+      } else if (type === 'jump') {
+        if (simulation.jump(race, p, now)) api.toHost({ pid, type: 'jump' });
+      }
+    },
+
+    leave(pid) {
+      const p = byId.get(pid);
+      if (p) p.steer = 0;
+    },
+
+    tick(now, dt) {
+      for (const p of racers) {
+        if (p.bot && simulation.botThink(race, p, now, dt, racers)) api.toHost({ pid: p.id, type: 'turbo' });
+      }
+      for (const e of simulation.step(race, racers, now, dt)) {
+        if (e.type !== 'manaFull') api.toHost(e);
+        api.toPlayer(e.pid, e);
+      }
+      if (!race.endedAt && now >= race.startAt && simulation.isOver(race, racers, now)) {
+        race.endedAt = now;
+        api.finish(
+          simulation.results(racers, race.trackLen).map(r => ({
+            ...r,
+            detail: r.finished ? `${(r.timeMs / 1000).toFixed(2)}s` : `chưa về đích (${Math.round(r.progress * 100)}%)`,
+          })),
+        );
+      }
+    },
+
+    hostState(now) {
+      return {
+        state: phase(now),
+        el: Math.max(0, now - race.startAt),
+        taken: race.taken.size ? [...race.taken] : undefined,
+        p: racers.map(p => ({
+          id: p.id,
+          x: round(p.x, 100),
+          z: round(p.z, 100),
+          sp: round(p.speed, 10),
+          f: simulation.flagsOf(p, now),
+          r: p.rank,
+        })),
+      };
+    },
+
+    playerState(pid, now) {
+      const p = byId.get(pid);
+      if (!p) return null;
+      if (orderAt !== now) {
+        orderAt = now;
+        order = new Map(simulation.standings(racers).map((q, i) => [q.id, i + 1]));
+      }
+      return {
+        state: phase(now),
+        pos: order.get(pid),
+        total: racers.length,
+        prog: Math.min(1, p.z / race.trackLen),
+        pw: round(p.driveEff, 100),
+        mn: round(p.mana, 100),
+        f: simulation.flagsOf(p, now),
+        rank: p.rank,
+      };
+    },
+  };
+}
+
+module.exports = {
+  id: 'animal-race', // trùng tên thư mục games/animal-race
+  name: 'Đua thú',
+  emoji: '🏁',
+  description: 'Lắc máy lên xuống để chạy, nghiêng để đổi làn, nhảy qua rào, ăn cà rốt lấy năng lượng TURBO.',
+  maxPlayers: 12,
+  bots: true,
+  sensors: true, // điện thoại cần cảm biến (lắc, nghiêng)
+  tickHz: C.TICK_HZ,
+  playerEvery: C.PLAYER_UPDATE_EVERY,
+  countdownMs: C.COUNTDOWN_MS,
+  goText: 'CHẠY!',
+  coastMs: C.COAST_MS,
+  options: [
+    {
+      key: 'difficulty',
+      label: 'Độ khó',
+      default: C.DEFAULT_DIFFICULTY,
+      choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
+    },
+  ],
+  // Phòng chờ: cảnh 3D dựng sẵn đường đua đúng độ dài theo độ khó.
+  preview: options => ({ trackLen: simulation.settingsFor(options.difficulty).TRACK_LEN }),
+  createMatch,
+};

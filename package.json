@@ -1,8 +1,8 @@
 {
-  "name": "family-animal-race",
+  "name": "party-game",
   "version": "0.1.0",
   "private": true,
-  "description": "Đua thú gia đình: màn hình chung 3D + điện thoại làm tay cầm",
+  "description": "Party Game: màn hình chung + điện thoại làm tay cầm, mỗi game là một module trong games/",
   "main": "server.js",
   "engines": {
     "node": ">=18.11"

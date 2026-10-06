@@ -1,12 +1,19 @@
-# 🏁 Đua thú
+# 🎮 Party Game
 
-Game đua thú cho cả nhà:
-- **TV hoặc laptop** chiếu đường đua 3D và mã QR.
-- **Mỗi người dùng điện thoại** quét QR, chọn một con vật, rồi dùng máy làm tay cầm.
+Bộ game cho cả nhà:
+- **TV hoặc laptop** làm màn hình chung, hiện mã QR.
+- **Mỗi người dùng điện thoại** quét QR, chọn một con vật làm avatar, rồi dùng máy làm tay cầm.
+- **Chủ phòng chọn game ở phòng chờ.** Đổi game không cần quét lại mã: cả nhà ở nguyên trong phòng.
+
+| Game | Cách chơi |
+|---|---|
+| 🏁 **Đua thú** | Đường đua 3D: lắc máy để chạy, nghiêng để đổi làn, nhảy rào, TURBO (chi tiết ở dưới) |
+
+Mỗi game là một module trong `games/`. **Cách thêm game mới: xem [games/README.md](games/README.md).**
 
 Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất.
 
-## Cách chơi (trên điện thoại)
+## 🏁 Đua thú: cách chơi (trên điện thoại)
 
 | Thao tác | Tác dụng |
 |---|---|
@@ -20,9 +27,9 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 | 🥕 Cà rốt | +10% năng lượng. Ai tới trước người đó ăn |
 | 💥 Va nhau | Hai con chạm nhau bị đẩy sang hai bên và **cùng chậm lại như lội bùn**, rồi tăng tốc lại. Tông đuôi con phía trước thì không vượt được, phải lái sang bên. Con đang TURBO không bị chậm, hất con kia ra và lách qua |
 
-Các con số này chỉnh trong `src/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm chỉnh bằng `COLLIDE` (đặt `false` để tắt), `BUMP_PUSH`, `TURBO_PUSH_SHARE`.
+Các con số này chỉnh trong `games/animal-race/logic/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm chỉnh bằng `COLLIDE` (đặt `false` để tắt), `BUMP_PUSH`, `TURBO_PUSH_SHARE`.
 
-## Độ khó
+## 🏁 Đua thú: độ khó
 
 Chủ phòng chọn ở phòng chờ trên màn hình chung (hoặc ở màn kết quả cho ván sau). **Mặc định: Dễ.** Mọi gói đều dùng được.
 
@@ -35,7 +42,7 @@ Chủ phòng chọn ở phòng chờ trên màn hình chung (hoặc ở màn k�
 | Độ nặng tay | Lắc nhẹ đã chạy tối đa | Vừa | Phải lắc mạnh mới chạy tối đa |
 | Bot | Chậm, ít nhảy rào, hay phí TURBO | Khá | Nhanh, nhảy rào giỏi, dùng TURBO khôn |
 
-Tốc độ tối đa ở cả 3 mức đều là 19 m/s. Độ nặng tay là `DRIVE_GAIN` (1.3 / 1 / 0.8). Chỉnh các con số trong `DIFFICULTIES` ở `src/config.js`.
+Tốc độ tối đa ở cả 3 mức đều là 19 m/s. Độ nặng tay là `DRIVE_GAIN` (1.3 / 1 / 0.8). Chỉnh các con số trong `DIFFICULTIES` ở `games/animal-race/logic/config.js`.
 
 ## Miễn phí và Pro
 
@@ -150,15 +157,25 @@ Cài Node 22 trên server, rồi chạy `npm install --omit=dev`. Tối ưu mode
 ## Cấu trúc
 
 ```
-server.js                  HTTP + Socket.IO + QR
-src/config.js              ★ tham số luật chơi (tốc độ, độ dài đường, thời gian choáng…)
-src/game.js                mô phỏng cuộc đua + bot (không dính đồ hoạ)
-src/rooms.js               quản lý phòng, sự kiện socket
-public/assets/animals.json ★ danh sách con vật, tên hoạt ảnh, hướng model
-public/host.html + js/host/  màn hình chung 3D (three.js)
-public/play.html + js/play.js + js/sensors.js   tay cầm điện thoại
-animal/                    model gốc (Quaternius, CC0)
-build/models/              model đã tối ưu (tạo bằng npm run models)
+server.js                     HTTP + Socket.IO + QR, mở thư mục giao diện của từng game
+src/                          ── phần chung (nền tảng) ──
+  config.js                   ★ phiên bản, giới hạn phòng/gói, game mặc định
+  rooms.js                    phòng, người chơi, bot, vòng lặp, chuyển tin giữa game ↔ màn hình ↔ điện thoại
+  games.js                    đọc danh sách game, tuỳ chọn của game
+  license.js                  mã Pro
+public/                       giao diện chung
+  host.html + js/core/host.js phòng chờ, QR, chọn game, đếm ngược, kết quả (màn hình chung)
+  play.html + js/core/play.js vào phòng, phòng chờ, màn kết quả (điện thoại)
+  js/core/sensors.js          cảm biến điện thoại (nghiêng, lắc, hất máy), game nào cũng dùng được
+  assets/animals.json         ★ danh sách con vật (avatar), tên hoạt ảnh, hướng model
+games/                        ── mỗi game một thư mục ──
+  index.js                    ★ danh sách game (thêm game = thêm 1 dòng)
+  animal-race/                🏁 Đua thú
+    logic/                    luật chơi: config.js ★, simulation.js (mô phỏng cuộc đua + bot), index.js (khai báo)
+    screen/                   hình ảnh trên TV: cảnh 3D (three.js), bản đồ nhỏ, bảng xếp hạng
+    controller/               tay cầm điện thoại: PHI!/NHẢY, thử cảm biến ở phòng chờ
+animal/                       model gốc (Quaternius, CC0)
+build/models/                 model đã tối ưu (tạo bằng npm run models)
 ```
 
 **Thêm con vật mới:**

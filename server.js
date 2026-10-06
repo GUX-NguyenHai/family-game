@@ -5,6 +5,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const QRCode = require('qrcode');
 const rooms = require('./src/rooms');
+const games = require('./src/games');
 const license = require('./src/license');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -22,6 +23,18 @@ app.use(
     setHeaders: res => res.setHeader('Cache-Control', 'no-cache'),
   }),
 );
+// Giao diện riêng của từng game: chỉ mở thư mục screen/ và controller/ (luật chơi trong logic/ không ra ngoài).
+for (const g of games.all()) {
+  for (const side of ['screen', 'controller']) {
+    app.use(
+      `/games/${g.id}/${side}`,
+      express.static(path.join(__dirname, 'games', g.id, side), {
+        setHeaders: res => res.setHeader('Cache-Control', 'no-cache'),
+      }),
+    );
+  }
+}
+app.get('/api/games', (req, res) => res.json(games.catalog()));
 app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules/three'), { maxAge: '1d' }));
 // Ưu tiên model đã tối ưu (npm run models), không có thì dùng file gốc trong animal/.
 app.use('/models', express.static(path.join(__dirname, 'build/models'), { maxAge: '1h' }));
@@ -57,7 +70,7 @@ io.on('connection', socket => socket.emit('hello', { build: BUILD_ID, version: A
 rooms.attach(io);
 
 server.listen(PORT, HOST, () => {
-  console.log(`Đua thú đang chạy:`);
+  console.log(`Party Game đang chạy (${games.all().map(g => g.name).join(', ')}):`);
   console.log(`  Màn hình chung: http://localhost:${PORT}/host`);
   for (const ip of lanIps()) console.log(`  Trong mạng LAN:  http://${ip}:${PORT}/host`);
   if (!license.hasSecret()) {

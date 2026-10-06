@@ -2,6 +2,7 @@
 // Toạ độ: z = quãng đường đã chạy (0 → trackLen), x = lệch ngang so với tim đường.
 // Mỗi cuộc đua mang bộ tham số riêng (race.cfg) theo độ khó của phòng.
 const CONFIG = require('./config');
+const DIFFICULTY_META = new Set(['label', 'desc']);
 
 const FLAG_STUN = 1;
 const FLAG_JUMP = 2;
@@ -25,7 +26,8 @@ function isLevel(level) {
 // Tham số chung + phần ghi đè của mức độ.
 function settingsFor(level) {
   const key = isLevel(level) ? level : CONFIG.DEFAULT_DIFFICULTY;
-  return { ...CONFIG, ...CONFIG.DIFFICULTIES[key], level: key };
+  const over = Object.fromEntries(Object.entries(CONFIG.DIFFICULTIES[key]).filter(([k]) => !DIFFICULTY_META.has(k)));
+  return { ...CONFIG, ...over, level: key };
 }
 
 function cfgOf(race) {
@@ -118,7 +120,7 @@ function botPace(p, progress) {
   return 1;
 }
 
-function createRace(racers, now, level) {
+function createRace(racers, now, level, startAt = null) {
   const C = settingsFor(level);
   const width = trackWidthFor(racers.length);
   const lane = width / racers.length;
@@ -131,7 +133,7 @@ function createRace(racers, now, level) {
     obstacles: createObstacles(C, width),
     taken: new Set(),
     contacts: new Set(), // các cặp đang chạm nhau ở tick trước
-    startAt: now + C.COUNTDOWN_MS,
+    startAt: startAt ?? now + C.COUNTDOWN_MS,
     firstFinishAt: null,
     finishCount: 0,
     endedAt: null,
