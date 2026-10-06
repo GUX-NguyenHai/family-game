@@ -1,5 +1,5 @@
 // Quản lý phòng + sự kiện socket, dùng chung cho mọi game. Mọi dữ liệu chỉ nằm trong RAM, tắt server là mất.
-// Luật chơi nằm trong games/<id>/logic; ở đây chỉ chạy vòng lặp và chuyển tin giữa game, màn hình chung và điện thoại:
+// Luật chơi nằm trong games/<id>/service; ở đây chỉ chạy vòng lặp và chuyển tin giữa game, màn hình chung và điện thoại:
 //   điện thoại → 'game:input' (type, data) → match.input()
 //   match.hostState() → 'game:state' (màn hình chung), match.playerState() → 'game:me' (từng điện thoại)
 //   api.toHost()/api.toPlayer() → 'game:event'; api.finish(results) → kết thúc ván

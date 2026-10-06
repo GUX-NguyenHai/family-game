@@ -8,7 +8,7 @@ Bộ game cho cả nhà:
 | Game | Cách chơi |
 |---|---|
 | 🏁 **Đua thú** | Đường đua 3D: lắc máy để chạy, nghiêng để đổi làn, nhảy rào, TURBO (chi tiết ở dưới) |
-| 🚣 **Đua thuyền** | Lắc máy lên xuống để chèo: lắc nhanh thì đi nhanh, ngừng lắc thì thuyền dừng. **Thi đơn** hoặc **theo đội** (2–4 người chung thuyền, tốc độ = trung bình mức lắc cả đội). Kiểu **Basic**: đường thẳng, không vật cản. Kiểu **Pro**: nghiêng để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Chọn xuồng hoặc thuyền chèo ở phòng chờ. Tham số: `games/boat-race/logic/config.js` |
+| 🚣 **Đua thuyền** | Lắc máy lên xuống để chèo: lắc nhanh thì đi nhanh, ngừng lắc thì thuyền dừng. **Thi đơn** hoặc **theo đội** (2–4 người chung thuyền, tốc độ = trung bình mức lắc cả đội). Kiểu **Basic**: đường thẳng, không vật cản. Kiểu **Pro**: nghiêng để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Chọn xuồng hoặc thuyền chèo ở phòng chờ. Tham số: `games/boat-race/service/config.js` |
 
 Mỗi game là một module trong `games/`. **Cách thêm game mới: xem [games/README.md](games/README.md).**
 
@@ -28,7 +28,7 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 | 🥕 Cà rốt | +10% năng lượng. Ai tới trước người đó ăn |
 | 💥 Va nhau | Hai con chạm nhau bị đẩy sang hai bên và **cùng chậm lại như lội bùn**, rồi tăng tốc lại. Tông đuôi con phía trước thì không vượt được, phải lái sang bên. Con đang TURBO không bị chậm, hất con kia ra và lách qua |
 
-Các con số này chỉnh trong `games/animal-race/logic/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm chỉnh bằng `COLLIDE` (đặt `false` để tắt), `BUMP_PUSH`, `TURBO_PUSH_SHARE`.
+Các con số này chỉnh trong `games/animal-race/service/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm chỉnh bằng `COLLIDE` (đặt `false` để tắt), `BUMP_PUSH`, `TURBO_PUSH_SHARE`.
 
 ## 🏁 Đua thú: độ khó
 
@@ -43,7 +43,7 @@ Chủ phòng chọn ở phòng chờ trên màn hình chung (hoặc ở màn k�
 | Độ nặng tay | Lắc nhẹ đã chạy tối đa | Vừa | Phải lắc mạnh mới chạy tối đa |
 | Bot | Chậm, ít nhảy rào, hay phí TURBO | Khá | Nhanh, nhảy rào giỏi, dùng TURBO khôn |
 
-Tốc độ tối đa ở cả 3 mức đều là 19 m/s. Độ nặng tay là `DRIVE_GAIN` (1.3 / 1 / 0.8). Chỉnh các con số trong `DIFFICULTIES` ở `games/animal-race/logic/config.js`.
+Tốc độ tối đa ở cả 3 mức đều là 19 m/s. Độ nặng tay là `DRIVE_GAIN` (1.3 / 1 / 0.8). Chỉnh các con số trong `DIFFICULTIES` ở `games/animal-race/service/config.js`.
 
 ## Miễn phí và Pro
 
@@ -173,11 +173,11 @@ public/                       giao diện chung
 games/                        ── mỗi game một thư mục ──
   index.js                    ★ danh sách game (thêm game = thêm 1 dòng)
   animal-race/                🏁 Đua thú
-    logic/                    luật chơi: config.js ★, simulation.js (mô phỏng cuộc đua + bot), index.js (khai báo)
+    service/                  luật chơi: config.js ★, simulation.js (mô phỏng cuộc đua + bot), index.js (khai báo)
     screen/                   hình ảnh trên TV: cảnh 3D (three.js), bản đồ nhỏ, bảng xếp hạng
     controller/               tay cầm điện thoại: PHI!/NHẢY, thử cảm biến ở phòng chờ
   boat-race/                  🚣 Đua thuyền
-    logic/                    luật chơi: config.js ★, simulation.js (thuyền, đội, vật cản, bot), index.js
+    service/                  luật chơi: config.js ★, simulation.js (thuyền, đội, vật cản, bot), index.js
     screen/                   cảnh sông 3D, bản đồ nhỏ, bảng xếp hạng
     controller/               tay cầm: chèo, lái (kiểu Pro), chọn thuyền ở phòng chờ
     assets/                   boats.json (danh sách thuyền), models/ (thuyền, khúc gỗ, hải đăng + CREDITS.md)

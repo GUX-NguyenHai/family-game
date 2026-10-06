@@ -23,7 +23,7 @@ app.use(
     setHeaders: res => res.setHeader('Cache-Control', 'no-cache'),
   }),
 );
-// Giao diện riêng của từng game: chỉ mở thư mục screen/, controller/ và assets/ (luật chơi trong logic/ không ra ngoài).
+// Giao diện riêng của từng game: chỉ mở thư mục screen/, controller/ và assets/ (luật chơi trong service/ không ra ngoài).
 for (const g of games.all()) {
   for (const side of ['screen', 'controller', 'assets']) {
     app.use(

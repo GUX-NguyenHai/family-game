@@ -4,21 +4,21 @@ Mỗi game là một thư mục `games/<id>/` gồm 3 phần. Phần chung đã 
 
 ```
 games/<id>/
-  logic/index.js        luật chơi (server chung gọi tới, Node CommonJS)
+  service/index.js      luật chơi (server chung gọi tới, Node CommonJS)
   screen/index.js       hình ảnh trên TV lúc chơi (ES module) + screen/style.css
   controller/index.js   tay cầm trên điện thoại (ES module) + controller/style.css
 ```
 
 Các bước:
 1. Tạo thư mục `games/<id>/` với 3 phần như dưới. `<id>` chỉ gồm chữ thường, số và dấu `-`. Có thể xem `games/animal-race/` để tham khảo.
-2. Thêm 1 dòng `require('./<id>/logic')` vào `games/index.js`.
+2. Thêm 1 dòng `require('./<id>/service')` vào `games/index.js`.
 3. Khởi động lại server. Game sẽ hiện ra ở phần chọn game trong phòng chờ.
 
-Chỉ thư mục `screen/`, `controller/` và `assets/` (model, ảnh, json của game) được mở ra ngoài, ở đường dẫn `/games/<id>/screen/…`, `/games/<id>/controller/…`, `/games/<id>/assets/…`. Không ai tải được thư mục `logic/`.
+Chỉ thư mục `screen/`, `controller/` và `assets/` (model, ảnh, json của game) được mở ra ngoài, ở đường dẫn `/games/<id>/screen/…`, `/games/<id>/controller/…`, `/games/<id>/assets/…`. Không ai tải được thư mục `service/`.
 
 Game cần cảnh 3D thì dùng đồ nghề chung trong `/js/core/scene-kit.js`: tải con vật (`loadAnimalTemplate`), tải model khác (`loadModel` + `cloneModel`), nhãn tên (`Label`), chữ nổi (`textSprite`), hạt hiệu ứng (`Particles`)…
 
-## 1. `logic/index.js`: khai báo + luật chơi
+## 1. `service/index.js`: khai báo + luật chơi
 
 ```js
 module.exports = {

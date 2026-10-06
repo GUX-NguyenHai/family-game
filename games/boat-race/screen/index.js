@@ -5,7 +5,7 @@ import { Minimap } from './minimap.js';
 
 const catalog = await fetch('/games/boat-race/assets/boats.json').then(r => r.json());
 
-// Phải khớp với BOAT_HALF_LEN_BASE / BOAT_HALF_LEN_PER_SEAT trong logic/config.js.
+// Phải khớp với BOAT_HALF_LEN_BASE / BOAT_HALF_LEN_PER_SEAT trong service/config.js.
 const halfLenFor = seats => 1.3 + 0.35 * seats;
 
 // Các thuyền để xếp ở phòng chờ, cùng id với thuyền lúc đua để chuyển cảnh mượt.
