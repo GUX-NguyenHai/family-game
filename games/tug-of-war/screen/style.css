@@ -1,0 +1,66 @@
+/* Kéo co – màn hình chung. Biến màu (--panel, --muted, --accent) lấy từ /css/host.css; --red/--blue = màu hai đội. */
+#game[data-game="tug-of-war"] { --red: #e6194b; --blue: #4363d8; background: #9fd8ff; }
+
+.tug-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.tug-hud { position: absolute; inset: 0; pointer-events: none; }
+
+/* Bảng tỉ số giữa trên */
+.tug-board {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 22px;
+  border-radius: 18px;
+  background: var(--panel);
+  font-size: 1.4rem;
+  white-space: nowrap;
+}
+.tug-board .team { display: flex; align-items: center; gap: 12px; }
+.tug-board .score { font-size: 2.6rem; min-width: 1.2em; text-align: center; }
+.tug-board .red .score { color: var(--red); }
+.tug-board .blue .score { color: var(--blue); }
+.tug-board .mid { display: flex; flex-direction: column; align-items: center; min-width: 110px; }
+.tug-board .round { color: var(--muted); font-size: 0.9rem; }
+.tug-board .timer { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+
+/* Lực hai đội: hai thanh ở đáy màn hình, mọc từ giữa ra hai bên */
+.tug-forces {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: min(70vw, 900px);
+  display: flex;
+  gap: 8px;
+}
+.tug-forces .force { flex: 1; height: 22px; border-radius: 99px; background: rgba(0, 0, 0, 0.35); overflow: hidden; display: flex; }
+.tug-forces .force.red { justify-content: flex-end; }
+.tug-forces .force i { display: block; height: 100%; width: 0; transition: width 0.12s; }
+.tug-forces .force.red i { background: var(--red); }
+.tug-forces .force.blue i { background: var(--blue); }
+
+/* Thông báo lớn giữa màn hình: "Ván 2 · 3", "Đội Xanh thắng ván 1!" */
+.tug-banner {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 16px 32px;
+  border-radius: 20px;
+  background: var(--panel);
+  font-size: min(6vw, 3.4rem);
+  font-weight: 900;
+  text-align: center;
+  white-space: nowrap;
+}

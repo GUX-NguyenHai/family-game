@@ -1,0 +1,68 @@
+/* Kéo co – tay cầm. Biến màu (--accent, --me, --muted...) lấy từ /css/play.css. */
+.tug-play { --red: #e6194b; --blue: #4363d8; display: flex; flex-direction: column; flex: 1; padding: 12px 0; touch-action: none; }
+
+.tug-score { display: flex; align-items: center; justify-content: space-between; font-size: 1.8rem; }
+.tug-score span { font-size: 1rem; color: var(--muted); font-weight: 700; }
+
+/* Sợi dây: nửa trái màu đội Đỏ, nửa phải màu đội Xanh, chấm trắng = dấu giữa dây */
+.tug-rope { position: relative; height: 26px; margin-top: 14px; border-radius: 99px; overflow: hidden; display: flex; }
+.tug-zone { flex: 1; opacity: 0.55; }
+.tug-zone.left { background: var(--red); }
+.tug-zone.right { background: var(--blue); }
+.tug-rope::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.5);
+}
+.tug-rope i {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px #111;
+  transition: left 0.1s linear;
+}
+.tug-side { margin: 8px 0 0; text-align: center; color: var(--muted); font-size: 0.9rem; }
+.tug-status { min-height: 2.4em; margin: 8px 0; text-align: center; font-size: 1.2rem; font-weight: 800; }
+
+.tug-meters .meter > span { width: 64px; }
+.tug-power { height: 18px; }
+.tug-power i { background: var(--me); transition: width 0.1s; }
+.tug-power.mine i { background: linear-gradient(90deg, #ffb020, #ff7a3d); }
+.tug-power.other i { background: #9aa5bd; }
+
+.tug-noshake {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 209, 102, 0.12);
+  color: #ffd166;
+  font-size: 0.85rem;
+}
+
+/* Khung lớn giữa màn hình: cánh tay gồng theo mức lắc (--lv 0..1) */
+.tug-pull {
+  --lv: 0;
+  flex: 1;
+  min-height: 180px;
+  margin-top: 14px;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #3a2f4a, #241c30);
+  color: #f5e9ff;
+  font-size: 1.3rem;
+}
+.tug-pull span { font-size: 5rem; transform: scale(calc(1 + var(--lv) * 0.35)) rotate(calc(var(--lv) * -15deg)); transition: transform 0.1s; }
+.tug-pull small { color: var(--muted); font-size: 1rem; min-height: 1.2em; }

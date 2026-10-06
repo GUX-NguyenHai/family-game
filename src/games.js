@@ -35,12 +35,20 @@ function catalog() {
     minPlayers: g.minPlayers || 1,
     bots: !!g.bots,
     sensors: !!g.sensors,
-    teams: g.teams ? { min: g.teams.min || 1, max: g.teams.max || C.PRO_MAX_PLAYERS } : null,
+    teams: g.teams
+      ? {
+          min: g.teams.min || 1,
+          max: g.teams.max || C.PRO_MAX_PLAYERS,
+          count: Math.min(C.TEAMS.length, g.teams.count || C.TEAMS.length),
+          equal: !!g.teams.equal,
+        }
+      : null,
     options: g.options || [],
   }));
 }
 
-// Game có chơi theo đội không (với tuỳ chọn đang chọn). Game khai báo teams: { min, max, enabled(options) }.
+// Game có chơi theo đội không (với tuỳ chọn đang chọn).
+// Game khai báo teams: { min, max, count (số đội dùng, mặc định 4), equal (các đội phải bằng người), enabled(options) }.
 function teamMode(game, options) {
   if (!game.teams) return false;
   return typeof game.teams.enabled === 'function' ? !!game.teams.enabled(options) : true;

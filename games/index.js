@@ -3,4 +3,5 @@
 module.exports = [
   require('./animal-race/service'),
   require('./boat-race/service'),
+  require('./tug-of-war/service'),
 ];

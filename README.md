@@ -8,6 +8,7 @@ Bộ game cho cả nhà:
 | Game | Cách chơi |
 |---|---|
 | 🏁 **Đua thú** | Đường đua 3D: lắc máy để chạy, nghiêng để đổi làn, nhảy rào, TURBO (chi tiết ở dưới) |
+| 🪢 **Kéo co** | 2 đội Đỏ – Xanh (1–6 người/đội, **phải bằng người**, thiếu thì thêm bot) đứng hai bên bờ sông, lắc máy để kéo. Lực đội = trung bình mức lắc. Kéo dấu giữa dây qua vạch bên mình là thắng ván, đội kia ngã xuống sông. Hết 45 giây thì dây lệch bên nào bên đó thắng. Chọn 1 ván hoặc thắng 2/3. Tham số: `games/tug-of-war/service/config.js` |
 | 🚣 **Đua thuyền** | Lắc máy lên xuống để chèo: lắc nhanh thì đi nhanh, ngừng lắc thì thuyền dừng. **Thi đơn** hoặc **theo đội** (2–4 người chung thuyền, tốc độ = trung bình mức lắc cả đội). Kiểu **Basic**: đường thẳng, không vật cản. Kiểu **Pro**: nghiêng để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Chọn xuồng hoặc thuyền chèo ở phòng chờ. Tham số: `games/boat-race/service/config.js` |
 
 Mỗi game là một module trong `games/`. **Cách thêm game mới: xem [games/README.md](games/README.md).**
@@ -181,6 +182,10 @@ games/                        ── mỗi game một thư mục ──
     screen/                   cảnh sông 3D, bản đồ nhỏ, bảng xếp hạng
     controller/               tay cầm: chèo, lái (kiểu Pro), chọn thuyền ở phòng chờ
     assets/                   boats.json (danh sách thuyền), models/ (thuyền, khúc gỗ, hải đăng + CREDITS.md)
+  tug-of-war/                 🪢 Kéo co
+    service/                  luật chơi: config.js ★, simulation.js (dây, ván, bot), index.js
+    screen/                   cảnh 3D hai bờ sông, tỉ số, lực hai đội
+    controller/               tay cầm: lắc để kéo, vị trí dây, tỉ số
 animal/                       model gốc (Quaternius, CC0)
 build/models/                 model đã tối ưu (tạo bằng npm run models)
 ```

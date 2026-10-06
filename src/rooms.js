@@ -125,7 +125,8 @@ function pickColor(room) {
   return C.COLORS.find(c => !used.has(c)) || C.COLORS[room.players.size % C.COLORS.length];
 }
 
-function publicPlayer(p) {
+// teamCount: số đội game đang dùng; người đang ở đội ngoài số đó (VD đội Vàng khi game chỉ có Đỏ/Xanh) coi như chưa chọn đội.
+function publicPlayer(p, teamCount = C.TEAMS.length) {
   return {
     id: p.id,
     name: p.name,
@@ -134,7 +135,7 @@ function publicPlayer(p) {
     bot: !!p.bot,
     connected: !!(p.bot || p.connected),
     inGame: !!p.inGame,
-    team: p.team ?? null,
+    team: p.team != null && p.team < teamCount ? p.team : null,
     prefs: p.prefs || {},
   };
 }
@@ -145,9 +146,14 @@ function teamModeOf(room) {
   return games.teamMode(gameOf(room), optionsOf(room));
 }
 
-function cleanTeam(team) {
+function cleanTeam(team, count = C.TEAMS.length) {
   const n = Number(team);
-  return Number.isInteger(n) && n >= 0 && n < C.TEAMS.length ? n : null;
+  return Number.isInteger(n) && n >= 0 && n < count ? n : null;
+}
+
+// Người đang ở đội mà game hiện tại không dùng thì bỏ chọn đội.
+function normalizeTeams(list, rule) {
+  for (const p of list) if (p.team != null && p.team >= rule.count) p.team = null;
 }
 
 // Lựa chọn riêng của người chơi cho từng game (VD loại thuyền). Chỉ nhận chuỗi ngắn, game tự kiểm tra giá trị.
@@ -170,9 +176,10 @@ function teamSizes(list) {
 // số đội cần để không đội nào quá đông), VD 5 người → 3 + 2, 9 người → 3 + 3 + 3.
 // list: những người tính vào đội; targets: những người cần xếp (mặc định cả list).
 function fillTeams(list, rule, targets = list) {
-  const sizes = teamSizes(list);
+  normalizeTeams(list, rule);
+  const sizes = teamSizes(list).slice(0, rule.count);
   const used = sizes.map((n, t) => (n > 0 ? t : -1)).filter(t => t >= 0);
-  const want = Math.min(C.TEAMS.length, Math.max(2, used.length, Math.ceil(list.length / rule.max)));
+  const want = Math.min(rule.count, Math.max(2, used.length, Math.ceil(list.length / rule.max)));
   const active = [...used];
   for (let t = 0; t < sizes.length && active.length < want; t++) if (!active.includes(t)) active.push(t);
   for (const p of targets) {
@@ -187,26 +194,34 @@ function fillTeams(list, rule, targets = list) {
 // Chia ngẫu nhiên: số đội ít nhất có thể sao cho mỗi đội không quá max người (tối thiểu 2 đội).
 function shuffleTeams(list, rule) {
   const order = [...list].sort(() => Math.random() - 0.5);
-  const count = Math.min(C.TEAMS.length, Math.max(2, Math.ceil(order.length / rule.max)));
+  const count = Math.min(rule.count, Math.max(2, Math.ceil(order.length / rule.max)));
   order.forEach((p, i) => (p.team = i % count));
 }
 
 // Kiểm tra đội trước khi bắt đầu. Trả về null nếu ổn, hoặc lỗi để báo chủ phòng.
 function teamProblem(list, rule) {
   const sizes = teamSizes(list).filter(n => n > 0);
-  if (sizes.length < 2) return { error: 'teams', reason: 'need-two', min: rule.min, max: rule.max };
-  if (sizes.some(n => n < rule.min || n > rule.max)) return { error: 'teams', reason: 'size', min: rule.min, max: rule.max };
+  const info = { error: 'teams', min: rule.min, max: rule.max };
+  if (sizes.length < 2) return { ...info, reason: 'need-two' };
+  if (sizes.some(n => n < rule.min || n > rule.max)) return { ...info, reason: 'size' };
+  if (rule.equal && sizes.some(n => n !== sizes[0])) return { ...info, reason: 'equal' };
   return null;
 }
 
 function teamRuleOf(room) {
   const t = gameOf(room).teams || {};
-  return { min: t.min || 1, max: t.max || C.PRO_MAX_PLAYERS };
+  return {
+    min: t.min || 1,
+    max: t.max || C.PRO_MAX_PLAYERS,
+    count: Math.min(C.TEAMS.length, t.count || C.TEAMS.length),
+    equal: !!t.equal,
+  };
 }
 
 function roomInfo(room) {
   const game = gameOf(room);
   const options = optionsOf(room);
+  const rule = teamRuleOf(room);
   return {
     code: room.code,
     state: room.state,
@@ -220,12 +235,12 @@ function roomInfo(room) {
     preview: game.preview ? game.preview(options) : null,
     startIn: room.state === 'countdown' ? Math.max(0, room.startAt - Date.now()) : 0,
     teamMode: teamModeOf(room),
-    teamRule: teamRuleOf(room),
-    teams: C.TEAMS,
+    teamRule: rule,
+    teams: C.TEAMS.slice(0, rule.count),
     maxPlayers: maxPlayersOf(room),
     tier: room.license ? 'pro' : 'free',
     proUntil: room.license?.expiresAt ?? null,
-    players: [...room.players.values()].map(publicPlayer),
+    players: [...room.players.values()].map(p => publicPlayer(p, rule.count)),
     results: room.results,
   };
 }
@@ -293,8 +308,8 @@ function startGame(io, room) {
   if (list.length < (game.minPlayers || 1)) return { ok: false, error: 'too-few', minPlayers: game.minPlayers };
   if (list.length > maxPlayersOf(room)) return { ok: false, error: 'too-many', maxPlayers: maxPlayersOf(room) };
   const teamMode = teamModeOf(room);
+  const rule = teamRuleOf(room);
   if (teamMode) {
-    const rule = teamRuleOf(room);
     fillTeams(list, rule);
     const problem = teamProblem(list, rule);
     if (problem) {
@@ -315,9 +330,9 @@ function startGame(io, room) {
   room.matchGame = game;
   const match = safe(room, 'createMatch', () =>
     game.createMatch({
-      players: list.map(publicPlayer),
+      players: list.map(p => publicPlayer(p, teamMode ? rule.count : 0)),
       options: { ...optionsOf(room) },
-      teams: teamMode ? C.TEAMS : null, // null = không chơi theo đội
+      teams: teamMode ? C.TEAMS.slice(0, rule.count) : null, // null = không chơi theo đội
       now,
       startAt: room.startAt,
       api: makeApi(io, room, room.matchSeq),
@@ -556,7 +571,7 @@ function attach(io) {
       const room = hostRoom();
       const p = room?.players.get(String(payload?.id));
       if (!p || room.state !== 'lobby') return;
-      p.team = cleanTeam(payload?.team);
+      p.team = cleanTeam(payload?.team, teamRuleOf(room).count);
       broadcastRoom(io, room);
     });
 
@@ -571,7 +586,7 @@ function attach(io) {
     socket.on('player:team', team => {
       const { room, p } = playerCtx();
       if (!p || room.state !== 'lobby') return;
-      p.team = cleanTeam(team);
+      p.team = cleanTeam(team, teamRuleOf(room).count);
       broadcastRoom(io, room);
     });
 

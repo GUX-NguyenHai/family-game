@@ -335,12 +335,13 @@ function renderLobby() {
 function renderTeams(list) {
   $('#teamBar').hidden = !room.teamMode;
   if (!room.teamMode) return;
-  const { min, max } = room.teamRule;
+  const { min, max, equal } = room.teamRule;
   const counts = room.teams.map(t => ({ t, n: list.filter(p => p.team === t.id).length })).filter(x => x.n > 0);
   const none = list.filter(p => p.team == null).length;
   const parts = counts.map(({ t, n }) => `${t.emoji} ${n}`);
   if (none) parts.push(`⚪ chưa chọn ${none}`);
-  $('#teamSummary').textContent = `Mỗi đội ${min}–${max} người. ${parts.join(' · ') || 'Chưa ai chọn đội.'}`;
+  const rule = `Mỗi đội ${min}–${max} người${equal ? ', các đội phải bằng người' : ''}.`;
+  $('#teamSummary').textContent = `${rule} ${parts.join(' · ') || 'Chưa ai chọn đội.'}`;
 }
 
 $('#btnShuffleTeams').onclick = () => socket.emit('host:shuffleTeams');
@@ -426,7 +427,9 @@ const START_ERRORS = {
   teams: r =>
     r.reason === 'need-two'
       ? 'Cần ít nhất 2 đội. Chia lại đội hoặc thêm bot.'
-      : `Mỗi đội cần ${r.min}–${r.max} người. Đổi đội, bấm "Chia đội ngẫu nhiên" hoặc thêm bot.`,
+      : r.reason === 'equal'
+        ? 'Các đội phải bằng người. Đổi đội, bấm "Chia đội ngẫu nhiên" hoặc thêm bot.'
+        : `Mỗi đội cần ${r.min}–${r.max} người. Đổi đội, bấm "Chia đội ngẫu nhiên" hoặc thêm bot.`,
   'game-error': () => 'Game bị lỗi khi bắt đầu, xem log server.',
 };
 

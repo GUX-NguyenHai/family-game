@@ -142,7 +142,7 @@ button.ghost { width: 100%; margin-top: 12px; background: transparent; border: 1
 .bar b { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; }
 
 .meter { position: relative; }
-.team-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.team-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; }
 .team-picker button { padding: 10px 4px; background: #2b3558; border: 3px solid transparent; font-size: 0.9rem; }
 .team-picker button.sel { border-color: var(--c); background: color-mix(in srgb, var(--c) 30%, #2b3558); }
 .team-picker button .e { display: block; font-size: 1.6rem; }

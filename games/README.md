@@ -31,7 +31,9 @@ module.exports = {
   minPlayers: 1,
   bots: true,                  // có nút "+ Thêm bot" không
   sensors: false,              // điện thoại có cần cảm biến không (hiện ô bật cảm biến)
-  teams: { min: 2, max: 4, enabled: options => options.mode === 'team' }, // (tuỳ chọn) chơi theo đội
+  // (tuỳ chọn) chơi theo đội: mỗi đội min–max người, count = số đội dùng (mặc định 4),
+  // equal = các đội phải bằng người, enabled(options) = lúc nào chơi theo đội (bỏ trống = luôn luôn)
+  teams: { min: 2, max: 4, count: 4, equal: false, enabled: options => options.mode === 'team' },
   tickHz: 20,                  // vòng lặp mấy lần/giây (mặc định 10)
   hostEvery: 2,                // gửi hostState() mỗi mấy tick (mặc định 1)
   playerEvery: 2,              // gửi playerState() mỗi mấy tick (mặc định 1)

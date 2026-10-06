@@ -282,9 +282,10 @@ function renderTeamPicker(me) {
       </button>`,
     )
     .join('');
-  const { min, max } = room.teamRule;
+  const { min, max, equal } = room.teamRule;
   $('#teamHint').textContent =
-    (me.team == null ? 'Bạn chưa chọn đội, lúc bắt đầu sẽ được xếp tự động. ' : '') + `Mỗi đội ${min}–${max} người.`;
+    (me.team == null ? 'Bạn chưa chọn đội, lúc bắt đầu sẽ được xếp tự động. ' : '') +
+    `Mỗi đội ${min}–${max} người${equal ? ', các đội phải bằng người' : ''}.`;
 }
 
 $('#teamPicker').onclick = e => {
