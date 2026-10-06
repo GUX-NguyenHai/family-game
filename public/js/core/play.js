@@ -45,6 +45,7 @@ let sensorErr = null;
 let game = null; // tay cầm đang gắn: { id, inst, removeCss }
 let loadingId = null;
 let cdTimer = null;
+let prefs = store.get('fg:prefs', {}) || {}; // lựa chọn riêng cho các game (VD loại thuyền), nhớ trên máy
 
 // ---------- Màn hình ----------
 function show(screen) {
@@ -91,6 +92,13 @@ function gameCtx() {
     me: () => room?.players.find(p => p.id === playerId) || null,
     sensorError: () => sensorErr,
     enableSensors,
+    // Lựa chọn riêng cho game (VD loại thuyền): nhớ trên máy + báo server.
+    pref: key => prefs[key],
+    setPref(key, value) {
+      prefs = { ...prefs, [key]: String(value) };
+      store.set('fg:prefs', prefs);
+      if (joined && socket.connected) socket.emit('player:prefs', { [key]: String(value) });
+    },
   };
 }
 
@@ -156,7 +164,7 @@ $('#btnJoin').onclick = () => {
 function join() {
   clearTimeout(retryTimer);
   if (!socket.connected) return; // sẽ tự vào khi kết nối lại
-  socket.emit('player:join', { code, playerId, name, animal }, res => {
+  socket.emit('player:join', { code, playerId, name, animal, prefs }, res => {
     if (res?.ok) {
       retries = 0;
       joined = true;
@@ -236,6 +244,7 @@ function onRoom(info) {
   $('#gameTitle').textContent = `${info.gameEmoji} ${info.gameName}`;
   $('#sensorBox').hidden = !info.sensors;
   updateSensorUi();
+  renderTeamPicker(me);
 
   if (info.state === 'lobby' || !me.inGame) {
     if (editing && info.state === 'lobby') return;
@@ -253,12 +262,36 @@ function onRoom(info) {
     return;
   }
   if (info.state === 'finished') {
-    const r = (info.results || []).find(x => x.id === playerId);
+    const r = (info.results || []).find(x => x.id === playerId || x.members?.includes(playerId));
     $('#doneBig').textContent = r ? MEDALS[r.place - 1] || `#${r.place}` : '🏁';
     $('#doneText').textContent = r ? `Hạng ${r.place}${r.detail ? ` · ${r.detail}` : ''}` : 'Hết lượt!';
     show('done');
   }
 }
+
+// ---------- Chọn đội ----------
+function renderTeamPicker(me) {
+  const box = $('#teamBox');
+  box.hidden = !room.teamMode;
+  if (!room.teamMode) return;
+  const counts = room.teams.map(t => room.players.filter(p => p.team === t.id).length);
+  $('#teamPicker').innerHTML = room.teams
+    .map(
+      t => `<button type="button" data-team="${t.id}" class="${me.team === t.id ? 'sel' : ''}" style="--c:${t.color}">
+        <span class="e">${t.emoji}</span>${esc(t.name)} (${counts[t.id]})
+      </button>`,
+    )
+    .join('');
+  const { min, max } = room.teamRule;
+  $('#teamHint').textContent =
+    (me.team == null ? 'Bạn chưa chọn đội, lúc bắt đầu sẽ được xếp tự động. ' : '') + `Mỗi đội ${min}–${max} người.`;
+}
+
+$('#teamPicker').onclick = e => {
+  const btn = e.target.closest('button[data-team]');
+  if (!btn || room?.state !== 'lobby') return;
+  socket.emit('player:team', Number(btn.dataset.team));
+};
 
 // ---------- Đếm ngược ----------
 function stopCountdown() {

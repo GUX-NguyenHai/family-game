@@ -34,8 +34,15 @@ function catalog() {
     minPlayers: g.minPlayers || 1,
     bots: !!g.bots,
     sensors: !!g.sensors,
+    teams: g.teams ? { min: g.teams.min || 1, max: g.teams.max || C.PRO_MAX_PLAYERS } : null,
     options: g.options || [],
   }));
+}
+
+// Game có chơi theo đội không (với tuỳ chọn đang chọn). Game khai báo teams: { min, max, enabled(options) }.
+function teamMode(game, options) {
+  if (!game.teams) return false;
+  return typeof game.teams.enabled === 'function' ? !!game.teams.enabled(options) : true;
 }
 
 function defaultOptions(game) {
@@ -59,4 +66,4 @@ function optionsText(game, options) {
     .join(' · ');
 }
 
-module.exports = { get, all, defaultId, catalog, defaultOptions, isChoice, optionsText };
+module.exports = { get, all, defaultId, catalog, defaultOptions, isChoice, optionsText, teamMode };

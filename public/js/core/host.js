@@ -276,16 +276,23 @@ function renderLobby() {
   renderTier();
   $('#playerCount').textContent = `${list.length}/${room.maxPlayers}`;
   $('#emptyHint').hidden = list.length > 0;
+  const teams = room.teamMode ? room.teams : null;
   $('#playerList').innerHTML = list
     .map(p => {
       const a = animalById.get(p.animal);
-      return `<li class="${p.connected ? '' : 'off'}" style="--c:${p.color}">
+      const t = teams && p.team != null ? teams[p.team] : null;
+      const teamBtn = teams
+        ? `<button class="team" data-id="${esc(p.id)}" title="Bấm để đổi đội">${t ? t.emoji : '⚪'}</button>`
+        : '';
+      return `<li class="${p.connected ? '' : 'off'}" style="--c:${t ? t.color : p.color}">
+        ${teamBtn}
         <span class="emoji">${a?.emoji || '🐾'}</span>
         <span class="name">${esc(p.name)}${p.bot ? ' 🤖' : ''}</span>
         <button class="kick" data-id="${esc(p.id)}" title="Mời ra">✕</button>
       </li>`;
     })
     .join('');
+  renderTeams(list);
   $('#btnStart').disabled = !list.some(p => p.connected);
   $('#btnStart').textContent = `▶ Bắt đầu ${game ? game.name : ''}`;
   const bots = !!game?.bots;
@@ -294,6 +301,20 @@ function renderLobby() {
   $('#btnAddBot').disabled = list.length >= room.maxPlayers;
   $('#btnClearBots').disabled = !list.some(p => p.bot);
 }
+
+// ---------- Đội ----------
+function renderTeams(list) {
+  $('#teamBar').hidden = !room.teamMode;
+  if (!room.teamMode) return;
+  const { min, max } = room.teamRule;
+  const counts = room.teams.map(t => ({ t, n: list.filter(p => p.team === t.id).length })).filter(x => x.n > 0);
+  const none = list.filter(p => p.team == null).length;
+  const parts = counts.map(({ t, n }) => `${t.emoji} ${n}`);
+  if (none) parts.push(`⚪ chưa chọn ${none}`);
+  $('#teamSummary').textContent = `Mỗi đội ${min}–${max} người. ${parts.join(' · ') || 'Chưa ai chọn đội.'}`;
+}
+
+$('#btnShuffleTeams').onclick = () => socket.emit('host:shuffleTeams');
 
 // ---------- Đếm ngược ----------
 let cdTimer = null;
@@ -373,6 +394,10 @@ const START_ERRORS = {
   'too-many': r => `Game này chỉ cho tối đa ${r.maxPlayers} người. Bớt người/bot hoặc nhập mã Pro.`,
   'too-few': r => `Game này cần ít nhất ${r.minPlayers} người.`,
   empty: () => 'Chưa có ai trong phòng.',
+  teams: r =>
+    r.reason === 'need-two'
+      ? 'Cần ít nhất 2 đội. Chia lại đội hoặc thêm bot.'
+      : `Mỗi đội cần ${r.min}–${r.max} người. Đổi đội, bấm "Chia đội ngẫu nhiên" hoặc thêm bot.`,
   'game-error': () => 'Game bị lỗi khi bắt đầu, xem log server.',
 };
 
@@ -393,6 +418,13 @@ $('#btnClearBots').onclick = () => socket.emit('host:clearBots');
 $('#playerList').onclick = e => {
   const btn = e.target.closest('.kick');
   if (btn) socket.emit('host:kick', btn.dataset.id);
+  // Bấm vào huy hiệu đội: chuyển sang đội kế tiếp.
+  const team = e.target.closest('.team');
+  if (team && room?.teamMode) {
+    const p = players.get(team.dataset.id);
+    const next = p?.team == null ? 0 : (p.team + 1) % room.teams.length;
+    socket.emit('host:team', { id: team.dataset.id, team: next });
+  }
 };
 
 $('#btnQuality').textContent = quality === 'high' ? '🎨 Đồ hoạ: Cao' : '🎨 Đồ hoạ: Thấp';

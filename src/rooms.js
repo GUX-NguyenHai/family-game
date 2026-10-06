@@ -134,7 +134,74 @@ function publicPlayer(p) {
     bot: !!p.bot,
     connected: !!(p.bot || p.connected),
     inGame: !!p.inGame,
+    team: p.team ?? null,
+    prefs: p.prefs || {},
   };
+}
+
+// ---------- Đội ----------
+
+function teamModeOf(room) {
+  return games.teamMode(gameOf(room), optionsOf(room));
+}
+
+function cleanTeam(team) {
+  const n = Number(team);
+  return Number.isInteger(n) && n >= 0 && n < C.TEAMS.length ? n : null;
+}
+
+// Lựa chọn riêng của người chơi cho từng game (VD loại thuyền). Chỉ nhận chuỗi ngắn, game tự kiểm tra giá trị.
+function cleanPrefs(input) {
+  const out = {};
+  if (!input || typeof input !== 'object') return out;
+  for (const [k, v] of Object.entries(input).slice(0, 12)) {
+    if (/^[a-zA-Z0-9_-]{1,24}$/.test(k) && typeof v === 'string' && v.length <= 32) out[k] = v;
+  }
+  return out;
+}
+
+function teamSizes(list) {
+  const sizes = C.TEAMS.map(() => 0);
+  for (const p of list) if (p.team != null) sizes[p.team]++;
+  return sizes;
+}
+
+// Người chưa chọn đội thì cho vào đội đang ít người nhất. Số đội dùng = max(2, số đội đã có người,
+// số đội cần để không đội nào quá đông), VD 5 người → 3 + 2, 9 người → 3 + 3 + 3.
+// list: những người tính vào đội; targets: những người cần xếp (mặc định cả list).
+function fillTeams(list, rule, targets = list) {
+  const sizes = teamSizes(list);
+  const used = sizes.map((n, t) => (n > 0 ? t : -1)).filter(t => t >= 0);
+  const want = Math.min(C.TEAMS.length, Math.max(2, used.length, Math.ceil(list.length / rule.max)));
+  const active = [...used];
+  for (let t = 0; t < sizes.length && active.length < want; t++) if (!active.includes(t)) active.push(t);
+  for (const p of targets) {
+    if (p.team != null) continue;
+    let best = active[0];
+    for (const t of active) if (sizes[t] < sizes[best]) best = t;
+    p.team = best;
+    sizes[best]++;
+  }
+}
+
+// Chia ngẫu nhiên: số đội ít nhất có thể sao cho mỗi đội không quá max người (tối thiểu 2 đội).
+function shuffleTeams(list, rule) {
+  const order = [...list].sort(() => Math.random() - 0.5);
+  const count = Math.min(C.TEAMS.length, Math.max(2, Math.ceil(order.length / rule.max)));
+  order.forEach((p, i) => (p.team = i % count));
+}
+
+// Kiểm tra đội trước khi bắt đầu. Trả về null nếu ổn, hoặc lỗi để báo chủ phòng.
+function teamProblem(list, rule) {
+  const sizes = teamSizes(list).filter(n => n > 0);
+  if (sizes.length < 2) return { error: 'teams', reason: 'need-two', min: rule.min, max: rule.max };
+  if (sizes.some(n => n < rule.min || n > rule.max)) return { error: 'teams', reason: 'size', min: rule.min, max: rule.max };
+  return null;
+}
+
+function teamRuleOf(room) {
+  const t = gameOf(room).teams || {};
+  return { min: t.min || 1, max: t.max || C.PRO_MAX_PLAYERS };
 }
 
 function roomInfo(room) {
@@ -152,6 +219,9 @@ function roomInfo(room) {
     optionsText: games.optionsText(game, options),
     preview: game.preview ? game.preview(options) : null,
     startIn: room.state === 'countdown' ? Math.max(0, room.startAt - Date.now()) : 0,
+    teamMode: teamModeOf(room),
+    teamRule: teamRuleOf(room),
+    teams: C.TEAMS,
     maxPlayers: maxPlayersOf(room),
     tier: room.license ? 'pro' : 'free',
     proUntil: room.license?.expiresAt ?? null,
@@ -222,6 +292,16 @@ function startGame(io, room) {
   if (!list.length) return { ok: false, error: 'empty' };
   if (list.length < (game.minPlayers || 1)) return { ok: false, error: 'too-few', minPlayers: game.minPlayers };
   if (list.length > maxPlayersOf(room)) return { ok: false, error: 'too-many', maxPlayers: maxPlayersOf(room) };
+  const teamMode = teamModeOf(room);
+  if (teamMode) {
+    const rule = teamRuleOf(room);
+    fillTeams(list, rule);
+    const problem = teamProblem(list, rule);
+    if (problem) {
+      broadcastRoom(io, room); // cho thấy đội vừa được tự xếp
+      return { ok: false, ...problem };
+    }
+  }
 
   endMatch(room);
   for (const p of room.players.values()) p.inGame = false;
@@ -237,6 +317,7 @@ function startGame(io, room) {
     game.createMatch({
       players: list.map(publicPlayer),
       options: { ...optionsOf(room) },
+      teams: teamMode ? C.TEAMS : null, // null = không chơi theo đội
       now,
       startAt: room.startAt,
       api: makeApi(io, room, room.matchSeq),
@@ -274,6 +355,7 @@ function finishMatch(io, room, results) {
     bot: !!r.bot,
     place: r.place ?? i + 1,
     detail: r.detail ?? '',
+    members: Array.isArray(r.members) ? r.members : undefined, // kết quả theo đội: id các thành viên
   }));
   broadcastRoom(io, room);
 }
@@ -317,7 +399,7 @@ function addBot(io, room) {
   const used = new Set([...room.players.values()].map(p => p.name));
   const name = BOT_NAMES.find(n => !used.has(n)) || `Bot ${room.players.size + 1}`;
   const id = 'bot-' + crypto.randomUUID();
-  room.players.set(id, {
+  const bot = {
     id,
     name,
     animal: ANIMAL_IDS[Math.floor(Math.random() * ANIMAL_IDS.length)],
@@ -326,7 +408,11 @@ function addBot(io, room) {
     connected: true,
     socketId: null,
     inGame: false,
-  });
+    team: null,
+    prefs: {},
+  };
+  room.players.set(id, bot);
+  if (teamModeOf(room)) fillTeams([...room.players.values()], teamRuleOf(room), [bot]);
   broadcastRoom(io, room);
 }
 
@@ -464,6 +550,38 @@ function attach(io) {
       broadcastRoom(io, room);
     });
 
+    // Chủ phòng đổi đội cho 1 người (VD bot): team = số đội, hoặc null để bỏ chọn.
+    socket.on('host:team', payload => {
+      const room = hostRoom();
+      const p = room?.players.get(String(payload?.id));
+      if (!p || room.state !== 'lobby') return;
+      p.team = cleanTeam(payload?.team);
+      broadcastRoom(io, room);
+    });
+
+    socket.on('host:shuffleTeams', () => {
+      const room = hostRoom();
+      if (!room || room.state !== 'lobby' || !teamModeOf(room)) return;
+      shuffleTeams([...room.players.values()].filter(p => p.bot || p.connected), teamRuleOf(room));
+      broadcastRoom(io, room);
+    });
+
+    // Người chơi tự chọn đội (ở phòng chờ).
+    socket.on('player:team', team => {
+      const { room, p } = playerCtx();
+      if (!p || room.state !== 'lobby') return;
+      p.team = cleanTeam(team);
+      broadcastRoom(io, room);
+    });
+
+    // Lựa chọn riêng cho game (VD loại thuyền). Gửi cả bộ, ghép vào bộ cũ.
+    socket.on('player:prefs', prefs => {
+      const { room, p } = playerCtx();
+      if (!p) return;
+      p.prefs = { ...(p.prefs || {}), ...cleanPrefs(prefs) };
+      broadcastRoom(io, room);
+    });
+
     socket.on('player:join', (payload, ack) => {
       const code = cleanCode(payload?.code);
       const room = code && rooms.get(code);
@@ -478,12 +596,13 @@ function attach(io) {
         if (room.players.size >= maxPlayersOf(room)) {
           return reply(ack, { ok: false, error: 'full', tier: room.license ? 'pro' : 'free', maxPlayers: maxPlayersOf(room) });
         }
-        p = { id, name, animal, color: pickColor(room), bot: false, inGame: false };
+        p = { id, name, animal, color: pickColor(room), bot: false, inGame: false, team: null, prefs: {} };
         room.players.set(id, p);
       } else if (!p.inGame || room.state === 'lobby') {
         p.name = name;
         p.animal = animal;
       }
+      p.prefs = { ...(p.prefs || {}), ...cleanPrefs(payload?.prefs) };
 
       if (p.socketId && p.socketId !== socket.id) io.to(p.socketId).emit('replaced');
       p.socketId = socket.id;

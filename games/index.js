@@ -2,4 +2,5 @@
 // Thứ tự ở đây = thứ tự hiện trên màn hình chọn game. Chỉ có 1 game thì phòng chờ ẩn phần chọn game.
 module.exports = [
   require('./animal-race/logic'),
+  require('./boat-race/logic'),
 ];

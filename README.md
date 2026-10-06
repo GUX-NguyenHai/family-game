@@ -8,6 +8,7 @@ Bộ game cho cả nhà:
 | Game | Cách chơi |
 |---|---|
 | 🏁 **Đua thú** | Đường đua 3D: lắc máy để chạy, nghiêng để đổi làn, nhảy rào, TURBO (chi tiết ở dưới) |
+| 🚣 **Đua thuyền** | Lắc máy lên xuống để chèo: lắc nhanh thì đi nhanh, ngừng lắc thì thuyền dừng. **Thi đơn** hoặc **theo đội** (2–4 người chung thuyền, tốc độ = trung bình mức lắc cả đội). Kiểu **Basic**: đường thẳng, không vật cản. Kiểu **Pro**: nghiêng để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Chọn xuồng hoặc thuyền chèo ở phòng chờ. Tham số: `games/boat-race/logic/config.js` |
 
 Mỗi game là một module trong `games/`. **Cách thêm game mới: xem [games/README.md](games/README.md).**
 
@@ -167,6 +168,7 @@ public/                       giao diện chung
   host.html + js/core/host.js phòng chờ, QR, chọn game, đếm ngược, kết quả (màn hình chung)
   play.html + js/core/play.js vào phòng, phòng chờ, màn kết quả (điện thoại)
   js/core/sensors.js          cảm biến điện thoại (nghiêng, lắc, hất máy), game nào cũng dùng được
+  js/core/scene-kit.js        đồ nghề 3D dùng chung: tải con vật/model, nhãn tên, chữ nổi, hạt hiệu ứng
   assets/animals.json         ★ danh sách con vật (avatar), tên hoạt ảnh, hướng model
 games/                        ── mỗi game một thư mục ──
   index.js                    ★ danh sách game (thêm game = thêm 1 dòng)
@@ -174,6 +176,11 @@ games/                        ── mỗi game một thư mục ──
     logic/                    luật chơi: config.js ★, simulation.js (mô phỏng cuộc đua + bot), index.js (khai báo)
     screen/                   hình ảnh trên TV: cảnh 3D (three.js), bản đồ nhỏ, bảng xếp hạng
     controller/               tay cầm điện thoại: PHI!/NHẢY, thử cảm biến ở phòng chờ
+  boat-race/                  🚣 Đua thuyền
+    logic/                    luật chơi: config.js ★, simulation.js (thuyền, đội, vật cản, bot), index.js
+    screen/                   cảnh sông 3D, bản đồ nhỏ, bảng xếp hạng
+    controller/               tay cầm: chèo, lái (kiểu Pro), chọn thuyền ở phòng chờ
+    assets/                   boats.json (danh sách thuyền), models/ (thuyền, khúc gỗ, hải đăng + CREDITS.md)
 animal/                       model gốc (Quaternius, CC0)
 build/models/                 model đã tối ưu (tạo bằng npm run models)
 ```

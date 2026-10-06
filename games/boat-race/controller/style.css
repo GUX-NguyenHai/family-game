@@ -1,0 +1,74 @@
+/* Đua thuyền – tay cầm. Biến màu (--accent, --me, --muted...) lấy từ /css/play.css. */
+
+/* Phòng chờ: chọn thuyền */
+.boat-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.boat-picker button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  background: #2b3558;
+  border: 2px solid transparent;
+  font-size: 0.85rem;
+}
+.boat-picker button .e { font-size: 1.8rem; }
+.boat-picker button.sel { border-color: var(--accent); background: #34406a; }
+
+/* Màn chơi */
+.boat-play { display: flex; flex-direction: column; flex: 1; padding: 12px 0; touch-action: none; }
+.boat-top { display: flex; align-items: center; gap: 12px; }
+.boat-pos { font-size: 2.2rem; font-weight: 900; min-width: 3.5em; }
+.boat-prog { height: 14px; }
+.boat-prog i { background: #42d4f4; }
+.boat-status { min-height: 2.2em; margin: 10px 0; text-align: center; font-size: 1.2rem; font-weight: 800; }
+.boat-meters .meter > span { width: 64px; }
+.boat-power { height: 20px; }
+.boat-power i { background: linear-gradient(90deg, #42d4f4, #1f6fd6); transition: width 0.1s; }
+.boat-power.team i { background: linear-gradient(90deg, #ffb020, #ff7a3d); }
+.boat-noshake {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 209, 102, 0.12);
+  color: #ffd166;
+  font-size: 0.85rem;
+}
+
+/* Khung lớn giữa màn hình: mái chèo nhún theo mức lắc (--lv 0..1) */
+.boat-paddle {
+  --lv: 0;
+  flex: 1;
+  min-height: 180px;
+  margin-top: 14px;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #1c4f86, #123a63);
+  color: #cfe8ff;
+  font-size: 1.3rem;
+}
+.boat-paddle span {
+  font-size: 5rem;
+  transform: translateY(calc(var(--lv) * -18px)) rotate(calc(var(--lv) * -20deg));
+  transition: transform 0.1s;
+}
+
+/* Kiểu Pro: lái */
+.boat-steer { display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center; gap: 10px; margin-top: 12px; }
+.boat-steer .hold { font-size: 2rem; padding: 18px 0; border-radius: 18px; background: #2b3558; touch-action: none; }
+.boat-steer .hold.on { background: var(--accent); color: var(--accent-text); }
+.boat-steer .steer-indicator { position: relative; height: 10px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); }
+.boat-steer .steer-indicator i {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: var(--me);
+}

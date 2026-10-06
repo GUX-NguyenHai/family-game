@@ -14,7 +14,9 @@ Các bước:
 2. Thêm 1 dòng `require('./<id>/logic')` vào `games/index.js`.
 3. Khởi động lại server. Game sẽ hiện ra ở phần chọn game trong phòng chờ.
 
-Chỉ thư mục `screen/` và `controller/` được mở ra ngoài, ở đường dẫn `/games/<id>/screen/…` và `/games/<id>/controller/…`. Không ai tải được thư mục `logic/`.
+Chỉ thư mục `screen/`, `controller/` và `assets/` (model, ảnh, json của game) được mở ra ngoài, ở đường dẫn `/games/<id>/screen/…`, `/games/<id>/controller/…`, `/games/<id>/assets/…`. Không ai tải được thư mục `logic/`.
+
+Game cần cảnh 3D thì dùng đồ nghề chung trong `/js/core/scene-kit.js`: tải con vật (`loadAnimalTemplate`), tải model khác (`loadModel` + `cloneModel`), nhãn tên (`Label`), chữ nổi (`textSprite`), hạt hiệu ứng (`Particles`)…
 
 ## 1. `logic/index.js`: khai báo + luật chơi
 
@@ -28,6 +30,7 @@ module.exports = {
   minPlayers: 1,
   bots: true,                  // có nút "+ Thêm bot" không
   sensors: false,              // điện thoại có cần cảm biến không (hiện ô bật cảm biến)
+  teams: { min: 2, max: 4, enabled: options => options.mode === 'team' }, // (tuỳ chọn) chơi theo đội
   tickHz: 20,                  // vòng lặp mấy lần/giây (mặc định 10)
   hostEvery: 2,                // gửi hostState() mỗi mấy tick (mặc định 1)
   playerEvery: 2,              // gửi playerState() mỗi mấy tick (mặc định 1)
@@ -56,10 +59,13 @@ Mỗi lần bấm Bắt đầu, server gọi `createMatch({ players, options, no
 | `leave(pid)` | Người chơi mất kết nối giữa ván |
 | `stop()` | Ván bị huỷ (về phòng chờ hoặc đổi game) |
 
-- `players`: `[{ id, name, animal, color, bot }]`. Game tự giữ trạng thái riêng của từng người.
+- `players`: `[{ id, name, animal, color, bot, team, prefs }]`. Game tự giữ trạng thái riêng của từng người.
+  - `team`: số đội (0–3) khi chơi theo đội, ngược lại `null`.
+  - `prefs`: lựa chọn riêng người chơi đặt ở phòng chờ qua `ctx.setPref()`, ví dụ `{ boat: 'canoe' }`. Game tự kiểm tra giá trị hợp lệ.
+- `teams`: danh sách đội `[{ id, name, emoji, color }]` khi đang chơi theo đội, `null` khi không. Lúc bấm Bắt đầu, phần chung đã xếp người chưa chọn đội vào đội và kiểm tra mỗi đội đủ `min`–`max` người.
 - `options`: giá trị chủ phòng đã chọn, ví dụ `{ rounds: '5' }`.
 - `api.toHost(msg)` / `api.toPlayer(pid, msg)` / `api.toPlayers(msg)`: gửi sự kiện tức thời, phía nhận là `screen.onEvent` / `controller.onEvent`.
-- `api.finish(results)`: kết thúc ván. `results` có dạng `[{ id, name, animal, color, bot, place, detail }]`. `detail` là chữ hiện cạnh tên, ví dụ `"12.34s"` hay `"7 điểm"`.
+- `api.finish(results)`: kết thúc ván. `results` có dạng `[{ id, name, animal, color, bot, place, detail, members }]`. `detail` là chữ hiện cạnh tên, ví dụ `"12.34s"` hay `"7 điểm"`. Kết quả theo đội thì mỗi đội một dòng, `members` là id các thành viên để điện thoại của họ hiện đúng hạng.
 - Bot là người chơi có `bot: true`. Game tự cho bot hành động trong `tick()`.
 - Nếu code game bị lỗi, server bắt lại và ghi log, không bị sập.
 
@@ -100,7 +106,9 @@ export function create(ctx) {
 }
 ```
 
-`ctx` gồm: `send(type, data)`, `sensors`, `vibrate(pattern)`, `screen()`, `room()`, `me()`, `sensorError()`, `enableSensors()`, `esc(text)`.
+`ctx` gồm: `send(type, data)`, `sensors`, `vibrate(pattern)`, `screen()`, `room()`, `me()`, `sensorError()`, `enableSensors()`, `esc(text)`, `pref(key)`, `setPref(key, value)`.
+
+Lựa chọn đặt bằng `setPref()` được nhớ trên máy, gửi lên server và có trong `players[].prefs` ở `createMatch`. Chọn đội do phần chung lo: ô "Chọn đội" tự hiện khi game đang chơi theo đội.
 
 `ctx.sensors` có sẵn:
 - `steer` (-1..1): nghiêng trái/phải.
