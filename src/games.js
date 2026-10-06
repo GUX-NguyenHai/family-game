@@ -30,6 +30,7 @@ function catalog() {
     name: g.name,
     emoji: g.emoji || '🎮',
     description: g.description || '',
+    category: g.category || 'other',
     maxPlayers: g.maxPlayers || C.PRO_MAX_PLAYERS,
     minPlayers: g.minPlayers || 1,
     bots: !!g.bots,

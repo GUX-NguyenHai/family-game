@@ -1,7 +1,7 @@
 // Cấu hình chung của nền tảng (phòng, gói, giới hạn). Tham số luật chơi của từng game nằm trong games/<id>/server/.
 module.exports = {
   // Tăng mỗi lần sửa; hiện ở góc màn hình chính và điện thoại để biết đang chạy đúng bản chưa.
-  APP_VERSION: '20261006.5', // dạng NămThángNgày.lần-sửa-trong-ngày
+  APP_VERSION: '20261006.6', // dạng NămThángNgày.lần-sửa-trong-ngày
 
   DEFAULT_GAME: 'animal-race', // game được chọn sẵn khi tạo phòng (id = tên thư mục trong games/)
   DEFAULT_TICK_HZ: 10, // game không khai báo tickHz thì vòng lặp chạy bấy nhiêu lần/giây
@@ -12,6 +12,15 @@ module.exports = {
   MAX_ROOMS: 50, // số phòng tối đa cùng lúc trên server
   PLAYER_DROP_MS: 2 * 60 * 1000, // người rời phòng chờ quá lâu thì xoá
   ROOM_IDLE_MS: 10 * 60 * 1000, // phòng không còn ai kết nối quá lâu thì xoá
+
+  // Nhóm game trên thanh chọn game (theo thứ tự này). Game khai báo category = id; nhóm chưa có game thì ẩn.
+  GAME_CATEGORIES: [
+    { id: 'motion', name: 'Vận động', emoji: '🏃' },
+    { id: 'reflex', name: 'Phản xạ', emoji: '⚡' },
+    { id: 'mind', name: 'Trí tuệ', emoji: '🧠' },
+    { id: 'secret', name: 'Bí mật', emoji: '🕵️' },
+    { id: 'folk', name: 'Dân gian', emoji: '🎉' },
+  ],
 
   // Đội (cho game chơi theo đội). Tối đa 4 đội.
   TEAMS: [

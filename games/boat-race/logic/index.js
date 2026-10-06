@@ -125,6 +125,7 @@ function createMatch({ players, options, teams, now, startAt, api }) {
 module.exports = {
   id: 'boat-race', // trùng tên thư mục games/boat-race
   name: 'Đua thuyền',
+  category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🚣',
   description: 'Lắc máy lên xuống để chèo: lắc nhanh thì thuyền đi nhanh, ngừng lắc thì thuyền dừng. Chơi đơn hoặc theo đội.',
   maxPlayers: 12,

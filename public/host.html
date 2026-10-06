@@ -22,6 +22,10 @@
   <div id="toasts"></div>
 
   <section id="lobby" class="panel" hidden>
+    <aside class="game-sidebar" aria-label="Chọn game">
+      <h2>🎮 Chọn game</h2>
+      <div class="game-list" role="radiogroup"></div>
+    </aside>
     <div class="join">
       <h1>🎮 Party Game</h1>
       <p class="sub">Quét mã để vào chơi</p>
@@ -31,8 +35,10 @@
       <p id="urlWarn" class="warn" hidden></p>
     </div>
     <div class="players">
-      <div class="game-picker" role="radiogroup" aria-label="Chọn game"></div>
-      <p class="game-desc"></p>
+      <div class="game-head">
+        <h2 class="game-title"></h2>
+        <p class="game-desc"></p>
+      </div>
       <h2>Người chơi <span id="playerCount">0</span></h2>
       <div class="tier">
         <div class="tier-row">

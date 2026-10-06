@@ -25,7 +25,8 @@ module.exports = {
   id: 'my-game',               // trùng tên thư mục
   name: 'Tên game',
   emoji: '🎯',
-  description: '…',            // hiện dưới phần chọn game
+  description: '…',            // hiện ở đầu cột người chơi khi game được chọn
+  category: 'motion',          // nhóm trên thanh chọn game: motion | reflex | mind | secret | folk (GAME_CATEGORIES trong src/config.js)
   maxPlayers: 12,              // giới hạn thật = min(gói Free/Pro, số này)
   minPlayers: 1,
   bots: true,                  // có nút "+ Thêm bot" không

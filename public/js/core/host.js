@@ -13,6 +13,7 @@ const quality = store.get('fg:quality', 'high');
 const socket = io();
 let room = null;
 let catalog = [];
+let categories = []; // nhóm game cho thanh chọn game bên trái
 let players = new Map();
 let lastState = null;
 let current = null; // game đang gắn: { id, inst, removeCss }
@@ -46,6 +47,7 @@ function create() {
 function onJoined(res) {
   if (!res?.ok) return;
   catalog = res.games || catalog;
+  categories = res.categories || categories;
   setSession({ code: res.code, token: res.token });
   setJoinUrl(res.code);
   lastSetup = res.setup ? { game: res.room.game, data: res.setup } : null;
@@ -171,14 +173,41 @@ function onRoom(info) {
   lastState = info.state;
 }
 
-// ---------- Chọn game + tuỳ chọn của game ----------
+// ---------- Chọn game (thanh bên trái, chia theo nhóm) + tuỳ chọn của game ----------
+function gameTags(g) {
+  const tags = [g.minPlayers > 1 ? `👤 ${g.minPlayers}–${g.maxPlayers}` : `👤 1–${g.maxPlayers}`];
+  if (g.sensors) tags.push('📱 Lắc');
+  if (g.teams) tags.push('👥 Có đội');
+  return tags;
+}
+
 function renderGamePicker() {
-  const box = document.querySelector('.game-picker');
-  box.innerHTML = catalog
-    .map(g => `<button data-game="${esc(g.id)}" class="${g.id === room.game ? 'sel' : ''}">${esc(g.emoji)} ${esc(g.name)}</button>`)
+  // Nhóm theo thứ tự trong cấu hình; game khai báo nhóm lạ thì vào nhóm "Khác" ở cuối.
+  const known = new Set(categories.map(c => c.id));
+  const groups = [...categories, { id: 'other', name: 'Khác', emoji: '🎮' }]
+    .map(c => ({ ...c, games: catalog.filter(g => (known.has(g.category) ? g.category : 'other') === c.id) }))
+    .filter(c => c.games.length);
+  document.querySelector('.game-list').innerHTML = groups
+    .map(
+      c => `<section class="game-group">
+        <h3>${esc(c.emoji)} ${esc(c.name)}</h3>
+        ${c.games
+          .map(
+            g => `<button class="game-card${g.id === room.game ? ' sel' : ''}" data-game="${esc(g.id)}" role="radio" aria-checked="${g.id === room.game}">
+              <span class="emoji">${esc(g.emoji)}</span>
+              <span class="info">
+                <b>${esc(g.name)}</b>
+                <span class="tags">${gameTags(g).map(t => `<i>${esc(t)}</i>`).join('')}</span>
+              </span>
+            </button>`,
+          )
+          .join('')}
+      </section>`,
+    )
     .join('');
-  box.hidden = catalog.length < 2;
-  document.querySelector('.game-desc').textContent = gameInfo()?.description || '';
+  const game = gameInfo();
+  document.querySelector('.game-title').textContent = game ? `${game.emoji} ${game.name}` : '';
+  document.querySelector('.game-desc').textContent = game?.description || '';
 }
 
 function renderOptions() {
@@ -202,8 +231,8 @@ function renderOptions() {
 }
 
 document.addEventListener('click', e => {
-  const g = e.target.closest?.('.game-picker button[data-game]');
-  if (g) socket.emit('host:game', g.dataset.game);
+  const g = e.target.closest?.('.game-list button[data-game]');
+  if (g && g.dataset.game !== room?.game) socket.emit('host:game', g.dataset.game);
   const o = e.target.closest?.('.game-options button[data-key]');
   if (o) socket.emit('host:option', { key: o.dataset.key, value: o.dataset.value });
 });

@@ -114,6 +114,7 @@ function createMatch({ players, options, now, startAt, api }) {
 module.exports = {
   id: 'animal-race', // trùng tên thư mục games/animal-race
   name: 'Đua thú',
+  category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🏁',
   description: 'Lắc máy lên xuống để chạy, nghiêng để đổi làn, nhảy qua rào, ăn cà rốt lấy năng lượng TURBO.',
   maxPlayers: 12,

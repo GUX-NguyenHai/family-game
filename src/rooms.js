@@ -448,6 +448,7 @@ function attach(io) {
         code: room.code,
         token: room.token,
         games: games.catalog(),
+        categories: C.GAME_CATEGORIES,
         room: roomInfo(room),
         setup: room.match ? safe(room, 'setup', () => room.match.setup?.()) ?? null : null,
         licenseError,

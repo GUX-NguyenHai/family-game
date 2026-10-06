@@ -60,9 +60,9 @@ button.primary:hover:not(:disabled) { background: #ffc34d; }
   padding: 24px 28px;
 }
 
-/* Phòng chờ */
+/* Phòng chờ: [thanh chọn game] [QR] [người chơi + tuỳ chọn] */
 #lobby .join {
-  width: min(420px, 40vw);
+  width: min(400px, 32vw);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -72,7 +72,7 @@ button.primary:hover:not(:disabled) { background: #ffc34d; }
 #lobby h1 { margin: 0; font-size: 2.2rem; }
 .sub { margin: 4px 0 14px; color: var(--muted); }
 #qr {
-  width: min(300px, 32vw);
+  width: min(300px, 26vw);
   aspect-ratio: 1;
   background: #fff;
   border-radius: 14px;
@@ -84,7 +84,7 @@ button.primary:hover:not(:disabled) { background: #ffc34d; }
 .warn { margin: 10px 0 0; color: #ffd166; font-size: 0.85rem; }
 
 #lobby .players {
-  width: min(480px, 44vw);
+  width: min(480px, 38vw);
   display: flex;
   flex-direction: column;
   overflow-y: auto; /* màn hình thấp thì cuộn cả cột, không để danh sách bị co mất */
@@ -98,11 +98,52 @@ button.primary:hover:not(:disabled) { background: #ffc34d; }
   background: rgba(255, 255, 255, 0.15);
   text-align: center;
 }
-/* Chọn game */
-.game-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-.game-picker button { padding: 10px 14px; font-size: 1.05rem; border: 2px solid transparent; }
-.game-picker button.sel { border-color: var(--accent); background: rgba(255, 176, 32, 0.22); }
-.game-desc { margin: 0 0 14px; color: var(--muted); font-size: 0.9rem; }
+/* Thanh chọn game bên trái, chia theo nhóm */
+#lobby .game-sidebar {
+  width: min(270px, 20vw);
+  min-width: 200px;
+  padding: 18px 14px;
+  overflow-y: auto;
+}
+#lobby .game-sidebar h2 { font-size: 1.3rem; margin: 0 4px 10px; }
+.game-group h3 {
+  margin: 14px 4px 8px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.game-group:first-child h3 { margin-top: 4px; }
+.game-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.08);
+}
+.game-card .emoji { font-size: 2rem; line-height: 1; }
+.game-card .info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.game-card b { font-size: 1.05rem; }
+.game-card .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.game-card .tags i {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+}
+.game-card.sel { border-color: var(--accent); background: rgba(255, 176, 32, 0.2); }
+
+/* Tên + mô tả game đang chọn, đầu cột người chơi */
+.game-head { margin-bottom: 14px; }
+#lobby .game-head .game-title { margin: 0 0 4px; font-size: 1.6rem; }
+.game-desc { margin: 0; color: var(--muted); font-size: 0.9rem; }
 
 /* Tuỳ chọn của game (VD độ khó) */
 .game-options .option { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
@@ -251,9 +292,19 @@ button.link:hover:not(:disabled) { background: transparent; color: #ffc34d; }
   font-weight: 700;
 }
 
-@media (max-width: 800px) {
+/* Màn hình hẹp: xếp dọc; thanh chọn game thành một hàng thẻ cuộn ngang ở trên cùng. */
+@media (max-width: 1000px) {
   .panel { flex-direction: column; inset: 12px; overflow: auto; }
-  #lobby .join, #lobby .players { width: auto; }
+  .panel > * { flex: none; }
+  #lobby .join, #lobby .players, #lobby .game-sidebar { width: auto; min-width: 0; }
+  #lobby .game-sidebar { padding: 12px; overflow: visible; }
+  #lobby .game-sidebar h2 { display: none; }
+  .game-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .game-group { display: flex; gap: 8px; }
+  .game-group h3 { display: none; }
+  .game-card { width: auto; min-width: 200px; margin: 0; }
   #qr { width: min(260px, 60vw); }
+}
+@media (max-width: 800px) {
   #playerList { grid-template-columns: 1fr; }
 }
