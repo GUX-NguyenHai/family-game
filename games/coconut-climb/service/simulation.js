@@ -101,10 +101,14 @@ function step(g, now, dt) {
     // Tốc độ mục tiêu: dương = leo lên, âm = tụt xuống.
     const d = c.driveEff;
     let target;
+    // Leo nhanh theo mức lắc mũ CLIMB_CURVE: lắc nhẹ chỉ nhích từng chút, phải lắc khoẻ mới leo nhanh.
     if (c.inSlip) {
-      target = d > C.SLIP_NEED ? ((d - C.SLIP_NEED) / (1 - C.SLIP_NEED)) * C.MAX_CLIMB * C.SLIP_CLIMB : -C.SLIP_SLIDE * (1 - d / C.SLIP_NEED);
+      target =
+        d > C.SLIP_NEED
+          ? Math.pow((d - C.SLIP_NEED) / (1 - C.SLIP_NEED), C.CLIMB_CURVE) * C.MAX_CLIMB * C.SLIP_CLIMB
+          : -C.SLIP_SLIDE * (1 - d / C.SLIP_NEED);
     } else {
-      target = d > 0 ? d * C.MAX_CLIMB : -C.SLIDE;
+      target = d > 0 ? Math.pow(d, C.CLIMB_CURVE) * C.MAX_CLIMB : -C.SLIDE;
     }
     c.v = target > c.v ? Math.min(target, c.v + C.ACCEL * dt) : Math.max(target, c.v - C.ACCEL * dt);
     c.y = Math.max(0, c.y + c.v * dt);

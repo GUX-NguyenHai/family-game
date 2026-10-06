@@ -2,6 +2,7 @@
 // texture tự vẽ, hạt hiệu ứng, giải phóng bộ nhớ. Game nào cần cảnh 3D thì import từ đây.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 export const lerp = (a, b, k) => a + (b - a) * k;
@@ -86,7 +87,8 @@ export function loadAnimalTemplate(def, manifest) {
   return animalTemplates.get(def.id);
 }
 
-// Model bất kỳ (thuyền, hải đăng...). Trả về { root, size, center, min } chưa co giãn; dùng cloneModel() để lấy bản sao.
+// Model bất kỳ (thuyền, hải đăng, khỉ...). Trả về { root, size, center, min, clips } chưa co giãn;
+// dùng cloneModel() để lấy bản sao. clips = hoạt ảnh có sẵn trong file (có thể rỗng).
 export function loadModel(url) {
   if (!modelTemplates.has(url)) {
     const promise = loader
@@ -95,7 +97,7 @@ export function loadModel(url) {
         const root = gltf.scene;
         prepareMeshes(root);
         const { box, size, center } = measure(root);
-        return { root, size, center, min: box.min.clone() };
+        return { root, size, center, min: box.min.clone(), clips: gltf.animations || [] };
       })
       .catch(err => {
         console.error('Không tải được model', url, err);
@@ -107,10 +109,12 @@ export function loadModel(url) {
   return modelTemplates.get(url);
 }
 
-// Bản sao model, xoay cho chiều dài nằm theo trục z, co giãn để dài đúng `length`, đáy đặt ở y = 0, tâm ở gốc.
-// Trả về { object, width, height, length } (kích thước sau khi co giãn).
+// Bản sao model, xoay cho chiều dài nằm theo trục z, co giãn để dài đúng `length` (hoặc cao đúng `height`),
+// đáy đặt ở y = 0, tâm ở gốc. Trả về { object, model, width, height, length } (kích thước sau khi co giãn);
+// `model` là bản sao bên trong, dùng để gắn hoạt ảnh (AnimationMixer).
+// Dùng SkeletonUtils.clone để model có xương (hoạt ảnh) không bị hỏng khi nhân bản.
 export function cloneModel(tpl, { length = null, height = null } = {}) {
-  const model = tpl.root.clone(true);
+  const model = SkeletonUtils.clone(tpl.root);
   const pivot = new THREE.Group();
   const alongX = tpl.size.x > tpl.size.z; // model nằm ngang theo trục x thì xoay 90°
   const len = alongX ? tpl.size.x : tpl.size.z;
@@ -125,7 +129,7 @@ export function cloneModel(tpl, { length = null, height = null } = {}) {
   inner.add(model);
   if (alongX) inner.rotation.y = Math.PI / 2;
   pivot.add(inner);
-  return { object: pivot, width: wid * scale, height: tpl.size.y * scale, length: len * scale };
+  return { object: pivot, model, width: wid * scale, height: tpl.size.y * scale, length: len * scale };
 }
 
 // ---------- Texture, chữ ----------

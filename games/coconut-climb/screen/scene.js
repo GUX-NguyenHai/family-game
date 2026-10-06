@@ -1,4 +1,4 @@
-// Cảnh 3D Leo cây hái dừa: bãi biển, hàng cây dừa (mỗi người một cây), con vật ôm thân cây leo lên.
+// Cảnh 3D Leo cây hái dừa: bãi biển, hàng cây dừa (mỗi người một cây), khỉ (người chơi tự chọn) ôm thân cây leo lên.
 // Thân cây tự dựng (thẳng, có khúc rêu xanh = đoạn trơn) để con vật bám đúng thân; cây dừa tải về dùng trang trí xung quanh.
 // Toạ độ: x = ngang (các cây xếp hàng), y = độ cao, camera nhìn từ phía trước (z dương).
 import * as THREE from 'three';
@@ -6,8 +6,6 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import {
   clamp,
   damp,
-  findClip,
-  loadAnimalTemplate,
   loadModel,
   cloneModel,
   canvasTexture,
@@ -23,8 +21,7 @@ export const FLAG = { SLIP: 1, SLIDING: 2, TOP: 4 };
 const MODELS = '/games/coconut-climb/assets/models/';
 const SPACING = 4; // khoảng cách giữa 2 cây
 const TRUNK_R = 0.32;
-const ANIMAL_SCALE = 0.6; // con vật thu nhỏ cho vừa thân cây
-const BASE_Y = 0.7; // độ cao 0m của người leo (con vật đứng dưới gốc)
+const BASE_Y = 0.3; // độ cao 0m của người leo (khỉ bám ngay trên gốc)
 
 // Vân thân cây dừa: các khoanh ngang.
 function trunkTexture(base, ring) {
@@ -152,89 +149,145 @@ class Tree {
   }
 }
 
-// ---------- Một con vật ôm thân cây ----------
+// ---------- Một chú khỉ ôm thân cây ----------
+// Model khỉ khác nhau về tư thế: đứng thẳng (cao hơn dài) thì giữ nguyên, quay mặt vào thân cây;
+// bò 4 chân (dài hơn cao) thì dựng đứng lên cho đầu hướng lên trên, bụng áp vào thân cây.
+// Có hoạt ảnh leo/chạy/đi thì dùng; không có thì tự nhún người theo nhịp lắc.
+
+const RING_GEO = new THREE.TorusGeometry(TRUNK_R + 0.12, 0.045, 6, 20);
+
+// Tìm hoạt ảnh theo tên (không phân biệt hoa thường), ưu tiên theo thứ tự các mẫu.
+function pickClip(clips, patterns) {
+  for (const re of patterns) {
+    const c = clips.find(x => re.test(x.name));
+    if (c) return c;
+  }
+  return null;
+}
 
 class Climber {
-  constructor(player, manifest) {
-    this.manifest = manifest;
+  constructor(player, figureId, catalog) {
+    this.catalog = catalog;
     this.group = new THREE.Group(); // đặt ở thân cây, nâng theo độ cao
-    this.hug = new THREE.Group(); // dựng đứng con vật: đầu hướng lên, bụng áp vào thân cây
-    this.hug.rotation.x = Math.PI / 2;
-    this.hug.position.z = TRUNK_R + 0.05;
-    this.group.add(this.hug);
+    this.body = new THREE.Group(); // nhún/rung khi leo, tụt
+    this.group.add(this.body);
+    // Vòng dây màu người chơi quấn quanh thân cây (như người trèo dừa thật).
+    this.ringMat = new THREE.MeshLambertMaterial({ color: player.color });
+    this.ring = new THREE.Mesh(RING_GEO, this.ringMat);
+    this.ring.rotation.x = Math.PI / 2;
+    this.group.add(this.ring);
     this.label = new Label();
     this.group.add(this.label.sprite);
-    this.pivot = null;
+    this.pose = null;
+    this.inner = null;
     this.mixer = null;
     this.actions = {};
     this.current = null;
     this.currentKey = null;
+    this.hasMove = false;
+    this.extraYaw = 0;
     this.loadToken = 0;
     this.disposed = false;
-    this.animal = undefined; // khác mọi giá trị thật để lần đầu luôn tải model
+    this.figure = undefined; // khác mọi giá trị thật để lần đầu luôn tải model
+    this.size = 1.3;
     this.y = 0;
-    this.setPlayer(player);
+    this.setPlayer(player, figureId);
   }
 
-  setPlayer(player) {
+  setPlayer(player, figureId) {
     this.label.set(player.name, player.color);
-    if (player.animal !== this.animal) {
-      this.animal = player.animal;
-      this.loadModel(player.animal);
+    this.ringMat.color.set(player.color);
+    if (figureId !== this.figure) {
+      this.figure = figureId;
+      this.loadFigure(figureId);
     }
   }
 
-  async loadModel(animalId) {
+  async loadFigure(figureId) {
     const token = ++this.loadToken;
-    const def = this.manifest.animals.find(a => a.id === animalId) || this.manifest.animals[0];
+    const def = this.catalog.figures.find(f => f.id === figureId) || this.catalog.figures[0];
     let tpl = null;
     try {
-      tpl = await loadAnimalTemplate(def, this.manifest);
+      tpl = await loadModel(MODELS + def.file);
     } catch {
       tpl = null;
     }
     if (token !== this.loadToken || this.disposed) return;
-    if (this.pivot) {
-      this.hug.remove(this.pivot);
+    if (this.pose) {
+      // Chỉ gỡ ra: bản sao dùng chung hình khối/vật liệu với model gốc nên không dispose.
+      this.body.remove(this.pose);
       this.mixer?.stopAllAction();
     }
-    this.pivot = new THREE.Group();
-    this.pivot.rotation.y = this.manifest.modelYaw; // quay mặt vào thân cây (-z) trước khi dựng đứng
     this.actions = {};
     this.current = null;
     this.currentKey = null;
+    this.mixer = null;
+    this.yaw = def.yaw || 0;
+    this.pose = new THREE.Group();
+    this.inner = new THREE.Group();
+    this.pose.add(this.inner);
+
+    let depth = 0.3; // nửa bề dày theo hướng thân cây, để bụng vừa chạm thân cây
     if (tpl) {
       const model = SkeletonUtils.clone(tpl.root);
-      model.scale.setScalar(tpl.scale * ANIMAL_SCALE);
-      model.position.copy(tpl.offset).multiplyScalar(ANIMAL_SCALE);
-      this.pivot.add(model);
-      this.mixer = new THREE.AnimationMixer(model);
-      for (const [key, names] of Object.entries(this.manifest.clips)) {
-        const clip = findClip(tpl.clips, names);
-        if (clip) this.actions[key] = this.mixer.clipAction(clip);
+      const { size, center } = tpl;
+      const scale = (def.size || 1.3) / Math.max(size.x, size.y, size.z, 1e-6);
+      model.scale.setScalar(scale);
+      model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+      this.inner.add(model);
+      const upright = size.y >= Math.max(size.x, size.z) * 0.9;
+      // glTF quay mặt về +z; quay 180° cho mặt hướng vào thân cây (-z), cộng thêm yaw riêng nếu model quay sai.
+      this.inner.rotation.y = Math.PI + this.yaw + this.extraYaw;
+      if (upright) {
+        const sideways = Math.abs(Math.sin(this.yaw)) > 0.5;
+        depth = ((sideways ? size.x : size.z) * scale) / 2;
+      } else {
+        this.pose.rotation.x = Math.PI / 2; // bò 4 chân → dựng đứng, đầu hướng lên
+        depth = (size.y * scale) / 2;
+      }
+      this.size = Math.max(size.x, size.y, size.z) * scale;
+      if (tpl.clips.length) {
+        this.mixer = new THREE.AnimationMixer(model);
+        const move = pickClip(tpl.clips, [/climb/i, /run|gallop/i, /walk/i, /jump/i]);
+        const idle = pickClip(tpl.clips, [/idle/i, /stand/i]);
+        const win = pickClip(tpl.clips, [/celebrat|victory|dance|happy|wave/i, /jump/i]);
+        if (move) this.actions.move = this.mixer.clipAction(move);
+        if (idle) this.actions.idle = this.mixer.clipAction(idle);
+        if (win) this.actions.win = this.mixer.clipAction(win);
+        if (!idle && !move) this.actions.idle = this.mixer.clipAction(tpl.clips[0]);
+        this.hasMove = !!move;
       }
     } else {
-      const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1.2), new THREE.MeshLambertMaterial({ color: 0xcccccc }));
-      box.position.y = 0.25;
-      this.pivot.add(box);
-      this.mixer = null;
+      // Tải model lỗi: khối tạm để vẫn chơi được.
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.1, 0.5), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
+      this.inner.add(box);
+      depth = 0.25;
+      this.size = 1.1;
     }
-    this.hug.add(this.pivot);
-    this.label.sprite.position.y = 1.3;
+    this.pose.position.z = TRUNK_R + depth;
+    this.body.add(this.pose);
+    this.ring.position.y = -this.size * 0.25;
+    this.label.sprite.position.y = this.size * 0.6 + 0.5;
     this.setAnim('idle');
+  }
+
+  // Phím Y trên màn hình chung: xoay thử khỉ 90° nếu quay sai hướng.
+  rotate(delta) {
+    this.extraYaw += delta;
+    if (this.inner) this.inner.rotation.y = Math.PI + this.yaw + this.extraYaw;
   }
 
   setAnim(key, timeScale = 1) {
     const action = this.actions[key] || this.actions.idle;
     if (!action) return;
-    if (this.currentKey === key) {
+    if (this.current === action) {
       action.setEffectiveTimeScale(timeScale);
       return;
     }
     action.reset();
     action.setLoop(THREE.LoopRepeat, Infinity);
     action.setEffectiveTimeScale(timeScale).setEffectiveWeight(1).fadeIn(0.2).play();
-    if (this.current && this.current !== action) this.current.fadeOut(0.2);
+    if (this.current) this.current.fadeOut(0.2);
     this.current = action;
     this.currentKey = key;
   }
@@ -242,11 +295,25 @@ class Climber {
   // y: độ cao (m), d: mức lắc 0..1, f: cờ trạng thái.
   place(x, y, d, f, state, dt, now) {
     this.y = damp(this.y, y, 15, dt);
-    this.group.position.set(x, BASE_Y + this.y, 0);
-    // Đang tụt thì rung lắc qua lại cho thấy đang trượt.
-    this.group.rotation.z = f & FLAG.SLIDING ? Math.sin(now / 60) * 0.08 : damp(this.group.rotation.z, 0, 10, dt);
-    if (f & FLAG.TOP) this.setAnim('celebrate');
-    else if (state === 'climb' && d > 0.12) this.setAnim('run', clamp(0.6 + d * 1.4, 0.6, 2));
+    this.group.position.set(x, BASE_Y + this.y + this.size / 2, 0);
+    const climbing = state === 'climb' && d > 0.12 && !(f & FLAG.TOP);
+
+    // Đang tụt thì rung lắc qua lại; leo mà model không có hoạt ảnh thì tự nhún người theo nhịp.
+    let wobble = 0;
+    let bob = 0;
+    if (f & FLAG.SLIDING) wobble = Math.sin(now / 60) * 0.1;
+    else if (climbing && !this.hasMove) {
+      const phase = now / (220 - d * 120);
+      bob = Math.abs(Math.sin(phase)) * 0.12;
+      wobble = Math.sin(phase) * 0.08;
+    } else if (f & FLAG.TOP && !this.actions.win) {
+      bob = Math.abs(Math.sin(now / 150)) * 0.25; // nhảy cẫng ăn mừng
+    }
+    this.body.rotation.z = damp(this.body.rotation.z, wobble, 20, dt);
+    this.body.position.y = damp(this.body.position.y, bob, 20, dt);
+
+    if (f & FLAG.TOP) this.setAnim('win');
+    else if (climbing) this.setAnim('move', clamp(0.6 + d * 1.4, 0.6, 2));
     else this.setAnim('idle');
   }
 
@@ -258,6 +325,7 @@ class Climber {
     this.disposed = true;
     this.mixer?.stopAllAction();
     this.label.dispose();
+    this.ringMat.dispose();
     this.group.parent?.remove(this.group);
   }
 }
@@ -265,8 +333,9 @@ class Climber {
 // ---------- Cảnh chính ----------
 
 export class ClimbScene {
-  constructor(canvas, manifest, quality = 'high') {
-    this.manifest = manifest;
+  constructor(canvas, catalog, quality = 'high') {
+    this.catalog = catalog; // danh sách khỉ (assets/figures.json)
+    this.extraYaw = 0;
     this.high = quality === 'high';
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.high, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.high ? 2 : 1));
@@ -375,8 +444,8 @@ export class ClimbScene {
     this.marks.add(top);
   }
 
-  // Dựng hàng cây + con vật. ids: người chơi theo thứ tự; playerOf: id → người chơi.
-  setPlayers(ids, playerOf, field) {
+  // Dựng hàng cây + khỉ. ids: người chơi theo thứ tự; playerOf: id → người chơi; figureOf: id → loại khỉ.
+  setPlayers(ids, playerOf, field, figureOf) {
     const changed = field && (field.height !== this.height || field.slipFrom !== this.slipFrom || field.slipTo !== this.slipTo);
     if (field) Object.assign(this, { height: field.height, slipFrom: field.slipFrom, slipTo: field.slipTo });
     const same = !changed && ids.length === this.order.length && ids.every((id, i) => id === this.order[i]);
@@ -405,13 +474,21 @@ export class ClimbScene {
       const player = playerOf(id) || { id, name: '?', animal: null, color: '#fff' };
       let c = this.climbers.get(id);
       if (!c) {
-        c = new Climber(player, this.manifest);
+        c = new Climber(player, figureOf(id), this.catalog);
+        if (this.extraYaw) c.rotate(this.extraYaw);
         this.climbers.set(id, c);
         this.scene.add(c.group);
       } else {
-        c.setPlayer(player);
+        c.setPlayer(player, figureOf(id));
       }
     }
+  }
+
+  // Phím Y: xoay thử mọi chú khỉ 90°. Trả về góc đã xoay thêm (ghi vào yaw trong figures.json nếu đúng).
+  rotateFigures(delta) {
+    this.extraYaw = (this.extraYaw + delta) % (Math.PI * 2);
+    for (const c of this.climbers.values()) c.rotate(delta);
+    return this.extraYaw;
   }
 
   setPhase(phase) {

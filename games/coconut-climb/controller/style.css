@@ -1,4 +1,20 @@
 /* Leo cây hái dừa – tay cầm. Biến màu (--accent, --me, --muted...) lấy từ /css/play.css. */
+
+/* Phòng chờ: chọn khỉ */
+.cc-figures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cc-figures button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px;
+  background: #2b3558;
+  border: 2px solid transparent;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.cc-figures button .e { font-size: 1.8rem; line-height: 1.2; }
+.cc-figures button.sel { border-color: var(--accent); background: #34406a; }
 .cc-play { display: flex; flex-direction: column; flex: 1; padding: 12px 0; touch-action: none; }
 .cc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .cc-pos { font-size: 2.2rem; font-weight: 900; }

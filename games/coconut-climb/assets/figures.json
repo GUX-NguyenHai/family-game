@@ -1,0 +1,13 @@
+{
+  "_ghi_chu": "Con vật leo cây cho người chơi chọn. yaw (radian): xoay thêm nếu model quay sai hướng (bấm phím Y trên màn hình chung để thử, rồi ghi số vào đây). size: chiều cao/dài khi leo (mét).",
+  "figures": [
+    { "id": "monkey", "name": "Khỉ", "emoji": "🐒", "file": "figure/monkey.glb", "yaw": 0, "size": 1.3 },
+    { "id": "monkey-vr", "name": "Khỉ con", "emoji": "🐵", "file": "figure/monkey-vr.glb", "yaw": 0, "size": 1.2 },
+    { "id": "capuchin", "name": "Khỉ mũ", "emoji": "🐒", "file": "figure/capuchin.glb", "yaw": 0, "size": 1.2 },
+    { "id": "squirrel-monkey", "name": "Khỉ sóc", "emoji": "🐒", "file": "figure/squirrel-monkey.glb", "yaw": 0, "size": 1.1 },
+    { "id": "monkroose", "name": "Monkroose", "emoji": "🐵", "file": "figure/monkroose.glb", "yaw": 0, "size": 1.3 },
+    { "id": "orangutan", "name": "Đười ươi", "emoji": "🦧", "file": "figure/orangutan.glb", "yaw": 0, "size": 1.5 },
+    { "id": "panda", "name": "Gấu trúc", "emoji": "🐼", "file": "figure/panda.glb", "yaw": 0, "size": 1.4 },
+    { "id": "panda-2", "name": "Gấu trúc con", "emoji": "🐼", "file": "figure/panda-2.glb", "yaw": 0, "size": 1.2 }
+  ]
+}

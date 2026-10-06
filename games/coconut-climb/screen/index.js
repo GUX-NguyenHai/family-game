@@ -1,6 +1,19 @@
-// Leo cây hái dừa – màn hình chung: hàng cây dừa 3D, bảng xếp hạng theo độ cao, đồng hồ.
-// Ở phòng chờ cảnh 3D làm nền: mỗi người một cây, con vật đứng sẵn dưới gốc.
+// Leo cây hái dừa – màn hình chung: hàng cây dừa 3D, khỉ của từng người, bảng xếp hạng theo độ cao, đồng hồ.
+// Ở phòng chờ cảnh 3D làm nền: mỗi người một cây, khỉ (theo lựa chọn trên điện thoại) bám sẵn dưới gốc.
+// Phím Y: xoay thử khỉ 90° nếu model quay sai hướng.
 import { ClimbScene, FLAG } from './scene.js';
+
+const catalog = await fetch('/games/coconut-climb/assets/figures.json').then(r => r.json());
+const FIGURE_IDS = catalog.figures.map(f => f.id);
+
+// Khỉ của người chơi: lựa chọn ở phòng chờ, chưa chọn thì lấy theo id. Phải khớp với figureOf() trong service/index.js.
+function defaultFigure(player) {
+  const pick = player?.prefs?.figure;
+  if (FIGURE_IDS.includes(pick)) return pick;
+  let h = 0;
+  for (const ch of String(player?.id || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return FIGURE_IDS[h % FIGURE_IDS.length];
+}
 
 export function create(ctx) {
   const { root, esc, toast, beep } = ctx;
@@ -11,8 +24,17 @@ export function create(ctx) {
       <div class="cc-timer"></div>
     </div>`;
   const q = sel => root.querySelector(sel);
-  const scene = new ClimbScene(q('.cc-scene'), ctx.manifest, ctx.quality);
+  const scene = new ClimbScene(q('.cc-scene'), catalog, ctx.quality);
   let hudAt = 0;
+
+  function onKey(e) {
+    if (e.target.closest?.('input, textarea')) return;
+    if (e.key === 'y' || e.key === 'Y') {
+      const yaw = scene.rotateFigures(Math.PI / 2);
+      toast(`Xoay khỉ: yaw = ${yaw.toFixed(4)} (ghi số này vào figures.json nếu đúng hướng)`);
+    }
+  }
+  window.addEventListener('keydown', onKey);
 
   function renderHud(s) {
     const order = [...s.p].sort((a, b) => {
@@ -40,17 +62,19 @@ export function create(ctx) {
       q('.cc-hud').hidden = info.state === 'lobby';
       if (info.state !== 'lobby') return;
       scene.setPhase('lobby');
+      const byId = new Map(info.players.map(p => [p.id, p]));
       scene.setPlayers(
         info.players.map(p => p.id),
         id => ctx.player(id),
         info.preview,
+        id => defaultFigure(byId.get(id)),
       );
     },
 
     onSetup(info) {
       if (!info) return;
       scene.setPhase('play');
-      scene.setPlayers(info.players, id => ctx.player(id), info);
+      scene.setPlayers(info.players, id => ctx.player(id), info, id => info.figures?.[id] || defaultFigure(ctx.player(id)));
     },
 
     onState(s) {
@@ -71,6 +95,7 @@ export function create(ctx) {
     },
 
     destroy() {
+      window.removeEventListener('keydown', onKey);
       scene.destroy();
       root.innerHTML = '';
     },

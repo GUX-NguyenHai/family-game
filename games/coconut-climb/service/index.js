@@ -2,13 +2,27 @@
 // Chơi cá nhân, mỗi lần bắt đầu là 1 ván.
 const C = require('./config');
 const simulation = require('./simulation');
+const catalog = require('../assets/figures.json');
+
+const FIGURE_IDS = catalog.figures.map(f => f.id);
 
 function round(v, k) {
   return Math.round(v * k) / k;
 }
 
+// Con vật leo cây của người chơi: lựa chọn ở phòng chờ (prefs.figure); chưa chọn thì lấy theo id người chơi
+// (cố định cho mỗi người). Phải khớp với defaultFigure() trong screen/index.js.
+function figureOf(player) {
+  const pick = player.prefs?.figure;
+  if (FIGURE_IDS.includes(pick)) return pick;
+  let h = 0;
+  for (const ch of String(player.id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return FIGURE_IDS[h % FIGURE_IDS.length];
+}
+
 function createMatch({ players, options, now, startAt, api }) {
   const g = simulation.createGame({ players, level: options.difficulty, now, startAt });
+  const figures = Object.fromEntries(players.map(p => [p.id, figureOf(p)]));
 
   // Thứ hạng tính 1 lần cho mỗi tick rồi dùng cho mọi điện thoại.
   let orderAt = -1;
@@ -25,6 +39,7 @@ function createMatch({ players, options, now, startAt, api }) {
         slipFrom: g.slipFrom,
         slipTo: g.slipTo,
         players: g.climbers.map(c => c.id),
+        figures, // id người chơi → con vật leo cây
       };
     },
 
@@ -90,7 +105,7 @@ module.exports = {
   name: 'Leo cây hái dừa',
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🌴',
-  description: 'Lắc máy để leo cây dừa, ngừng lắc là tụt xuống. Qua đoạn thân trơn phải lắc thật mạnh. Ai lên ngọn hái dừa trước thì thắng!',
+  description: 'Chọn một chú khỉ, lắc máy để leo cây dừa, ngừng lắc là tụt xuống. Qua đoạn thân trơn phải lắc thật mạnh. Ai lên ngọn hái dừa trước thì thắng!',
   maxPlayers: 12,
   bots: true,
   sensors: true,

@@ -9,9 +9,10 @@ module.exports = {
   COAST_MS: 3000, // hiện bảng kết quả rồi vẫn chạy thêm cho cảnh ăn mừng
 
   // Lắc lên xuống để leo: lắc càng mạnh/nhanh leo càng nhanh. Ngừng lắc thì từ từ tụt xuống.
-  DRIVE_GAIN: 1,
+  DRIVE_GAIN: 0.7, // nhân mức lắc: nhỏ = phải lắc khoẻ hơn mới leo nhanh
   MOVE_STALE_MS: 400, // quá lâu không nhận mức lắc thì coi như ngừng lắc
-  MIN_DRIVE: 0.12, // lắc nhẹ hơn mức này (rung tay) coi như không lắc
+  MIN_DRIVE: 0.2, // lắc nhẹ hơn mức này coi như không lắc (vẫn tụt)
+  CLIMB_CURVE: 1.6, // tốc độ leo = (mức lắc)^CLIMB_CURVE: lắc nhẹ leo rất chậm, lắc mạnh mới leo nhanh
   MAX_CLIMB: 1.6, // m/s khi lắc hết cỡ
   SLIDE: 0.5, // m/s tụt xuống khi ngừng lắc
   ACCEL: 4, // tốc độ leo/tụt đổi dần (m/s²) cho mượt
@@ -27,9 +28,9 @@ module.exports = {
   DIFFICULTIES: {
     easy: {
       label: '🟢 Dễ',
-      desc: 'Cây 14m, lắc nhẹ đã leo nhanh, tụt chậm, đoạn trơn ngắn, bot yếu.',
+      desc: 'Cây 14m, tụt chậm, đoạn trơn ngắn, bot yếu.',
       HEIGHT: 14,
-      DRIVE_GAIN: 1.3,
+      DRIVE_GAIN: 0.9,
       SLIDE: 0.35,
       SLIP_START: 0.45,
       SLIP_END: 0.55,
@@ -41,14 +42,14 @@ module.exports = {
       label: '🟡 Trung bình',
       desc: 'Cây 18m, đoạn trơn vừa, bot khá.',
       HEIGHT: 18,
-      DRIVE_GAIN: 1,
+      DRIVE_GAIN: 0.7,
       BOT: { skillMin: 0.45, skillMax: 0.85 },
     },
     hard: {
       label: '🔴 Khó',
       desc: 'Cây 22m, phải lắc mạnh, tụt nhanh, đoạn trơn dài và rất trơn, bot giỏi.',
       HEIGHT: 22,
-      DRIVE_GAIN: 0.8,
+      DRIVE_GAIN: 0.55,
       SLIDE: 0.7,
       SLIP_START: 0.38,
       SLIP_END: 0.64,

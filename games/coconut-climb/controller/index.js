@@ -1,11 +1,24 @@
 // Leo cây hái dừa – tay cầm trên điện thoại: lắc lên xuống để leo, ngừng lắc là tụt.
-// Bên trái là "cây" dọc: chấm = mình đang ở đâu, khúc xanh rêu = đoạn thân trơn, 🥥 = ngọn.
+// Phòng chờ: chọn khỉ (con vật leo cây) + thử lắc.
+// Bên trái màn chơi là "cây" dọc: chấm = mình đang ở đâu, khúc xanh rêu = đoạn thân trơn, 🥥 = ngọn.
 const FLAG = { SLIP: 1, SLIDING: 2, TOP: 4 };
+const catalog = await fetch('/games/coconut-climb/assets/figures.json').then(r => r.json());
+
+// Chưa chọn thì lấy theo id người chơi. Phải khớp với figureOf() trong service/index.js.
+function defaultFigure(id) {
+  let h = 0;
+  for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return catalog.figures[h % catalog.figures.length].id;
+}
 
 export function create(ctx) {
-  const { lobbyRoot, playRoot, sensors, send, vibrate } = ctx;
+  const { lobbyRoot, playRoot, sensors, send, vibrate, esc } = ctx;
 
   lobbyRoot.innerHTML = `
+    <div class="box">
+      <h3>🐒 Chọn khỉ leo cây</h3>
+      <div class="cc-figures" data-r="figurePicker"></div>
+    </div>
     <div class="box">
       <h3>🌴 Thử leo</h3>
       <div class="meter">
@@ -51,6 +64,28 @@ export function create(ctx) {
   el.selSens.value = String(sensors.range);
   el.selSens.onchange = e => sensors.setRange(e.target.value);
 
+  // ---------- Chọn khỉ ----------
+  function currentFigure() {
+    const pick = ctx.pref('figure');
+    if (catalog.figures.some(f => f.id === pick)) return pick;
+    return defaultFigure(ctx.me()?.id || '');
+  }
+
+  function renderFigures() {
+    const sel = currentFigure();
+    el.figurePicker.innerHTML = catalog.figures
+      .map(f => `<button type="button" data-id="${esc(f.id)}" class="${f.id === sel ? 'sel' : ''}"><span class="e">${f.emoji}</span>${esc(f.name)}</button>`)
+      .join('');
+  }
+
+  el.figurePicker.onclick = e => {
+    const btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+    ctx.setPref('figure', btn.dataset.id);
+    renderFigures();
+  };
+  renderFigures();
+
   function updateNoShake() {
     if (sensors.enabled && sensors.gotMotion) {
       el.noShake.hidden = true;
@@ -82,6 +117,10 @@ export function create(ctx) {
   }, 100);
 
   return {
+    onRoom() {
+      renderFigures(); // lúc mới vào phòng chưa biết id của mình thì vẽ lại khi đã biết
+    },
+
     onShow(screen, prev) {
       if (screen === 'game' && prev !== 'game') resetPlay();
     },

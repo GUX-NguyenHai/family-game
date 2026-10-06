@@ -9,7 +9,7 @@ Bộ game cho cả nhà:
 |---|---|
 | 🏁 **Đua thú** | Đường đua 3D: lắc máy để chạy, nghiêng để đổi làn, nhảy rào, TURBO (chi tiết ở dưới) |
 | 🪢 **Kéo co** | 2 đội Đỏ – Xanh (1–6 người/đội, **phải bằng người**, thiếu thì thêm bot) đứng hai bên bờ sông, lắc máy để kéo. Lực đội = trung bình mức lắc. Kéo dấu giữa dây qua vạch bên mình là thắng ván, đội kia ngã xuống sông. Hết 45 giây thì dây lệch bên nào bên đó thắng. Mỗi lần bắt đầu là 1 ván, muốn đấu tiếp thì bấm "Chơi lại". Tham số: `games/tug-of-war/service/config.js` |
-| 🌴 **Leo cây hái dừa** | Mỗi người một cây dừa, lắc máy để leo, **ngừng lắc là tụt xuống**. Giữa thân có **đoạn trơn** (rêu xanh): phải lắc thật mạnh mới qua, lắc yếu là trượt. Ai lên ngọn hái dừa trước thì thắng, hết 45 giây xếp theo độ cao. Mỗi lần bắt đầu là 1 ván. Tham số: `games/coconut-climb/service/config.js` |
+| 🌴 **Leo cây hái dừa** | Mỗi người chọn một chú khỉ (khỉ, khỉ mũ, khỉ sóc, đười ươi, gấu trúc… trong `assets/figures.json`) và một cây dừa, lắc máy để leo, **ngừng lắc là tụt xuống**. Giữa thân có **đoạn trơn** (rêu xanh): phải lắc thật mạnh mới qua, lắc yếu là trượt. Ai lên ngọn hái dừa trước thì thắng, hết 45 giây xếp theo độ cao. Mỗi lần bắt đầu là 1 ván. Tham số: `games/coconut-climb/service/config.js` |
 | 🚣 **Đua thuyền** | Lắc máy lên xuống để chèo: lắc nhanh thì đi nhanh, ngừng lắc thì thuyền dừng. **Thi đơn** hoặc **theo đội** (2–4 người chung thuyền, tốc độ = trung bình mức lắc cả đội). Kiểu **Basic**: đường thẳng, không vật cản. Kiểu **Pro**: nghiêng để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Chọn xuồng hoặc thuyền chèo ở phòng chờ. Tham số: `games/boat-race/service/config.js` |
 
 Mỗi game là một module trong `games/`. **Cách thêm game mới: xem [games/README.md](games/README.md).**
@@ -191,7 +191,7 @@ games/                        ── mỗi game một thư mục ──
     service/                  luật chơi: config.js ★, simulation.js (leo, tụt, đoạn trơn, bot), index.js
     screen/                   cảnh bãi biển 3D, hàng cây dừa, bảng xếp hạng
     controller/               tay cầm: lắc để leo, thanh độ cao có đoạn trơn
-    assets/models/            palm-tree.glb, coconut.glb (+ CREDITS.md)
+    assets/                   figures.json (danh sách khỉ), models/ (khỉ trong figure/, cây dừa, quả dừa + CREDITS.md)
 animal/                       model gốc (Quaternius, CC0)
 build/models/                 model đã tối ưu (tạo bằng npm run models)
 ```
