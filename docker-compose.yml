@@ -1,8 +1,8 @@
 services:
-  dua-thu:
+  party-game:
     build: .
-    image: dua-thu
-    container_name: dua-thu
+    image: party-game
+    container_name: party-game
     restart: unless-stopped
     ports:
       # Chỉ mở cho nginx trên cùng máy. Muốn truy cập thẳng từ ngoài thì đổi thành "3000:3000".

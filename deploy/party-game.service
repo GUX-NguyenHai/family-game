@@ -1,8 +1,8 @@
 # Chạy game như một service, tự khởi động lại khi lỗi hoặc khi server reboot.
-# Sửa User và WorkingDirectory cho đúng, rồi copy vào /etc/systemd/system/dua-thu.service
+# Sửa User và WorkingDirectory cho đúng, rồi copy vào /etc/systemd/system/party-game.service
 
 [Unit]
-Description=Dua thu - family animal race
+Description=Party Game - TV + phone controller games
 After=network.target
 
 [Service]

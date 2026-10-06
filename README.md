@@ -67,8 +67,8 @@ Giữ kín file `.env`, **không đưa lên git**. Đổi khoá thì mọi mã c
 
 **Tạo mã (trên server, sau khi đã đặt khoá):**
 ```bash
-docker compose exec dua-thu node src/license.js --days 30 --players 12
-docker compose exec dua-thu node src/license.js --days 0 --count 5    # 5 mã vĩnh viễn
+docker compose exec party-game node src/license.js --days 30 --players 12
+docker compose exec party-game node src/license.js --days 0 --count 5    # 5 mã vĩnh viễn
 ```
 Khi chạy trên Mac không có `.env`, `npm run make-code -- --days 30` tạo **mã thử**. Mã này chỉ dùng được với server cũng chưa đặt khoá.
 
@@ -132,18 +132,18 @@ Code lấy từ GitHub: `GUX-NguyenHai/family-game`. Gốc repo chính là thư 
    Lúc build, image tự cài thư viện và tối ưu model. Container tự chạy lại khi lỗi và khi server reboot.
 4. **nginx + HTTPS (lần đầu):**
    ```bash
-   cp deploy/nginx.conf /etc/nginx/sites-available/dua-thu
-   ln -sf /etc/nginx/sites-available/dua-thu /etc/nginx/sites-enabled/dua-thu
+   cp deploy/nginx.conf /etc/nginx/sites-available/party-game
+   ln -sf /etc/nginx/sites-available/party-game /etc/nginx/sites-enabled/party-game
    rm -f /etc/nginx/sites-enabled/default
    nginx -t && systemctl reload nginx
    certbot --nginx -d 103-185-185-188.sslip.io --redirect
    ```
-   ⚠️ Certbot sửa trực tiếp file `/etc/nginx/sites-available/dua-thu` để thêm HTTPS. Sau đó **đừng chép đè `deploy/nginx.conf`** lên file này nữa. Lỡ chép đè thì chạy lại lệnh certbot ở trên.
+   ⚠️ Certbot sửa trực tiếp file `/etc/nginx/sites-available/party-game` để thêm HTTPS. Sau đó **đừng chép đè `deploy/nginx.conf`** lên file này nữa. Lỡ chép đè thì chạy lại lệnh certbot ở trên.
 5. Mở `https://103-185-185-188.sslip.io/host` trên TV hoặc laptop.
 
 **Cập nhật code sau này:** trên Mac chạy `git push`, rồi trên server chạy:
 ```bash
-cd ~/family-game && git pull && docker compose up -d --build
+cd ~/family-game && git pull && docker compose up -d --build --force-recreate
 ```
 
 **Lệnh Docker hay dùng** (chạy trong `~/family-game`):
@@ -153,7 +153,7 @@ cd ~/family-game && git pull && docker compose up -d --build
 - `docker image prune -f`: dọn image cũ sau nhiều lần build.
 
 ### Không dùng Docker (tuỳ chọn)
-Cài Node 22 trên server, rồi chạy `npm install --omit=dev`. Tối ưu model bằng `npm run models` trên Mac, sau đó chép thêm thư mục `build/` lên server. Chạy bằng systemd theo file `deploy/dua-thu.service` (đang để `User=root`, `WorkingDirectory=/root/family-game`): copy vào `/etc/systemd/system/`, rồi chạy `systemctl enable --now dua-thu`.
+Cài Node 22 trên server, rồi chạy `npm install --omit=dev`. Tối ưu model bằng `npm run models` trên Mac, sau đó chép thêm thư mục `build/` lên server. Chạy bằng systemd theo file `deploy/party-game.service` (đang để `User=root`, `WorkingDirectory=/root/family-game`): copy vào `/etc/systemd/system/`, rồi chạy `systemctl enable --now party-game`.
 
 ## Cấu trúc
 
