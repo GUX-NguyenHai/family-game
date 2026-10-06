@@ -46,7 +46,7 @@ export function create(ctx) {
       <div class="cc-main">
         <div class="cc-tree">
           <span class="cc-nut">🥥</span>
-          <div class="cc-slip" data-r="slipZone"></div>
+          <div data-r="slipZones"></div>
           <i data-r="marker"></i>
         </div>
         <div class="cc-right">
@@ -130,8 +130,14 @@ export function create(ctx) {
       el.height.textContent = `${m.y.toFixed(1)} / ${m.height}m`;
       el.timer.textContent = m.phase === 'climb' ? `${Math.ceil(m.timeLeft / 1000)}s` : '';
       el.marker.style.bottom = `${Math.min(1, m.y / m.height) * 100}%`;
-      el.slipZone.style.bottom = `${m.slip[0] * 100}%`;
-      el.slipZone.style.height = `${(m.slip[1] - m.slip[0]) * 100}%`;
+      // Các khúc rêu trơn trên thanh "cây" (chỉ vẽ lại khi đổi).
+      const key = JSON.stringify(m.slips);
+      if (el.slipZones.dataset.key !== key) {
+        el.slipZones.dataset.key = key;
+        el.slipZones.innerHTML = m.slips
+          .map(([a, b]) => `<div class="cc-slip" style="bottom:${a * 100}%;height:${(b - a) * 100}%"></div>`)
+          .join('');
+      }
       el.powerBar.style.width = `${m.pw * 100}%`;
       el.needMark.style.left = `${m.need * 100}%`;
       updateNoShake();

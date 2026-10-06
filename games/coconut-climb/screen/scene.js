@@ -56,7 +56,8 @@ const NUT_MAT = new THREE.MeshLambertMaterial({ color: 0x6b4a2b });
 // ---------- Một cây dừa (mỗi người một cây) ----------
 
 class Tree {
-  constructor(height, slipFrom, slipTo) {
+  // slips: các đoạn trơn [[từ, đến]] (mét tính từ 0m của người leo).
+  constructor(height, slips) {
     this.group = new THREE.Group();
     this.height = height;
     this.nuts = [];
@@ -70,16 +71,17 @@ class Tree {
     trunk.castShadow = true;
     this.group.add(trunk);
 
-    // Khúc rêu trơn.
-    const slipH = Math.max(0.1, slipTo - slipFrom);
+    // Các khúc rêu trơn, bọc ngoài thân cây (thân thon dần lên ngọn nên bán kính tính theo độ cao).
+    const radiusAt = y => TRUNK_R * (1 - 0.2 * (y / top)) + 0.03;
     const mossTex = trunkTexture('#3f8f3a', '#57b04f');
-    mossTex.repeat.set(1, slipH / 0.4);
-    const moss = new THREE.Mesh(
-      new THREE.CylinderGeometry(TRUNK_R * 0.95, TRUNK_R * 1.02, slipH, 10),
-      new THREE.MeshLambertMaterial({ map: mossTex }),
-    );
-    moss.position.y = BASE_Y + slipFrom + slipH / 2;
-    this.group.add(moss);
+    const mossMat = new THREE.MeshLambertMaterial({ map: mossTex });
+    for (const [from, to] of slips || []) {
+      const y0 = BASE_Y + from;
+      const y1 = BASE_Y + to;
+      const moss = new THREE.Mesh(new THREE.CylinderGeometry(radiusAt(y1), radiusAt(y0), Math.max(0.1, y1 - y0), 10), mossMat);
+      moss.position.y = (y0 + y1) / 2;
+      this.group.add(moss);
+    }
 
     // Tán lá: 8 tàu lá xoè ra và rủ xuống.
     const crown = new THREE.Group();
@@ -357,8 +359,7 @@ export class ClimbScene {
     this.scene.add(this.sun);
 
     this.height = 18;
-    this.slipFrom = 7.5;
-    this.slipTo = 10.8;
+    this.slips = []; // các đoạn trơn [[từ, đến]] (mét)
     this.order = []; // id người chơi theo thứ tự cây từ trái sang phải
     this.trees = new Map();
     this.climbers = new Map();
@@ -446,8 +447,8 @@ export class ClimbScene {
 
   // Dựng hàng cây + khỉ. ids: người chơi theo thứ tự; playerOf: id → người chơi; figureOf: id → loại khỉ.
   setPlayers(ids, playerOf, field, figureOf) {
-    const changed = field && (field.height !== this.height || field.slipFrom !== this.slipFrom || field.slipTo !== this.slipTo);
-    if (field) Object.assign(this, { height: field.height, slipFrom: field.slipFrom, slipTo: field.slipTo });
+    const changed = field && (field.height !== this.height || JSON.stringify(field.slips) !== JSON.stringify(this.slips));
+    if (field) Object.assign(this, { height: field.height, slips: field.slips || [] });
     const same = !changed && ids.length === this.order.length && ids.every((id, i) => id === this.order[i]);
     this.order = ids;
     // Dựng lại cây khi đổi người/độ khó, hoặc ván trước đã có quả dừa rơi.
@@ -456,7 +457,7 @@ export class ClimbScene {
       for (const t of this.trees.values()) t.dispose();
       this.trees.clear();
       ids.forEach((id, i) => {
-        const t = new Tree(this.height, this.slipFrom, this.slipTo);
+        const t = new Tree(this.height, this.slips);
         t.group.position.x = (i - (ids.length - 1) / 2) * SPACING;
         this.trees.set(id, t);
         this.scene.add(t.group);

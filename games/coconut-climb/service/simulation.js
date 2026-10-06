@@ -1,6 +1,6 @@
 // Mô phỏng một ván leo cây hái dừa. Không biết gì về socket hay đồ hoạ.
 // Mỗi người một cây; y = độ cao đã leo (0 → HEIGHT mét). Lắc để leo, ngừng lắc thì tụt.
-// Đoạn thân trơn (SLIP_START..SLIP_END phần chiều cao): phải lắc mạnh hơn SLIP_NEED mới leo được.
+// Các đoạn thân trơn (SLIP_ZONES, tính theo phần chiều cao): phải lắc mạnh hơn SLIP_NEED mới leo được.
 // Các giai đoạn: countdown → climb → done.
 const CONFIG = require('./config');
 
@@ -26,6 +26,15 @@ function settingsFor(level) {
   const key = isLevel(level) ? level : CONFIG.DEFAULT_DIFFICULTY;
   const over = Object.fromEntries(Object.entries(CONFIG.DIFFICULTIES[key]).filter(([k]) => !DIFFICULTY_META.has(k)));
   return { ...CONFIG, ...over, level: key };
+}
+
+// Các đoạn trơn đổi ra mét.
+function slipsFor(C) {
+  return C.SLIP_ZONES.map(([a, b]) => [C.HEIGHT * a, C.HEIGHT * b]);
+}
+
+function inSlip(g, y) {
+  return g.slips.some(([a, b]) => y >= a && y < b);
 }
 
 // players: [{ id, name, animal, color, bot }].
@@ -57,8 +66,7 @@ function createGame({ players, level, now, startAt }) {
     cfg: C,
     level: C.level,
     height: C.HEIGHT,
-    slipFrom: C.HEIGHT * C.SLIP_START,
-    slipTo: C.HEIGHT * C.SLIP_END,
+    slips: slipsFor(C), // [[từ, đến]] tính bằng mét
     phase: 'countdown',
     startAt: start,
     firstTopAt: null,
@@ -95,7 +103,7 @@ function step(g, now, dt) {
   for (const c of g.climbers) {
     if (c.finishMs != null) continue;
     const wasSlip = c.inSlip;
-    c.inSlip = c.y >= g.slipFrom && c.y < g.slipTo;
+    c.inSlip = inSlip(g, c.y);
     if (c.inSlip && !wasSlip) events.push({ pid: c.id, type: 'slip' });
 
     // Tốc độ mục tiêu: dương = leo lên, âm = tụt xuống.
@@ -186,6 +194,7 @@ function flagsOf(c) {
 module.exports = {
   createGame,
   settingsFor,
+  slipsFor,
   isLevel,
   step,
   move,

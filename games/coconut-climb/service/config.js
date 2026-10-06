@@ -17,9 +17,9 @@ module.exports = {
   SLIDE: 0.5, // m/s tụt xuống khi ngừng lắc
   ACCEL: 4, // tốc độ leo/tụt đổi dần (m/s²) cho mượt
 
-  // Đoạn thân trơn (rêu) giữa cây: lắc mạnh hơn SLIP_NEED mới leo được, yếu hơn thì trượt (càng yếu trượt càng nhanh).
-  SLIP_START: 0.42, // bắt đầu ở bấy nhiêu phần chiều cao cây
-  SLIP_END: 0.6,
+  // Các đoạn thân trơn (rêu): lắc mạnh hơn SLIP_NEED mới leo được, yếu hơn thì trượt (càng yếu trượt càng nhanh).
+  // SLIP_ZONES: [bắt đầu, kết thúc] tính theo phần chiều cao cây (0 = gốc, 1 = ngọn).
+  SLIP_ZONES: [[0.22, 0.32], [0.48, 0.58], [0.74, 0.84]],
   SLIP_NEED: 0.45,
   SLIP_SLIDE: 1.2, // m/s trượt khi đứng trên đoạn trơn mà không lắc
   SLIP_CLIMB: 0.75, // trên đoạn trơn leo chậm hơn bình thường bấy nhiêu lần
@@ -28,31 +28,29 @@ module.exports = {
   DIFFICULTIES: {
     easy: {
       label: '🟢 Dễ',
-      desc: 'Cây 14m, tụt chậm, đoạn trơn ngắn, bot yếu.',
+      desc: 'Cây 14m, 2 đoạn trơn ngắn, tụt chậm, bot yếu.',
       HEIGHT: 14,
       DRIVE_GAIN: 0.9,
       SLIDE: 0.35,
-      SLIP_START: 0.45,
-      SLIP_END: 0.55,
+      SLIP_ZONES: [[0.3, 0.38], [0.62, 0.7]],
       SLIP_NEED: 0.35,
       SLIP_SLIDE: 0.9,
       BOT: { skillMin: 0.3, skillMax: 0.5 },
     },
     normal: {
       label: '🟡 Trung bình',
-      desc: 'Cây 18m, đoạn trơn vừa, bot khá.',
+      desc: 'Cây 18m, 3 đoạn trơn, bot khá.',
       HEIGHT: 18,
       DRIVE_GAIN: 0.7,
       BOT: { skillMin: 0.45, skillMax: 0.85 },
     },
     hard: {
       label: '🔴 Khó',
-      desc: 'Cây 22m, phải lắc mạnh, tụt nhanh, đoạn trơn dài và rất trơn, bot giỏi.',
+      desc: 'Cây 22m, 4 đoạn trơn dài và rất trơn, phải lắc mạnh, tụt nhanh, bot giỏi.',
       HEIGHT: 22,
       DRIVE_GAIN: 0.55,
       SLIDE: 0.7,
-      SLIP_START: 0.38,
-      SLIP_END: 0.64,
+      SLIP_ZONES: [[0.16, 0.26], [0.38, 0.5], [0.6, 0.72], [0.8, 0.9]],
       SLIP_NEED: 0.55,
       SLIP_SLIDE: 1.6,
       BOT: { skillMin: 0.75, skillMax: 1 },

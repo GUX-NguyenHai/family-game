@@ -36,8 +36,7 @@ function createMatch({ players, options, now, startAt, api }) {
     setup() {
       return {
         height: g.height,
-        slipFrom: g.slipFrom,
-        slipTo: g.slipTo,
+        slips: g.slips, // các đoạn trơn [[từ, đến]] (mét)
         players: g.climbers.map(c => c.id),
         figures, // id người chơi → con vật leo cây
       };
@@ -89,7 +88,7 @@ function createMatch({ players, options, now, startAt, api }) {
         total: g.climbers.length,
         y: round(c.y, 10),
         height: g.height,
-        slip: [g.slipFrom / g.height, g.slipTo / g.height], // đoạn trơn (phần chiều cao) để vẽ
+        slips: g.slips.map(([a, b]) => [round(a / g.height, 1000), round(b / g.height, 1000)]), // các đoạn trơn (phần chiều cao) để vẽ
         pw: round(c.driveEff, 100),
         need: g.cfg.SLIP_NEED, // trên đoạn trơn phải lắc quá mức này
         f: simulation.flagsOf(c),
@@ -124,7 +123,7 @@ module.exports = {
   ],
   preview: options => {
     const s = simulation.settingsFor(options.difficulty);
-    return { height: s.HEIGHT, slipFrom: s.HEIGHT * s.SLIP_START, slipTo: s.HEIGHT * s.SLIP_END };
+    return { height: s.HEIGHT, slips: simulation.slipsFor(s) };
   },
   createMatch,
 };
