@@ -1,0 +1,71 @@
+/* Leo cây hái dừa – tay cầm. Biến màu (--accent, --me, --muted...) lấy từ /css/play.css. */
+.cc-play { display: flex; flex-direction: column; flex: 1; padding: 12px 0; touch-action: none; }
+.cc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cc-pos { font-size: 2.2rem; font-weight: 900; }
+.cc-height { font-size: 1.1rem; font-weight: 800; color: var(--muted); }
+.cc-timer { font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 2.5em; text-align: right; }
+
+.cc-main { flex: 1; display: grid; grid-template-columns: 70px 1fr; gap: 14px; margin-top: 12px; }
+
+/* "Cây" dọc: chấm màu của mình leo từ dưới lên, khúc rêu xanh = đoạn trơn */
+.cc-tree {
+  position: relative;
+  margin: 28px 0 6px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #7a5230, #9c6b3e, #7a5230);
+}
+.cc-nut { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: 1.8rem; }
+.cc-slip { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(45deg, #3f8f3a, #3f8f3a 6px, #57b04f 6px, #57b04f 12px); opacity: 0.9; }
+.cc-tree i {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 34px;
+  height: 34px;
+  margin: 0 0 -17px -17px;
+  border-radius: 50%;
+  background: var(--me);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: bottom 0.1s linear;
+}
+
+.cc-right { display: flex; flex-direction: column; min-width: 0; }
+.cc-status { min-height: 3.4em; font-size: 1.15rem; font-weight: 800; }
+.cc-power { display: flex; align-items: center; gap: 8px; }
+.cc-power > span { color: var(--muted); width: 36px; }
+.cc-power .bar { height: 20px; }
+.cc-power .bar i { background: linear-gradient(90deg, #42d4f4, #3cb44b); transition: width 0.1s; }
+/* Vạch "phải lắc quá mức này" khi ở đoạn trơn */
+.cc-power .bar b { position: absolute; top: 0; bottom: 0; width: 3px; background: #ff5a5a; }
+.cc-noshake {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 209, 102, 0.12);
+  color: #ffd166;
+  font-size: 0.85rem;
+}
+
+/* Khung lớn: người leo nhún theo mức lắc (--lv 0..1); đổi màu khi ở đoạn trơn / đang tụt / đã lên ngọn */
+.cc-shake {
+  --lv: 0;
+  flex: 1;
+  min-height: 160px;
+  margin-top: 12px;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #2d6b3a, #1c4a27);
+  color: #e6ffe9;
+  font-size: 1.2rem;
+  text-align: center;
+  transition: background 0.2s;
+}
+.cc-shake span { font-size: 4.5rem; transform: translateY(calc(var(--lv) * -20px)); transition: transform 0.1s; }
+.cc-play.slip .cc-shake { background: linear-gradient(180deg, #6b5a1c, #4a3d12); }
+.cc-play.sliding .cc-shake { background: linear-gradient(180deg, #7a2a2a, #4a1a1a); }
+.cc-play.top .cc-shake { background: linear-gradient(180deg, #b8860b, #7a5a07); }

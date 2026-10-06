@@ -1,0 +1,46 @@
+/* Leo cây hái dừa – màn hình chung. Biến màu (--panel, --muted, --accent) lấy từ /css/host.css. */
+#game[data-game="coconut-climb"] { background: #8fd3ff; }
+
+.cc-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.cc-hud { position: absolute; inset: 0; pointer-events: none; }
+
+.cc-standings {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  margin: 0;
+  padding: 10px 12px;
+  list-style: none;
+  background: var(--panel);
+  border-radius: 14px;
+  min-width: 230px;
+  max-height: calc(100% - 32px);
+  overflow: hidden;
+}
+.cc-standings li { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-weight: 600; }
+.cc-standings .pos { width: 1.6em; text-align: right; color: var(--muted); }
+.cc-standings .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
+.cc-standings .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-standings .h { color: var(--muted); font-variant-numeric: tabular-nums; }
+.cc-standings .mark { width: 1.4em; text-align: center; }
+
+.cc-timer {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 20px;
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cc-timer:empty { display: none; }
