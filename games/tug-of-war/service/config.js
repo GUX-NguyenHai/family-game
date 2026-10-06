@@ -4,11 +4,11 @@ module.exports = {
   TICK_HZ: 30,
   PLAYER_UPDATE_EVERY: 3, // gửi trạng thái riêng cho điện thoại ~10 lần/giây
   COUNTDOWN_MS: 3000,
-  COAST_MS: 2500, // kết thúc trận rồi vẫn chạy thêm cho cảnh ăn mừng
+  COAST_MS: 2500, // hiện bảng kết quả rồi vẫn chạy thêm cho cảnh ăn mừng
 
+  // Mỗi lần bắt đầu chỉ đấu 1 ván; muốn đấu tiếp thì chủ phòng bấm "Chơi lại".
   ROUND_MS: 45000, // hết giờ mà chưa ai kéo qua vạch: dây lệch về bên nào, bên đó thắng
-  ROUND_END_MS: 4000, // xem đội thua rơi xuống sông
-  READY_MS: 3000, // đếm ngược trước ván sau
+  END_SHOW_MS: 3500, // có đội thắng rồi, xem đội thua rơi xuống sông bấy lâu mới hiện bảng kết quả
 
   // Lắc lên xuống để kéo. Lực của đội = trung bình mức lắc của các thành viên (0..1).
   DRIVE_GAIN: 1,

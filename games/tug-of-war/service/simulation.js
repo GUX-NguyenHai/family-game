@@ -1,7 +1,7 @@
-// Mô phỏng trận kéo co. Không biết gì về socket hay đồ hoạ.
+// Mô phỏng một ván kéo co. Không biết gì về socket hay đồ hoạ.
 // Hai đội: đội 0 (Đỏ) đứng bên trái, đội 1 (Xanh) bên phải. rope = vị trí dấu giữa dây (mét):
-// âm = lệch về đội Đỏ, dương = lệch về đội Xanh. Kéo qua -WIN_DISTANCE thì Đỏ thắng ván, qua +WIN_DISTANCE thì Xanh thắng.
-// Các giai đoạn: countdown → pull → roundEnd → (ready → pull → roundEnd …) → done.
+// âm = lệch về đội Đỏ, dương = lệch về đội Xanh. Kéo qua -WIN_DISTANCE thì Đỏ thắng, qua +WIN_DISTANCE thì Xanh thắng.
+// Mỗi lần bắt đầu chỉ đấu 1 ván: countdown → pull → end (xem đội thua rơi xuống sông) → done.
 const CONFIG = require('./config');
 
 const DIFFICULTY_META = new Set(['label', 'desc']);
@@ -25,16 +25,10 @@ function settingsFor(level) {
   return { ...CONFIG, ...over, level: key };
 }
 
-function setupBot(C, p) {
-  p.botSkill = rand(C.BOT.skillMin, C.BOT.skillMax);
-  p.botForm = 1;
-  p.botFormAt = 0;
-  p.botDelay = 0;
-}
-
-// players: [{ id, name, animal, color, bot, team }]; teams: [đội 0, đội 1]; rounds: '1' hoặc '3'.
-function createGame({ players, teams, level, rounds, now, startAt }) {
+// players: [{ id, name, animal, color, bot, team }]; teams: [đội 0, đội 1].
+function createGame({ players, teams, level, now, startAt }) {
   const C = settingsFor(level);
+  const start = startAt ?? now + C.COUNTDOWN_MS;
   const pullers = players.map(p => ({
     id: p.id,
     name: p.name,
@@ -45,68 +39,55 @@ function createGame({ players, teams, level, rounds, now, startAt }) {
     drive: 0, // mức lắc gửi lên (0..1.5)
     driveAt: 0,
     driveEff: 0, // mức kéo sau khi nhân độ khó (0..1)
+    botSkill: rand(C.BOT.skillMin, C.BOT.skillMax),
+    botForm: 1,
+    botFormAt: 0,
+    botDelay: start + rand(150, 900), // phản xạ lúc bắt đầu
   }));
-  for (const p of pullers) if (p.bot) setupBot(C, p);
   const sides = [0, 1].map(i => ({
     team: teams[i],
     members: pullers.filter(p => p.team === i),
     force: 0, // lực hiện tại = trung bình mức kéo
-    forceSum: 0, // cộng dồn trong ván, để phân thắng thua nếu hết giờ mà dây đứng giữa
-    wins: 0,
+    forceSum: 0, // cộng dồn cả ván, để phân thắng thua nếu hết giờ mà dây đứng giữa
   }));
-  const best = rounds === '1' ? 1 : 3;
   return {
     cfg: C,
     level: C.level,
-    totalRounds: best,
-    winsNeeded: Math.ceil(best / 2),
-    round: 1,
     phase: 'countdown',
-    phaseUntil: startAt ?? now + C.COUNTDOWN_MS,
-    roundStartAt: startAt ?? now + C.COUNTDOWN_MS,
-    startAt: startAt ?? now + C.COUNTDOWN_MS,
+    startAt: start,
+    endAt: 0, // lúc phân thắng thua
     rope: 0,
     ropeV: 0,
     sides,
     pullers,
     byId: new Map(pullers.map(p => [p.id, p])),
-    lastWinner: null,
-    lastByTime: false,
-    endedAt: null,
+    winner: null,
+    byTime: false,
+    endedAt: null, // lúc kết thúc hẳn (sau khi xem đội thua rơi xuống sông)
   };
 }
 
 // Điện thoại gửi mức lắc hiện tại (0 = không kéo) khoảng 10 lần/giây.
 function move(g, p, level, now) {
-  if (g.endedAt) return;
+  if (g.phase !== 'countdown' && g.phase !== 'pull') return;
   p.drive = clamp(Number(level) || 0, 0, 1.5);
   p.driveAt = now;
 }
 
-function startPull(g, now) {
-  g.phase = 'pull';
-  g.roundStartAt = now;
-  g.rope = 0;
+function decide(g, winner, now, byTime, events) {
+  g.winner = winner;
+  g.byTime = byTime;
+  g.phase = 'end';
+  g.endAt = now;
   g.ropeV = 0;
-  for (const s of g.sides) s.forceSum = 0;
-  for (const p of g.pullers) if (p.bot) p.botDelay = now + rand(150, 900); // phản xạ lúc bắt đầu ván
-}
-
-function roundWin(g, winner, now, byTime, events) {
-  g.sides[winner].wins++;
-  g.lastWinner = winner;
-  g.lastByTime = byTime;
-  g.phase = 'roundEnd';
-  g.phaseUntil = now + g.cfg.ROUND_END_MS;
-  g.ropeV = 0;
-  events.push({ type: 'roundWin', team: winner, round: g.round, byTime });
+  events.push({ type: 'win', team: winner, byTime });
 }
 
 function step(g, now, dt) {
   const C = g.cfg;
   const events = [];
 
-  // Mức kéo của từng người (tính cả ngoài lúc kéo để điện thoại hiện thanh lắc).
+  // Mức kéo của từng người (tính cả lúc đếm ngược để điện thoại hiện thanh lắc).
   for (const p of g.pullers) {
     const fresh = now - p.driveAt <= C.MOVE_STALE_MS;
     const raw = fresh ? p.drive * C.DRIVE_GAIN : 0;
@@ -117,7 +98,7 @@ function step(g, now, dt) {
   }
 
   if (g.phase === 'countdown' && now >= g.startAt) {
-    startPull(g, now);
+    g.phase = 'pull';
   } else if (g.phase === 'pull') {
     const [red, blue] = g.sides;
     red.forceSum += red.force * dt;
@@ -128,38 +109,25 @@ function step(g, now, dt) {
     g.rope += g.ropeV * dt;
     if (g.rope <= -C.WIN_DISTANCE) {
       g.rope = -C.WIN_DISTANCE;
-      roundWin(g, 0, now, false, events);
+      decide(g, 0, now, false, events);
     } else if (g.rope >= C.WIN_DISTANCE) {
       g.rope = C.WIN_DISTANCE;
-      roundWin(g, 1, now, false, events);
-    } else if (now - g.roundStartAt >= C.ROUND_MS) {
+      decide(g, 1, now, false, events);
+    } else if (now - g.startAt >= C.ROUND_MS) {
       // Hết giờ: dây lệch bên nào bên đó thắng; đứng đúng giữa thì đội kéo nhiều hơn cả ván thắng.
       let winner;
       if (Math.abs(g.rope) > 0.05) winner = g.rope < 0 ? 0 : 1;
       else winner = red.forceSum === blue.forceSum ? (Math.random() < 0.5 ? 0 : 1) : red.forceSum > blue.forceSum ? 0 : 1;
-      roundWin(g, winner, now, true, events);
+      decide(g, winner, now, true, events);
     }
-  } else if (g.phase === 'roundEnd' && now >= g.phaseUntil) {
-    if (g.sides[g.lastWinner].wins >= g.winsNeeded) {
-      g.phase = 'done';
-      g.endedAt = now;
-      events.push({ type: 'matchWin', team: g.lastWinner });
-    } else {
-      g.round++;
-      g.rope = 0;
-      g.ropeV = 0;
-      g.phase = 'ready';
-      g.phaseUntil = now + C.READY_MS;
-      events.push({ type: 'ready', round: g.round });
-    }
-  } else if (g.phase === 'ready' && now >= g.phaseUntil) {
-    startPull(g, now);
-    events.push({ type: 'go', round: g.round });
+  } else if (g.phase === 'end' && now - g.endAt >= C.END_SHOW_MS) {
+    g.phase = 'done';
+    g.endedAt = now;
   }
   return events;
 }
 
-// Bot: kéo đều theo tay nghề, phong độ lên xuống mỗi 1,5–3 giây; nghỉ giữa các ván.
+// Bot: kéo đều theo tay nghề, phong độ lên xuống mỗi 1,5–3 giây.
 function botThink(g, p, now) {
   if (g.phase !== 'pull' || now < p.botDelay) {
     p.drive = 0;
@@ -175,12 +143,11 @@ function botThink(g, p, now) {
   p.driveAt = now;
 }
 
-// Kết quả: mỗi đội một dòng, đội thắng trận đứng trước.
+// Kết quả: mỗi đội một dòng, đội thắng đứng trước.
 function results(g) {
-  const winner = g.lastWinner ?? (g.sides[0].wins >= g.sides[1].wins ? 0 : 1);
+  const winner = g.winner ?? 0;
   return [winner, 1 - winner].map((i, place) => {
     const s = g.sides[i];
-    const other = g.sides[1 - i];
     return {
       id: `t${s.team.id}`,
       name: `${s.team.emoji} Đội ${s.team.name}`,
@@ -189,7 +156,7 @@ function results(g) {
       bot: false,
       place: place + 1,
       members: s.members.map(p => p.id),
-      detail: `${place === 0 ? 'Thắng' : 'Thua'} ${s.wins}–${other.wins} · ${s.members.map(p => p.name).join(', ')}`,
+      detail: `${place === 0 ? 'Thắng' : 'Thua'}${g.byTime ? ' (hết giờ)' : ''} · ${s.members.map(p => p.name).join(', ')}`,
     };
   });
 }

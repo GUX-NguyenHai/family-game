@@ -1,8 +1,10 @@
 /* Kéo co – tay cầm. Biến màu (--accent, --me, --muted...) lấy từ /css/play.css. */
 .tug-play { --red: #e6194b; --blue: #4363d8; display: flex; flex-direction: column; flex: 1; padding: 12px 0; touch-action: none; }
 
-.tug-score { display: flex; align-items: center; justify-content: space-between; font-size: 1.8rem; }
-.tug-score span { font-size: 1rem; color: var(--muted); font-weight: 700; }
+.tug-score { display: flex; align-items: center; justify-content: space-between; font-size: 1.3rem; }
+.tug-score .red { color: var(--red); }
+.tug-score .blue { color: var(--blue); }
+.tug-score span { font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 
 /* Sợi dây: nửa trái màu đội Đỏ, nửa phải màu đội Xanh, chấm trắng = dấu giữa dây */
 .tug-rope { position: relative; height: 26px; margin-top: 14px; border-radius: 99px; overflow: hidden; display: flex; }

@@ -23,9 +23,9 @@ export function create(ctx) {
   playRoot.innerHTML = `
     <div class="tug-play">
       <div class="tug-score">
-        <b data-r="redScore">🔴 0</b>
-        <span data-r="roundText"></span>
-        <b data-r="blueScore">0 🔵</b>
+        <b data-r="redName" class="red"></b>
+        <span data-r="timerTop"></span>
+        <b data-r="blueName" class="blue"></b>
       </div>
       <div class="tug-rope">
         <div class="tug-zone left"></div>
@@ -40,7 +40,7 @@ export function create(ctx) {
         <div class="meter"><span>Đội kia</span><div class="bar tug-power other"><i data-r="otherBar"></i></div></div>
       </div>
       <p data-r="noShake" class="tug-noshake" hidden></p>
-      <div class="tug-pull" data-r="pull"><span>💪</span><b>LẮC ĐỂ KÉO!</b><small data-r="timer"></small></div>
+      <div class="tug-pull" data-r="pull"><span>💪</span><b>LẮC ĐỂ KÉO!</b></div>
     </div>`;
 
   const el = {}; // các phần tử có data-r, tra theo tên
@@ -69,7 +69,7 @@ export function create(ctx) {
 
   function resetPlay() {
     el.status.textContent = '';
-    el.timer.textContent = '';
+    el.timerTop.textContent = '';
     el.marker.style.left = '50%';
     el.myBar.style.width = el.teamBar.style.width = el.otherBar.style.width = '0%';
     playRoot.style.setProperty('--red', teamOf(0).color);
@@ -96,9 +96,9 @@ export function create(ctx) {
     onMe(m) {
       const mine = teamOf(m.team);
       const other = teamOf(1 - m.team);
-      el.redScore.textContent = `${teamOf(0).emoji} ${m.wins[0]}`;
-      el.blueScore.textContent = `${m.wins[1]} ${teamOf(1).emoji}`;
-      el.roundText.textContent = m.totalRounds > 1 ? `Ván ${m.round}/${m.totalRounds}` : 'Ván quyết định';
+      el.redName.textContent = `${teamOf(0).emoji} ${teamOf(0).name}`;
+      el.blueName.textContent = `${teamOf(1).name} ${teamOf(1).emoji}`;
+      el.timerTop.textContent = m.phase === 'pull' ? `${Math.ceil(m.timeLeft / 1000)}s` : '';
       el.marker.style.left = `${50 + Math.max(-0.96, Math.min(0.96, m.rope)) * 50}%`;
       el.side.textContent = `Bạn ở ${mine.emoji} Đội ${mine.name} (${m.team === 0 ? 'bên trái' : 'bên phải'})`;
       el.myBar.style.width = `${m.pw * 100}%`;
@@ -109,26 +109,17 @@ export function create(ctx) {
       // Dây đang lệch về phía đội mình? (Đỏ ở trái = rope âm, Xanh ở phải = rope dương)
       const lead = m.team === 0 ? -m.rope : m.rope;
       let status = '';
-      let timer = '';
       if (m.phase === 'pull') {
         status = lead > 0.05 ? 'Đội bạn đang thắng thế! 💪' : lead < -0.05 ? 'Kéo mạnh lên! Sắp rơi xuống sông 😱' : 'Giằng co…';
-        timer = `Còn ${Math.ceil(m.timeLeft / 1000)}s`;
-      } else if (m.phase === 'roundEnd' || m.phase === 'done') {
-        status = m.lastWinner === m.team ? `${mine.emoji} Đội bạn thắng ván ${m.round}! 🎉` : `Đội bạn rơi xuống sông! 💦 ${other.emoji} thắng ván ${m.round}`;
-      } else if (m.phase === 'ready') {
-        status = `Ván ${m.round} bắt đầu sau ${Math.max(1, Math.ceil(m.phaseLeft / 1000))}…`;
+      } else if ((m.phase === 'end' || m.phase === 'done') && m.winner != null) {
+        status = m.winner === m.team ? `${mine.emoji} Đội bạn thắng! 🎉` : `Đội bạn rơi xuống sông! 💦 ${other.emoji} thắng`;
       }
       el.status.textContent = status;
-      el.timer.textContent = timer;
     },
 
     onEvent(e) {
       const me = ctx.me();
-      if (e.type === 'roundWin' || e.type === 'matchWin') {
-        vibrate(me?.team === e.team ? [80, 60, 80] : [400]);
-      } else if (e.type === 'go') {
-        vibrate(120);
-      }
+      if (e.type === 'win') vibrate(me?.team === e.team ? [80, 60, 80] : [400]);
     },
 
     frame() {

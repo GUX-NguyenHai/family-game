@@ -323,15 +323,14 @@ export class TugScene {
     this.extras.forEach(id => put(id, 0, '#9aa5bd'));
   }
 
-  // s: trạng thái server (rope, phase, lastWinner, p: [{ id, d }]).
+  // s: trạng thái server (rope, phase, winner, p: [{ id, d }]).
   setState(s) {
-    this.ropeTarget = s.rope;
+    this.ropeTarget = s.phase === 'countdown' ? 0 : s.rope;
     this.levels = new Map(s.p.map(x => [x.id, x.d]));
-    this.lastWinner = s.lastWinner;
+    this.lastWinner = s.winner;
     if (s.phase === 'pull') this.mood = 'pull';
-    else if (s.phase === 'roundEnd' || s.phase === 'done') this.mood = 'end';
+    else if (s.phase === 'end' || s.phase === 'done') this.mood = 'end';
     else this.mood = 'idle';
-    if (s.phase === 'ready' || s.phase === 'countdown') this.ropeTarget = 0;
   }
 
   reset() {

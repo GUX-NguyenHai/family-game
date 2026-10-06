@@ -1,16 +1,16 @@
-// Kéo co – màn hình chung: cảnh 3D hai đội hai bên bờ sông, tỉ số, đồng hồ, lực hai đội, thông báo thắng ván.
-// Ở phòng chờ cảnh 3D làm nền: hai đội đứng sẵn hai bên bờ theo đội đã chọn.
+// Kéo co – màn hình chung: cảnh 3D hai đội hai bên bờ sông, tên hai đội, đồng hồ, lực hai đội, thông báo đội thắng.
+// Mỗi lần bắt đầu là 1 ván. Ở phòng chờ cảnh 3D làm nền: hai đội đứng sẵn hai bên bờ theo đội đã chọn.
 import { TugScene } from './scene.js';
 
 export function create(ctx) {
-  const { root, esc, toast, beep, fanfare } = ctx;
+  const { root, toast, beep } = ctx;
   root.innerHTML = `
     <canvas class="tug-scene"></canvas>
     <div class="tug-hud" hidden>
       <div class="tug-board">
-        <span class="team red"><b class="name"></b><b class="score">0</b></span>
-        <span class="mid"><small class="round"></small><b class="timer"></b></span>
-        <span class="team blue"><b class="score">0</b><b class="name"></b></span>
+        <b class="name red"></b>
+        <b class="timer"></b>
+        <b class="name blue"></b>
       </div>
       <div class="tug-forces">
         <div class="force red"><i></i></div>
@@ -21,15 +21,14 @@ export function create(ctx) {
   const q = sel => root.querySelector(sel);
   const scene = new TugScene(q('.tug-scene'), ctx.manifest, ctx.quality);
   let teams = [];
-  let phase = null;
 
   function teamOf(i) {
     return teams[i] || { emoji: i ? '🔵' : '🔴', name: i ? 'Xanh' : 'Đỏ', color: i ? '#4363d8' : '#e6194b' };
   }
 
   function renderNames() {
-    q('.tug-board .red .name').textContent = `${teamOf(0).emoji} Đội ${teamOf(0).name}`;
-    q('.tug-board .blue .name').textContent = `Đội ${teamOf(1).name} ${teamOf(1).emoji}`;
+    q('.tug-board .name.red').textContent = `${teamOf(0).emoji} Đội ${teamOf(0).name}`;
+    q('.tug-board .name.blue').textContent = `Đội ${teamOf(1).name} ${teamOf(1).emoji}`;
     root.style.setProperty('--red', teamOf(0).color);
     root.style.setProperty('--blue', teamOf(1).color);
   }
@@ -71,34 +70,23 @@ export function create(ctx) {
 
     onState(s) {
       scene.setState(s);
-      q('.tug-board .red .score').textContent = s.wins[0];
-      q('.tug-board .blue .score').textContent = s.wins[1];
-      q('.tug-board .round').textContent = s.totalRounds > 1 ? `Ván ${s.round}/${s.totalRounds}` : 'Ván quyết định';
       q('.tug-board .timer').textContent = s.phase === 'pull' ? `${Math.ceil(s.timeLeft / 1000)}s` : '';
       q('.tug-forces .red i').style.width = `${s.forces[0] * 100}%`;
       q('.tug-forces .blue i').style.width = `${s.forces[1] * 100}%`;
-
-      if (s.phase === 'ready') banner(`Ván ${s.round} · ${Math.max(1, Math.ceil(s.phaseLeft / 1000))}`);
-      else if (s.phase === 'roundEnd' || s.phase === 'done') {
-        const w = teamOf(s.lastWinner);
-        banner(`${w.emoji} Đội ${w.name} thắng ván ${s.round}!${s.lastByTime ? ' (hết giờ)' : ''}`);
-      } else if (s.phase === 'pull' && phase !== 'pull') banner('');
-      phase = s.phase;
+      if ((s.phase === 'end' || s.phase === 'done') && s.winner != null) {
+        const w = teamOf(s.winner);
+        banner(`${w.emoji} Đội ${w.name} thắng!${s.byTime ? ' (hết giờ)' : ''}`);
+      } else {
+        banner('');
+      }
     },
 
     onEvent(e) {
-      if (e.type === 'roundWin') {
-        beep(180, 0.3, 'sawtooth', 0.05);
-        setTimeout(() => beep(660, 0.25, 'triangle'), 250);
-      } else if (e.type === 'matchWin') {
+      if (e.type === 'win') {
         const w = teamOf(e.team);
-        toast(`${w.emoji} Đội ${w.name} thắng trận! 🏆`);
-        fanfare();
-      } else if (e.type === 'go') {
-        toast(`Ván ${e.round}: KÉO! 🪢`);
-        beep(880, 0.3);
-      } else if (e.type === 'ready') {
-        beep(440, 0.15);
+        toast(`${w.emoji} Đội ${w.name} thắng! 🏆`);
+        beep(180, 0.3, 'sawtooth', 0.05); // tiếng rơi xuống nước; nhạc chiến thắng do bảng kết quả chung phát
+        setTimeout(() => beep(660, 0.25, 'triangle'), 250);
       }
     },
 
