@@ -7,10 +7,16 @@ const FULL_TILT_DEG = 15; // nghiêng tới mức này là lái hết cỡ
 const NOISE_FLOOR = 1.5; // m/s²: rung tay khi cầm yên dưới mức này không tính
 const ACTIVITY_TAU_MS = 250; // làm mượt mức lắc: dừng tay thì ~0,5 giây là về 0
 const MAX_LEVEL = 1.5; // cho phép vượt 1 để độ khó cao (phải lắc mạnh hơn) vẫn đạt tối đa
-// Nhảy = "giật cương": hất nhanh đầu máy về phía mình, tức góc ngửa (beta) đổi nhiều trong thời gian ngắn.
-// Khác chạy (dịch chuyển lên xuống, góc gần như không đổi) và lái (nghiêng trái/phải = gamma, trục khác).
+// Nhảy có 2 cách (cách nào cũng gọi onJump):
+//  1. "Giật cương": hất nhanh đầu máy về phía mình, tức góc ngửa (beta) đổi nhiều trong thời gian ngắn.
+//     Khác chạy (dịch chuyển lên xuống, góc gần như không đổi) và lái (nghiêng trái/phải = gamma, trục khác).
+//  2. Giật mạnh cả máy lên trên: gia tốc hướng lên vọt cao hơn hẳn nhịp lắc đang có.
 const JUMP_GAP_MS = 700; // 2 lần nhảy cách nhau ít nhất
 const JUMP_WINDOW_MS = 350; // góc ngửa phải đổi đủ nhiều trong khoảng này
+// Nhảy cách 2: giật mạnh cả máy LÊN TRÊN (gia tốc hướng lên vọt cao trong chốc lát).
+// Phải mạnh hơn hẳn nhịp lắc đang có (gấp JERK_RATIO lần mức lắc trung bình) để lắc chạy bình thường không bị tính là nhảy.
+const JERK_PER_DEG = 1.2; // ngưỡng giật (m/s²) = jumpDeg × hệ số này: Thấp 22° → 26, Vừa 15° → 18, Cao 10° → 12
+const JERK_RATIO = 2.5;
 const GRAVITY_SMOOTH = 0.05; // lọc thông thấp để biết hướng trọng lực (= phương thẳng đứng)
 const TILT_SMOOTH_MS = 120; // làm mượt góc nghiêng: giật máy nhanh sang ngang không làm đổi làn
 const G = 9.81;
@@ -54,6 +60,7 @@ export function createSensors({ onJump } = {}) {
     // Độ nhạy: lắc mạnh bao nhiêu (m/s², trên mức rung tay) thì coi là hết cỡ. Nhỏ = nhạy.
     range: load('fg:range', 10),
     pitchSwing: 0, // góc ngửa đổi nhiều nhất gần đây (độ) để vẽ thanh đo
+    jerkPeak: 0, // cú giật lên mạnh nhất gần đây (m/s²) để vẽ thanh đo
     // Ngưỡng nhảy (độ đổi trong 0,35 giây): nhỏ = nhạy. 0 = tắt nhảy bằng cử chỉ, chỉ dùng nút.
     jumpDeg: load('fg:jumpDeg2', 15),
   };
@@ -106,6 +113,18 @@ export function createSensors({ onJump } = {}) {
     onJump?.();
   }
 
+  // Ngưỡng giật lên để nhảy: theo độ nhạy đã chọn, và luôn mạnh hơn hẳn nhịp lắc đang có.
+  s.jerkNeed = () => Math.max(s.jumpDeg * JERK_PER_DEG, s.activity * JERK_RATIO);
+
+  // up: gia tốc theo phương thẳng đứng, dương = máy đang bị đẩy lên trên (m/s²).
+  function detectJerk(up, now) {
+    if (up > s.jerkPeak) s.jerkPeak = up;
+    if (!s.jumpDeg || up < s.jerkNeed() || now - lastJumpAt < JUMP_GAP_MS) return;
+    lastJumpAt = now;
+    pitchHistory = [];
+    onJump?.();
+  }
+
   function onMotion(e) {
     const a = e.acceleration;
     const g = e.accelerationIncludingGravity;
@@ -114,6 +133,7 @@ export function createSensors({ onJump } = {}) {
     if (!hasA && !hasG) return;
     s.gotMotion = true;
 
+    const now = performance.now();
     let mag;
     if (hasG) {
       // Hướng trọng lực = phương thẳng đứng, lấy bằng cách làm mượt accelerationIncludingGravity.
@@ -125,10 +145,14 @@ export function createSensors({ onJump } = {}) {
         grav.z += (g.z - grav.z) * GRAVITY_SMOOTH;
       }
       // Gia tốc do tay lắc (đã bỏ trọng lực), chỉ giữ phần theo phương thẳng đứng.
-      // Lấy trị tuyệt đối nên không sợ iPhone/Android ngược dấu nhau.
+      // Mức lắc lấy trị tuyệt đối nên không sợ iPhone/Android ngược dấu nhau.
       const lin = hasA ? a : { x: g.x - grav.x, y: g.y - grav.y, z: g.z - grav.z };
       const gn = Math.hypot(grav.x, grav.y, grav.z) || G;
-      mag = Math.abs((lin.x * grav.x + lin.y * grav.y + lin.z * grav.z) / gn);
+      const up = (lin.x * grav.x + lin.y * grav.y + lin.z * grav.z) / gn;
+      mag = Math.abs(up);
+      // Giật mạnh lên trên = nhảy (xét trước khi cập nhật mức lắc, để so với nhịp lắc ngay trước đó).
+      // Cả 2 vector cùng đổi dấu trên máy đo ngược chiều nên tích vô hướng vẫn đúng chiều "lên".
+      detectJerk(up, now);
 
       // Máy không có con quay hồi chuyển: tính góc nghiêng từ trọng lực.
       if (!s.gotOrientation) {
@@ -141,7 +165,6 @@ export function createSensors({ onJump } = {}) {
       mag = Math.hypot(a.x, a.y, a.z);
     }
 
-    const now = performance.now();
     const dt = lastMotionAt ? Math.min(100, now - lastMotionAt) : 16;
     lastMotionAt = now;
     s.activity += (mag - s.activity) * (1 - Math.exp(-dt / ACTIVITY_TAU_MS));
@@ -200,6 +223,7 @@ export function createSensors({ onJump } = {}) {
   // Gọi mỗi khung hình: nếu trình duyệt ngừng gửi sự kiện chuyển động thì cho mức lắc về 0.
   s.decay = () => {
     s.pitchSwing *= 0.93;
+    s.jerkPeak *= 0.93;
     if (performance.now() - lastMotionAt > 200) {
       s.activity *= 0.85;
       updateLevel();

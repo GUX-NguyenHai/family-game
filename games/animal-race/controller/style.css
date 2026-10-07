@@ -16,18 +16,16 @@
 .power { height: 22px; flex: none; }
 .power i { background: linear-gradient(90deg, #ffb020, #ff5a5a); transition: width 0.1s; }
 
+/* Hai nút to cạnh nhau: PHI! (trái) và NHẢY (phải). Không còn nút lái trái/phải. */
 .controls {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1.6fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   margin-top: 14px;
   min-height: 260px;
 }
 .controls button { font-size: 2rem; border-radius: 20px; touch-action: none; }
-.controls .hold { background: #2b3558; }
-.controls .hold.on { background: var(--accent); color: var(--accent-text); }
-.mid { display: grid; grid-template-rows: 2fr 1fr; gap: 10px; }
 /* Nút PHI! = TURBO: năng lượng dâng từ dưới lên; có mana là sáng (bấm được), đầy thì nhấp nháy. */
 .boost {
   --mana: 0%;
@@ -74,7 +72,7 @@
   color: #ffd166;
   font-size: 0.85rem;
 }
-.jump { background: #42d4f4; color: #06222a; font-size: 1.4rem !important; }
+.jump { background: #42d4f4; color: #06222a; font-size: 2.2rem !important; }
 .jump.flash { background: #a8f0ff; }
 .jump-hit {
   position: absolute;
@@ -87,21 +85,3 @@
   font-size: 0.8rem;
 }
 .jump-bar { background: #42d4f4 !important; }
-
-.steer-indicator {
-  position: relative;
-  height: 10px;
-  margin-top: 12px;
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.1);
-}
-.steer-indicator i {
-  position: absolute;
-  top: -3px;
-  left: 50%;
-  width: 16px;
-  height: 16px;
-  margin-left: -8px;
-  border-radius: 50%;
-  background: var(--me);
-}

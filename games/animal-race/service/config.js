@@ -29,7 +29,6 @@ module.exports = {
   TURBO_FACTOR: 1.4, // nhanh hơn 40%, lướt qua bùn
   TURBO_MIN_DRIVE: 0.7, // đang TURBO thì dù không lắc vẫn chạy ít nhất 70% tốc độ tối đa (rồi ×1,4)
 
-  LATERAL_SPEED: 5,
   MUD_FACTOR: 0.4,
   STUN_MS: 1000,
   JUMP_MS: 900,
@@ -39,7 +38,8 @@ module.exports = {
   BODY_HALF_LEN: 0.9,
 
   // Va chạm giữa các con vật: đẩy nhau sang ngang, tông đuôi thì không xuyên qua được.
-  COLLIDE: true,
+  // Tắt vì giờ mỗi con chạy thẳng trong làn riêng (không lái trái/phải), không bao giờ chạm nhau.
+  COLLIDE: false,
   BUMP_PUSH: 0.35, // mỗi tick gỡ bấy nhiêu phần chồng lấn (càng lớn càng bật mạnh)
   TURBO_PUSH_SHARE: 0.85, // con đang TURBO hất con kia: con kia chịu 85% lực đẩy
   BUMP_FX_GAP_MS: 700, // mỗi con tối đa 1 hiệu ứng va chạm trong khoảng này

@@ -1,5 +1,5 @@
-// Đua thú – tay cầm trên điện thoại: nghiêng để lái, lắc lên xuống để chạy, PHI! (TURBO), NHẢY.
-// Phòng chờ có phần thử cảm biến + chỉnh độ nhạy.
+// Đua thú – tay cầm trên điện thoại: lắc lên xuống để chạy, hất máy (hoặc nút) để NHẢY, PHI! (TURBO).
+// Mỗi con chạy thẳng trong làn của mình, không lái trái/phải. Phòng chờ có phần thử cảm biến + chỉnh độ nhạy.
 const FLAG = { STUN: 1, JUMP: 2, MUD: 4, FINISHED: 8, TURBO: 16, BUMP: 32 };
 
 export function create(ctx) {
@@ -9,10 +9,6 @@ export function create(ctx) {
     <div class="box race-lobby">
       <h3>🏁 Thử điều khiển</h3>
       <div class="meter">
-        <span>Nghiêng</span>
-        <div class="tilt"><i data-r="tiltDot"></i></div>
-      </div>
-      <div class="meter">
         <span>Lắc ↕</span>
         <div class="bar"><i data-r="shakeBar"></i></div>
       </div>
@@ -20,10 +16,6 @@ export function create(ctx) {
         <span>Nhảy ⤴</span>
         <div class="bar"><i data-r="jumpBar" class="jump-bar"></i></div>
         <b data-r="jumpHit" class="jump-hit" hidden>NHẢY!</b>
-      </div>
-      <div class="row">
-        <button data-r="btnCalib">Hiệu chỉnh</button>
-        <label class="check"><input type="checkbox" data-r="chkInvert"> Đảo chiều</label>
       </div>
       <label class="row">
         <span>Độ nhạy lắc</span>
@@ -44,7 +36,7 @@ export function create(ctx) {
       </label>
       <p data-r="jumpDbg" class="hint"></p>
       <p data-r="jumpNote" class="hint" hidden></p>
-      <p class="hint">Cầm máy dọc, bấm "Hiệu chỉnh" khi đang cầm thẳng. Nghiêng trái/phải để lái. <b>Lắc lên xuống</b> để chạy: không lắc là đứng yên, lắc càng nhanh càng chạy nhanh (lắc ngang không tính). Thanh "Lắc ↕" cho biết con vật sẽ chạy nhanh cỡ nào. <b>Nhảy</b>: hất nhanh đầu máy về phía mình rồi thả về (như giật cương), hoặc bấm nút NHẢY. Bấm <b>PHI!</b> 1 lần để tăng tốc, năng lượng tụt dần tới hết (đầy 100% thì được 5 giây).</p>
+      <p class="hint">Cầm máy dọc. Mỗi con chạy thẳng trong làn của mình, không cần lái. <b>Lắc lên xuống</b> để chạy: không lắc là đứng yên, lắc càng nhanh càng chạy nhanh (lắc ngang không tính). Thanh "Lắc ↕" cho biết con vật sẽ chạy nhanh cỡ nào. <b>Nhảy</b>: hất nhanh đầu máy về phía mình (như giật cương), hoặc <b>giật mạnh cả máy lên trên</b> (mạnh hơn hẳn lúc lắc chạy), hoặc bấm nút NHẢY. Bấm <b>PHI!</b> 1 lần để tăng tốc, năng lượng tụt dần tới hết (đầy 100% thì được 5 giây).</p>
     </div>`;
 
   playRoot.innerHTML = `
@@ -57,17 +49,12 @@ export function create(ctx) {
       <div class="bar power"><i data-r="powerBar"></i></div>
       <p data-r="noShake" class="noshake" hidden></p>
       <div class="controls">
-        <button data-r="btnLeft" class="hold" aria-label="Sang trái">◀</button>
-        <div class="mid">
-          <button data-r="btnBoost" class="boost" aria-label="Tăng tốc">
-            <span class="mana-fill"></span>
-            <span data-r="boostLabel" class="lbl">PHI!<small>0%</small></span>
-          </button>
-          <button data-r="btnJump" class="jump">NHẢY ⤴</button>
-        </div>
-        <button data-r="btnRight" class="hold" aria-label="Sang phải">▶</button>
+        <button data-r="btnBoost" class="boost" aria-label="Tăng tốc">
+          <span class="mana-fill"></span>
+          <span data-r="boostLabel" class="lbl">PHI!<small>0%</small></span>
+        </button>
+        <button data-r="btnJump" class="jump">NHẢY ⤴</button>
       </div>
-      <div class="steer-indicator"><i data-r="steerDot"></i></div>
     </div>`;
 
   const el = {}; // các phần tử có data-r, tra theo tên
@@ -114,31 +101,6 @@ export function create(ctx) {
   }
 
   // ---------- Điều khiển ----------
-  let holdSteer = 0;
-  let lastSteer = null;
-  let lastSteerAt = 0;
-
-  function bindHold(btn, dir) {
-    const on = e => {
-      e.preventDefault();
-      holdSteer = dir;
-      btn.classList.add('on');
-      try {
-        btn.setPointerCapture(e.pointerId);
-      } catch {}
-    };
-    const off = () => {
-      if (holdSteer === dir) holdSteer = 0;
-      btn.classList.remove('on');
-    };
-    btn.addEventListener('pointerdown', on);
-    btn.addEventListener('pointerup', off);
-    btn.addEventListener('pointercancel', off);
-    btn.addEventListener('lostpointercapture', off);
-  }
-  bindHold(el.btnLeft, -1);
-  bindHold(el.btnRight, 1);
-
   el.btnBoost.addEventListener('pointerdown', e => {
     e.preventDefault();
     const b = el.btnBoost;
@@ -166,30 +128,14 @@ export function create(ctx) {
     doJump();
   });
 
-  // Gửi lái + mức lắc khi đang ở màn chơi.
-  let moveTick = 0;
+  // Mức lắc gửi đều 10 lần/giây (kể cả 0) khi đang ở màn chơi: server không nhận được nữa thì con vật dừng.
   const sendTimer = setInterval(() => {
-    const steer = holdSteer || (sensors.enabled ? sensors.steer : 0);
-    el.steerDot.style.left = `${50 + steer * 45}%`;
     if (ctx.screen() !== 'game') return;
-    const v = Math.round(steer * 20) / 20;
-    const now = Date.now();
-    if (v !== lastSteer || now - lastSteerAt > 500) {
-      send('steer', v);
-      lastSteer = v;
-      lastSteerAt = now;
-    }
-    // Mức lắc gửi đều 10 lần/giây (kể cả 0): server không nhận được nữa thì con vật dừng.
-    if (++moveTick % 2 === 0) {
-      const level = sensors.enabled ? sensors.level : 0;
-      send('move', Math.round(level * 100) / 100);
-    }
-  }, 50);
+    const level = sensors.enabled ? sensors.level : 0;
+    send('move', Math.round(level * 100) / 100);
+  }, 100);
 
   // ---------- Phòng chờ: thử cảm biến ----------
-  el.btnCalib.onclick = () => sensors.calibrate();
-  el.chkInvert.checked = sensors.invert;
-  el.chkInvert.onchange = e => sensors.setInvert(e.target.checked);
   el.selSens.value = String(sensors.range);
   el.selSens.onchange = e => sensors.setRange(e.target.value);
   el.selJump.value = String(sensors.jumpDeg);
@@ -201,10 +147,6 @@ export function create(ctx) {
   return {
     onShow(screen, prev) {
       if (screen === 'game' && prev !== 'game') resetPlay();
-      if (screen !== 'game') {
-        holdSteer = 0;
-        lastSteer = null;
-      }
     },
 
     onMe(m) {
@@ -221,7 +163,6 @@ export function create(ctx) {
       else if (f & FLAG.STUN) status = 'Vấp rào! 💫';
       else if (f & FLAG.TURBO) status = 'TURBO! 🔥';
       else if (f & FLAG.JUMP) status = 'Nhảy! ⤴';
-      else if (f & FLAG.BUMP) status = 'Va nhau! 💥';
       else if (f & FLAG.MUD) status = 'Lội bùn… 🟫';
       el.status.textContent = status;
     },
@@ -249,21 +190,21 @@ export function create(ctx) {
 
     frame(t) {
       if (ctx.screen() !== 'lobby') return;
-      // Chấm chạm mép = lái hết cỡ.
-      el.tiltDot.style.left = `${50 + sensors.steer * 45}%`;
       // Thanh "Lắc ↕" = tốc độ con vật sẽ chạy (đầy = tối đa ở độ khó Trung bình).
       el.shakeBar.style.width = `${Math.min(1, sensors.level) * 100}%`;
-      // Thanh "Nhảy ⤴": đầy = đủ mạnh để nhảy.
+      // Thanh "Nhảy ⤴": đầy = đủ mạnh để nhảy (hất đầu máy hoặc giật máy lên, cách nào mạnh hơn thì tính).
       const jd = sensors.jumpDeg || 20;
-      el.jumpBar.style.width = `${Math.min(1, sensors.pitchSwing / jd) * 100}%`;
+      const jerkNeed = sensors.jerkNeed();
+      el.jumpBar.style.width = `${Math.min(1, Math.max(sensors.pitchSwing / jd, sensors.jerkPeak / jerkNeed)) * 100}%`;
       if (t - uiAt > 150) {
         uiAt = t;
-        // Số đo để chỉnh: hất máy xem góc đổi bao nhiêu độ, vượt ngưỡng là nhảy.
-        el.jumpDbg.textContent = !sensors.gotOrientation
-          ? 'Chưa nhận được góc nghiêng của máy.'
-          : `Hất máy: ${Math.round(sensors.pitchSwing)}° · cần ${sensors.jumpDeg ? sensors.jumpDeg + '°' : '(đang tắt)'}`;
+        // Số đo để chỉnh: vượt ngưỡng là nhảy.
+        const swing = sensors.gotOrientation ? `Hất đầu máy: ${Math.round(sensors.pitchSwing)}°/${jd}°` : 'Không đo được góc nghiêng';
+        el.jumpDbg.textContent = !sensors.jumpDeg
+          ? 'Nhảy bằng cử chỉ đang tắt, chỉ dùng nút NHẢY.'
+          : `${swing} · Giật lên: ${Math.round(sensors.jerkPeak)}/${Math.round(jerkNeed)}`;
         const noGyro = sensors.enabled && sensors.gotMotion && !sensors.gotOrientation;
-        el.jumpNote.textContent = noGyro ? 'Máy không báo được góc nghiêng nên không nhảy bằng cử chỉ được, hãy bấm nút NHẢY.' : '';
+        el.jumpNote.textContent = noGyro ? 'Máy không báo được góc nghiêng nên không hất đầu máy được: hãy giật cả máy lên hoặc bấm nút NHẢY.' : '';
         el.jumpNote.hidden = !noGyro;
       }
     },

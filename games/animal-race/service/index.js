@@ -38,10 +38,7 @@ function createMatch({ players, options, now, startAt, api }) {
     input(pid, type, data, now) {
       const p = byId.get(pid);
       if (!p) return;
-      if (type === 'steer') {
-        const n = Number(data);
-        p.steer = Number.isFinite(n) ? Math.max(-1, Math.min(1, n)) : 0;
-      } else if (type === 'move') {
+      if (type === 'move') {
         simulation.move(race, p, data, now);
       } else if (type === 'turbo') {
         if (simulation.turbo(race, p, now)) api.toHost({ pid, type: 'turbo' });
@@ -52,7 +49,7 @@ function createMatch({ players, options, now, startAt, api }) {
 
     leave(pid) {
       const p = byId.get(pid);
-      if (p) p.steer = 0;
+      if (p) p.drive = 0;
     },
 
     tick(now, dt) {
@@ -116,7 +113,7 @@ module.exports = {
   name: 'Đua thú',
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🏁',
-  description: 'Lắc máy lên xuống để chạy, nghiêng để đổi làn, nhảy qua rào, ăn cà rốt lấy năng lượng TURBO.',
+  description: 'Mỗi con chạy thẳng một làn. Lắc máy lên xuống để chạy, hất máy để nhảy qua rào và bùn, ăn cà rốt lấy năng lượng TURBO.',
   maxPlayers: 12,
   bots: true,
   sensors: true, // điện thoại cần cảm biến (lắc, nghiêng)

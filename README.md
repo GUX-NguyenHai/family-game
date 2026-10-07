@@ -7,7 +7,7 @@ Bộ game cho cả nhà:
 
 | Game | Cách chơi |
 |---|---|
-| 🏁 **Đua thú** | Đường đua 3D: lắc máy để chạy, nghiêng để đổi làn, nhảy rào, TURBO (chi tiết ở dưới) |
+| 🏁 **Đua thú** | Đường đua 3D, mỗi con chạy thẳng một làn: lắc máy để chạy, hất máy để nhảy rào, TURBO (chi tiết ở dưới) |
 | 🪢 **Kéo co** | 2 đội Đỏ – Xanh (1–6 người/đội, **phải bằng người**, thiếu thì thêm bot) đứng hai bên bờ sông, lắc máy để kéo. Lực đội = trung bình mức lắc. Kéo dấu giữa dây qua vạch bên mình là thắng ván, đội kia ngã xuống sông. Hết 45 giây thì dây lệch bên nào bên đó thắng. Mỗi lần bắt đầu là 1 ván, muốn đấu tiếp thì bấm "Chơi lại". Tham số: `games/tug-of-war/service/config.js` |
 | 🌴 **Leo cây hái dừa** | Mỗi người chọn một chú khỉ (khỉ, khỉ mũ, khỉ sóc, đười ươi, gấu trúc… trong `assets/figures.json`) và một cây dừa, lắc máy để leo, **ngừng lắc là tụt xuống**. Thân cây có nhiều **đoạn trơn** (rêu xanh; Dễ 2 đoạn, Trung bình 3, Khó 4): phải lắc thật mạnh mới qua, lắc yếu là trượt. Ai lên ngọn hái dừa trước thì thắng, hết 45 giây xếp theo độ cao. Mỗi lần bắt đầu là 1 ván. Tham số: `games/coconut-climb/service/config.js` |
 | 🚣 **Đua thuyền** | Lắc máy lên xuống để chèo: lắc nhanh thì đi nhanh, ngừng lắc thì thuyền dừng. **Thi đơn** hoặc **theo đội** (2–4 người chung thuyền, tốc độ = trung bình mức lắc cả đội). Kiểu **Basic**: đường thẳng, không vật cản. Kiểu **Pro**: nghiêng để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Chọn xuồng hoặc thuyền chèo ở phòng chờ. Tham số: `games/boat-race/service/config.js` |
@@ -20,7 +20,7 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 
 | Thao tác | Tác dụng |
 |---|---|
-| Nghiêng máy trái/phải (hoặc giữ nút ◀ ▶) | Lái sang trái/phải |
+| (không lái) | Mỗi con chạy thẳng trong làn riêng. Mọi làn có **cùng một dãy rào, bùn, cà rốt ở cùng khoảng cách** nên công bằng cho mọi người |
 | **Lắc máy lên xuống** | **Không lắc thì đứng yên.** Lắc thì chạy, lắc càng nhanh và mạnh thì càng nhanh. Dừng tay thì chậm dần rồi dừng trong khoảng 1 giây. Lắc ngang không tính. Tốc độ **tăng dần**: từ đứng yên lên tối đa mất ~2,4 giây |
 | Nút **PHI!** (TURBO) | **Có năng lượng là bấm được.** Nhanh hơn 40% và lướt qua bùn. Trong lúc TURBO, thanh năng lượng **tụt dần**, cạn thì hết TURBO: đầy 100% dùng được 5 giây, 50% dùng được 2,5 giây… Chỉ cần bấm 1 lần, không cần giữ. Đang TURBO mà ăn cà rốt thì được kéo dài. Đâm rào thì mất TURBO |
 | **Giật cương** (hất nhanh đầu máy về phía mình rồi thả về) hoặc bấm nút **NHẢY** | Nhảy qua rào. Chỉnh độ nhạy hoặc tắt cử chỉ ở phòng chờ ("Nhảy bằng cử chỉ"). Máy không có con quay hồi chuyển thì chỉ dùng nút |
@@ -28,9 +28,8 @@ Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất
 | 🟫 Bùn | Chạy chậm lại (trừ khi đang TURBO) |
 | 🚧 Rào | Đâm vào thì dừng hẳn, khựng 1 giây, mất 20% năng lượng, rồi tăng tốc lại từ 0 |
 | 🥕 Cà rốt | +10% năng lượng. Ai tới trước người đó ăn |
-| 💥 Va nhau | Hai con chạm nhau bị đẩy sang hai bên và **cùng chậm lại như lội bùn**, rồi tăng tốc lại. Tông đuôi con phía trước thì không vượt được, phải lái sang bên. Con đang TURBO không bị chậm, hất con kia ra và lách qua |
 
-Các con số này chỉnh trong `games/animal-race/service/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm chỉnh bằng `COLLIDE` (đặt `false` để tắt), `BUMP_PUSH`, `TURBO_PUSH_SHARE`.
+Các con số này chỉnh trong `games/animal-race/service/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm giữa các con (`COLLIDE`) đang tắt vì mỗi con chạy riêng một làn.
 
 ## 🏁 Đua thú: độ khó
 
@@ -41,7 +40,6 @@ Chủ phòng chọn ở phòng chờ trên màn hình chung (hoặc ở màn k�
 | Đường đua | 300m | 400m | 500m |
 | Vật cản | Ít rào, nhiều cà rốt, không có 2 vật cản cạnh nhau | Vừa phải | Nhiều rào, bùn to, hay có 2 vật cản cạnh nhau |
 | Đâm rào | Khựng 0,5s, không mất năng lượng | Khựng 1s, −20% | Khựng 1,5s, −30% |
-| Va nhau | Chậm nhẹ (còn 70%) | Còn 40% | Còn 40%, chậm lâu hơn |
 | Độ nặng tay | Lắc nhẹ đã chạy tối đa | Vừa | Phải lắc mạnh mới chạy tối đa |
 | Bot | Chậm, ít nhảy rào, hay phí TURBO | Khá | Nhanh, nhảy rào giỏi, dùng TURBO khôn |
 
