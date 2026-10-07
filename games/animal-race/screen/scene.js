@@ -16,7 +16,7 @@ import {
   Particles,
 } from '/js/core/scene-kit.js';
 
-export const FLAG = { STUN: 1, JUMP: 2, MUD: 4, FINISHED: 8, TURBO: 16, BUMP: 32 };
+export const FLAG = { STUN: 1, JUMP: 2, MUD: 4, FINISHED: 8 };
 
 const INTERP_DELAY_MS = 100;
 const LEAD_VIEW_BEHIND = 16; // camera nhìn từ con dẫn đầu lùi về bấy nhiêu mét
@@ -197,9 +197,6 @@ class Runner {
       this.body.position.y = damp(this.body.position.y, 0, 12, dt);
     }
 
-    const pulse = p.f & FLAG.TURBO ? 1.2 + 0.2 * Math.sin(now / 50) : 1;
-    this.ring.scale.setScalar(pulse);
-
     this.chooseAnim(p, state, jumpMs);
     this.showBehind(behind);
   }
@@ -247,8 +244,6 @@ const CIRCLE_GEO = new THREE.CircleGeometry(1, 24);
 const POST_MAT = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
 const PLANK_WHITE = new THREE.MeshLambertMaterial({ color: 0xf5f5f5 });
 const PLANK_RED = new THREE.MeshLambertMaterial({ color: 0xd63a3a });
-const CARROT_MAT = new THREE.MeshLambertMaterial({ color: 0xff8a1e });
-const LEAF_MAT = new THREE.MeshLambertMaterial({ color: 0x3fae3f });
 
 function makeObstacle(o) {
   const g = new THREE.Group();
@@ -268,7 +263,8 @@ function makeObstacle(o) {
       spot.position.set((Math.random() - 0.5) * o.w, 0.05, (Math.random() - 0.5) * o.d);
       g.add(spot);
     }
-  } else if (o.type === 'fence') {
+  } else {
+    // Rào.
     const postGeo = new THREE.BoxGeometry(0.15, 1.05, 0.15);
     for (const side of [-1, 1]) {
       const post = new THREE.Mesh(postGeo, POST_MAT);
@@ -283,32 +279,31 @@ function makeObstacle(o) {
     high.position.y = 0.85;
     low.castShadow = high.castShadow = true;
     g.add(low, high);
-  } else {
-    const carrot = new THREE.Group();
-    const root = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.8, 8), CARROT_MAT);
-    root.rotation.x = Math.PI;
-    carrot.add(root);
-    for (let i = 0; i < 3; i++) {
-      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.35, 5), LEAF_MAT);
-      leaf.position.set((i - 1) * 0.07, 0.55, 0);
-      leaf.rotation.z = (i - 1) * 0.35;
-      carrot.add(leaf);
-    }
-    carrot.scale.setScalar(1.3);
-    carrot.position.y = 1;
-    g.add(carrot);
-    g.userData.spin = carrot;
   }
   return g;
 }
 
 // ---------- Cảnh chính ----------
 
+// Khung nhỏ cho người bị tụt lại (ra khỏi cảnh chính): mỗi người một khung, xếp 2 cột trái/phải.
+// Khung chỉ vẽ làn của người đó (ẩn cây cối, người khác, vật cản làn khác) cho nhẹ.
+const MINI_RATIO = 0.62; // cao / rộng
+const MINI_MIN_H = 64; // khung thấp hơn mức này thì không đủ chỗ, người đó chỉ hiện nhãn tên ở mép dưới
+const MINI_GAP = 10;
+const MINI_MARGIN = 16;
+
 export class RaceScene {
-  constructor(canvas, manifest, quality = 'high') {
+  // overlay: phần tử HTML phủ lên canvas để vẽ viền + tên cho các khung nhỏ.
+  constructor(canvas, manifest, quality = 'high', overlay = null) {
     this.manifest = manifest;
     this.high = quality === 'high';
     this.modelYaw = manifest.modelYaw;
+    this.overlay = overlay;
+    this.miniCam = new THREE.PerspectiveCamera(45, 1.6, 0.3, 90);
+    this.miniArea = null; // { left: {top, bottom}, right: {top, bottom} } (px): chỗ trống 2 bên để đặt khung
+    this.minis = []; // [{ id, r, p, rect }] các khung nhỏ của khung hình hiện tại
+    this.miniFrames = new Map(); // id → phần tử viền + tên
+    this.scenery = []; // cây, đồi, rào biên, biển báo: ẩn khi vẽ khung nhỏ
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.high, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.high ? 2 : 1));
@@ -355,6 +350,8 @@ export class RaceScene {
   destroy() {
     this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.onResize);
+    for (const el of this.miniFrames.values()) el.remove();
+    this.miniFrames.clear();
     for (const r of this.runners.values()) r.dispose();
     this.runners.clear();
     this.clearObstacles();
@@ -381,6 +378,7 @@ export class RaceScene {
     const g = new THREE.Group();
     this.trackGroup = g;
     this.scene.add(g);
+    this.scenery = [];
 
     const len = trackLen + TRACK_EXTRA_BEFORE + TRACK_EXTRA_AFTER;
     const centerZ = -(len / 2 - TRACK_EXTRA_BEFORE);
@@ -420,12 +418,14 @@ export class RaceScene {
     }
     posts.castShadow = true;
     g.add(posts);
+    this.scenery.push(posts);
     const boardGeo = new THREE.BoxGeometry(0.08, 0.12, len);
     for (const side of [-1, 1]) {
       for (const y of [0.55, 0.95]) {
         const board = new THREE.Mesh(boardGeo, railMat);
         board.position.set(side * (half + 1), y, centerZ);
         g.add(board);
+        this.scenery.push(board);
       }
     }
 
@@ -461,6 +461,7 @@ export class RaceScene {
       const sign = textSprite(`${d}m`, { height: 0.7 });
       sign.position.set(-(half + 2.2), 1.6, -d);
       g.add(sign);
+      this.scenery.push(sign);
     }
 
     // Cây và đồi (instanced cho nhẹ).
@@ -483,6 +484,7 @@ export class RaceScene {
     }
     if (this.high) crowns.castShadow = true;
     g.add(trunks, crowns);
+    this.scenery.push(trunks, crowns);
 
     const hillMat = new THREE.MeshLambertMaterial({ color: 0x5da65a, flatShading: true });
     const hillGeo = new THREE.IcosahedronGeometry(1, 1);
@@ -492,6 +494,7 @@ export class RaceScene {
       hill.position.set(side * (70 + Math.random() * 40), -2, TRACK_EXTRA_BEFORE - (h / 16) * (len + 80));
       hill.scale.set(30 + Math.random() * 20, 10 + Math.random() * 10, 30 + Math.random() * 20);
       g.add(hill);
+      this.scenery.push(hill);
     }
   }
 
@@ -547,20 +550,13 @@ export class RaceScene {
       this.obstacles.set(o.id, mesh);
       this.obstacleGroup.add(mesh);
     }
-    for (const id of info.taken || []) this.hideCarrot(id);
     this.focus = 0;
-  }
-
-  hideCarrot(id) {
-    const o = this.obstacles.get(id);
-    if (o && o.visible) o.visible = false;
   }
 
   pushSnapshot(s) {
     s.recv = performance.now();
     this.snapshots.push(s);
     if (this.snapshots.length > 30) this.snapshots.shift();
-    if (s.taken) for (const id of s.taken) this.hideCarrot(id);
   }
 
   sample(now) {
@@ -592,16 +588,6 @@ export class RaceScene {
       if (r) r.hitKey = ev.side === 'left' ? 'hitLeft' : 'hitRight';
       pos.y = 0.8;
       this.particles.burst(pos, ['#8b5a2b', '#f5f5f5', '#d63a3a'], { count: 16, speed: 3, up: 3 });
-    } else if (ev.type === 'carrot') {
-      this.hideCarrot(ev.oid);
-      pos.y = 1.2;
-      this.particles.burst(pos, ['#ff8a1e', '#ffd166', '#3fae3f'], { count: 22, speed: 2.5, up: 4 });
-    } else if (ev.type === 'bump') {
-      pos.y = 0.6;
-      this.particles.burst(pos, ['#c89f6d', '#e8d8b0', '#ffffff'], { count: 8, speed: 2.5, up: 2, life: 0.5 });
-    } else if (ev.type === 'turbo') {
-      pos.y = 1;
-      this.particles.burst(pos, ['#ff3d00', '#ffb020', '#ffd166'], { count: 30, speed: 4, up: 3, life: 0.8 });
     } else if (ev.type === 'clear') {
       pos.y = 0.5;
       this.particles.burst(pos, ['#ffffff', '#e8d8b0'], { count: 10, speed: 2, up: 2, life: 0.6 });
@@ -661,44 +647,146 @@ export class RaceScene {
     this.focus = damp(this.focus, target, 2.5, dt);
     this.updateCamera(dt, this.focus);
 
-    // Tụt ra khỏi mép dưới khung hình thì chỉ hiện nhãn tên ở mép dưới.
+    // Tụt ra khỏi mép dưới khung hình: có khung nhỏ riêng (gần nhất được ưu tiên);
+    // hết chỗ đặt khung thì chỉ hiện nhãn tên ở mép dưới như cũ.
     const minZ = this.focus - 2.5;
+    const behind = s.state === 'racing' ? s.players.filter(p => p.z < minZ && !(p.f & FLAG.FINISHED)).sort((a, b) => b.z - a.z) : [];
+    const rects = this.layoutMinis(behind.length);
+    const miniIds = new Map(behind.slice(0, rects.length).map((p, i) => [p.id, rects[i]]));
+    this.minis = [];
     const seen = new Set();
     for (const p of s.players) {
       const r = this.runners.get(p.id);
       if (!r) continue;
       seen.add(p.id);
+      if (miniIds.has(p.id)) {
+        r.placeRace(p, p.z, 0, dt, now, s.state, this.jumpMs);
+        this.minis.push({ id: p.id, r, p, rect: miniIds.get(p.id), behind: this.focus - p.z });
+        continue;
+      }
       if (p.z < minZ) {
         r.placeStraggler(p, this.focus - 2, this.focus - p.z);
         continue;
       }
       r.placeRace(p, p.z, 0, dt, now, s.state, this.jumpMs);
-      if (p.f & FLAG.TURBO && Math.random() < (this.high ? 0.5 : 0.25)) {
-        // Vệt lửa phía sau khi đang TURBO.
-        const tail = r.group.position.clone();
-        tail.y = 0.4 + Math.random() * 0.6;
-        tail.z += 1.1;
-        this.particles.burst(tail, ['#ff3d00', '#ffb020', '#ffd166'], { count: 1, speed: 0.8, up: 1.2, life: 0.45 });
-      }
     }
     for (const [id, r] of this.runners) if (!seen.has(id)) r.group.visible = false;
+  }
+
+  // ---------- Khung nhỏ cho người bị tụt lại ----------
+
+  // Màn hình chung báo chỗ trống 2 bên (tránh bảng xếp hạng, thanh tiến độ, bản đồ nhỏ).
+  setMiniArea(area) {
+    this.miniArea = area;
+  }
+
+  // Vị trí các khung (px, gốc trên-trái), xen kẽ trái/phải theo thứ tự ưu tiên. Thiếu chỗ thì trả về ít hơn n.
+  layoutMinis(n) {
+    const area = this.miniArea;
+    if (!area || !n) return [];
+    const W = window.innerWidth;
+    const maxPerSide = this.high ? 4 : 2;
+    const cols = { left: [], right: [] };
+    const want = { left: Math.min(maxPerSide, Math.ceil(n / 2)), right: Math.min(maxPerSide, Math.floor(n / 2)) };
+    if (n === 1) want.right = 0;
+    for (const side of ['left', 'right']) {
+      const band = area[side];
+      let k = want[side];
+      if (!band || !k) continue;
+      const bandH = band.bottom - band.top;
+      // Thu nhỏ khung cho vừa; thấp quá thì bớt số khung bên này.
+      while (k > 0 && (bandH - (k - 1) * MINI_GAP) / k < MINI_MIN_H) k--;
+      if (!k) continue;
+      const h = Math.min(W * 0.17 * MINI_RATIO, (bandH - (k - 1) * MINI_GAP) / k);
+      const w = h / MINI_RATIO;
+      for (let i = 0; i < k; i++) {
+        cols[side].push({ x: side === 'left' ? MINI_MARGIN : W - MINI_MARGIN - w, y: band.top + i * (h + MINI_GAP), w, h });
+      }
+    }
+    // Ưu tiên xen kẽ: trái 1, phải 1, trái 2, phải 2…
+    const out = [];
+    for (let i = 0; i < maxPerSide; i++) {
+      if (cols.left[i]) out.push(cols.left[i]);
+      if (cols.right[i]) out.push(cols.right[i]);
+    }
+    return out.slice(0, n);
+  }
+
+  // Vẽ từng khung nhỏ: camera sau lưng con vật, chỉ hiện làn của nó.
+  renderMinis() {
+    const H = window.innerHeight;
+    const renderer = this.renderer;
+    const shadowAuto = renderer.shadowMap.autoUpdate;
+    renderer.shadowMap.autoUpdate = false; // dùng lại bóng đã tính cho cảnh chính, không tính lại
+    const visibleRunners = [...this.runners.values()].filter(r => r.group.visible);
+    for (const r of visibleRunners) r.group.visible = false;
+    for (const o of this.scenery) o.visible = false;
+    renderer.setScissorTest(true);
+
+    for (const m of this.minis) {
+      const { r, p, rect } = m;
+      r.group.visible = true;
+      r.label.sprite.visible = false; // tên đã có ở viền khung
+      for (const o of this.obstacles.values()) o.visible = Math.abs(o.position.x - p.x) < 0.5;
+      this.miniCam.aspect = rect.w / rect.h;
+      this.miniCam.updateProjectionMatrix();
+      this.miniCam.position.set(p.x, 3.4, -(p.z - 6.5));
+      this.miniCam.lookAt(p.x, 0.6, -(p.z + 9));
+      const y = H - rect.y - rect.h; // WebGL tính từ dưới lên
+      renderer.setViewport(rect.x, y, rect.w, rect.h);
+      renderer.setScissor(rect.x, y, rect.w, rect.h);
+      renderer.render(this.scene, this.miniCam);
+      r.group.visible = false;
+      r.label.sprite.visible = true;
+    }
+
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, window.innerWidth, H);
+    renderer.shadowMap.autoUpdate = shadowAuto;
+    for (const o of this.obstacles.values()) o.visible = true;
+    for (const o of this.scenery) o.visible = true;
+    for (const r of visibleRunners) r.group.visible = true;
+  }
+
+  // Viền màu + tên + khoảng cách cho từng khung (HTML phủ lên canvas).
+  syncMiniFrames() {
+    if (!this.overlay) return;
+    const keep = new Set();
+    for (const m of this.minis) {
+      keep.add(m.id);
+      let el = this.miniFrames.get(m.id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'race-mini';
+        el.innerHTML = '<b></b>';
+        this.overlay.append(el);
+        this.miniFrames.set(m.id, el);
+      }
+      const { x, y, w, h } = m.rect;
+      el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;--c:${m.r.color}`;
+      const text = `${m.r.name} ↓${Math.max(5, Math.round(m.behind / 5) * 5)}m`;
+      if (el.firstChild.textContent !== text) el.firstChild.textContent = text;
+    }
+    for (const [id, el] of this.miniFrames) {
+      if (keep.has(id)) continue;
+      el.remove();
+      this.miniFrames.delete(id);
+    }
   }
 
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
     const now = performance.now();
+    this.minis = [];
     if (this.mode === 'race') this.updateRace(dt, now);
     else this.updateLobby(dt, now);
 
     for (const r of this.runners.values()) r.mixer?.update(dt);
-    for (const o of this.obstacles.values()) {
-      const spin = o.userData.spin;
-      if (spin) {
-        spin.rotation.y += dt * 2;
-        spin.position.y = 1 + Math.sin(now / 300 + o.position.z) * 0.15;
-      }
-    }
     this.particles.update(dt);
+    // Cảnh chính không vẽ những con đang có khung nhỏ (chúng ở sau lưng camera).
+    for (const m of this.minis) m.r.group.visible = false;
     this.renderer.render(this.scene, this.camera);
+    if (this.minis.length) this.renderMinis();
+    this.syncMiniFrames();
   }
 }

@@ -8,7 +8,6 @@ export class Minimap {
     this.canvas = canvas;
     this.ctx = canvas?.getContext('2d') || null; // trang HTML cũ không có khung minimap: bỏ qua, không làm hỏng trang
     this.race = null;
-    this.taken = new Set();
     this.colors = new Map();
     this.onResize = () => this.resize();
     window.addEventListener('resize', this.onResize);
@@ -32,16 +31,11 @@ export class Minimap {
 
   setRace(info) {
     this.race = { trackLen: info.trackLen, width: info.width, obstacles: info.obstacles };
-    this.taken = new Set(info.taken || []);
     this.resize();
   }
 
   setColors(players) {
     this.colors = new Map(players.map(p => [p.id, p.color]));
-  }
-
-  markTaken(id) {
-    this.taken.add(id);
   }
 
   // players: [{id, x, z, r}] từ snapshot; focus: quãng đường camera đang nhìn (m).
@@ -90,18 +84,14 @@ export class Minimap {
         ctx.beginPath();
         ctx.ellipse(x, y, Math.max(2, o.w * scaleX), Math.max(1.5, o.d * scaleY), 0, 0, Math.PI * 2);
         ctx.fill();
-      } else if (o.type === 'fence') {
+      } else {
+        // Rào.
         ctx.strokeStyle = '#e03b3b';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x - o.w * scaleX, y);
         ctx.lineTo(x + o.w * scaleX, y);
         ctx.stroke();
-      } else if (!this.taken.has(o.id)) {
-        ctx.fillStyle = '#ff8a1e';
-        ctx.beginPath();
-        ctx.arc(x, y, 2, 0, Math.PI * 2);
-        ctx.fill();
       }
     }
 

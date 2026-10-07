@@ -34,7 +34,6 @@ function createMatch({ players, options, now, startAt, api }) {
         trackLen: race.trackLen,
         jumpMs: race.cfg.JUMP_MS,
         obstacles: race.obstacles,
-        taken: [...race.taken],
         racers: racers.map(p => p.id),
       };
     },
@@ -44,8 +43,6 @@ function createMatch({ players, options, now, startAt, api }) {
       if (!p) return;
       if (type === 'move') {
         simulation.move(race, p, data, now);
-      } else if (type === 'turbo') {
-        if (simulation.turbo(race, p, now)) api.toHost({ pid, type: 'turbo' });
       } else if (type === 'jump') {
         if (simulation.jump(race, p, now)) api.toHost({ pid, type: 'jump' });
       }
@@ -57,11 +54,9 @@ function createMatch({ players, options, now, startAt, api }) {
     },
 
     tick(now, dt) {
-      for (const p of racers) {
-        if (p.bot && simulation.botThink(race, p, now, dt, racers)) api.toHost({ pid: p.id, type: 'turbo' });
-      }
+      for (const p of racers) if (p.bot) simulation.botThink(race, p, now);
       for (const e of simulation.step(race, racers, now, dt)) {
-        if (e.type !== 'manaFull') api.toHost(e);
+        api.toHost(e);
         api.toPlayer(e.pid, e);
       }
       if (!race.endedAt && now >= race.startAt && simulation.isOver(race, racers, now)) {
@@ -75,7 +70,7 @@ function createMatch({ players, options, now, startAt, api }) {
       }
     },
 
-    // Nhị phân ~7 byte mỗi con (JSON cũ ~95 byte, chủ yếu vì id). Cà rốt bị ăn báo qua sự kiện 'carrot'.
+    // Nhị phân ~7 byte mỗi con (JSON cũ ~95 byte, chủ yếu vì id).
     hostState(now) {
       return codec.encode(stateCodec, {
         state: phase(now),
@@ -96,7 +91,6 @@ function createMatch({ players, options, now, startAt, api }) {
         total: racers.length,
         prog: Math.min(1, p.z / race.trackLen),
         pw: round(p.driveEff, 100),
-        mn: round(p.mana, 100),
         f: simulation.flagsOf(p, now),
         rank: p.rank,
       };
@@ -109,10 +103,10 @@ module.exports = {
   name: 'Đua thú',
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🏁',
-  description: 'Mỗi con chạy thẳng một làn. Lắc máy lên xuống để chạy, hất máy để nhảy qua rào và bùn, ăn cà rốt lấy năng lượng TURBO.',
+  description: 'Mỗi con chạy thẳng một làn. Lắc máy lên xuống để chạy, hất hoặc giật máy lên để nhảy qua rào và bùn. Không có nút bấm.',
   maxPlayers: 12,
   bots: true,
-  sensors: true, // điện thoại cần cảm biến (lắc, nghiêng)
+  sensors: true, // chỉ điều khiển bằng cảm biến (lắc, hất máy); máy không có cảm biến thì không chơi được
   tickHz: C.TICK_HZ,
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,

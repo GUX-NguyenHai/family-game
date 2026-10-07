@@ -1,5 +1,6 @@
 // Mô phỏng cuộc đua. Không biết gì về socket hay đồ hoạ.
-// Toạ độ: z = quãng đường đã chạy (0 → trackLen), x = lệch ngang so với tim đường.
+// Toạ độ: z = quãng đường đã chạy (0 → trackLen), x = vị trí làn (mỗi con chạy thẳng trong làn riêng).
+// Chỉ có lắc để chạy và nhảy qua rào/bùn; không có năng lượng, TURBO hay cà rốt.
 // Mỗi cuộc đua mang bộ tham số riêng (race.cfg) theo độ khó của phòng.
 const CONFIG = require('./config');
 const DIFFICULTY_META = new Set(['label', 'desc']);
@@ -8,8 +9,6 @@ const FLAG_STUN = 1;
 const FLAG_JUMP = 2;
 const FLAG_MUD = 4;
 const FLAG_FINISHED = 8;
-const FLAG_TURBO = 16;
-const FLAG_BUMP = 32;
 
 function rand(a, b) {
   return a + Math.random() * (b - a);
@@ -46,8 +45,7 @@ function makeObstacle(C, id, type, x, z, laneW, size) {
     const k = C.OBSTACLES.mudScale;
     return { id, type, x, z, w: Math.min(fit, 1.2 * k), d: size.mudD * k };
   }
-  if (type === 'fence') return { id, type, x, z, w: Math.min(fit, 1.4), d: 0.25 };
-  return { id, type: 'carrot', x, z, w: 0.35, d: 0.35 };
+  return { id, type: 'fence', x, z, w: Math.min(fit, 1.4), d: 0.25 };
 }
 
 // lanes: toạ độ x giữa mỗi làn.
@@ -62,16 +60,17 @@ function createObstacles(C, lanes, laneW) {
   };
   let z = 35;
   while (z < C.TRACK_LEN - 25) {
-    const r = Math.random();
-    const type = r < O.mud ? 'mud' : r < O.mud + O.fence ? 'fence' : 'carrot';
+    const type = Math.random() < O.fence ? 'fence' : 'mud';
     row(type, z);
     // Thỉnh thoảng thêm 1 hàng vật cản nữa ngay sau (rào rồi bùn, bùn rồi rào…) cho khó hơn.
-    if (type !== 'carrot' && Math.random() < O.pairChance) row(type === 'mud' ? 'fence' : 'mud', z + rand(6, 9));
-    if (Math.random() < O.extraCarrot) row('carrot', z + rand(10, 14));
+    if (Math.random() < O.pairChance) row(type === 'mud' ? 'fence' : 'mud', z + rand(6, 9));
     z += rand(O.gapMin, O.gapMax);
   }
   return obstacles;
 }
+
+// starter: xuất phát nhanh rồi đuối; finisher: chậm đầu, bứt tốc cuối; wobbly: phong độ thất thường.
+const BOT_STYLES = ['steady', 'starter', 'finisher', 'wobbly'];
 
 function resetRacer(C, p, x) {
   p.inRace = true;
@@ -85,14 +84,10 @@ function resetRacer(C, p, x) {
   p.stunUntil = 0;
   p.jumpUntil = 0;
   p.nextJumpAt = 0;
-  p.mana = 0;
-  p.turboOn = false;
   p.inMud = false;
   p.hits = new Set();
   p.finishMs = null;
   p.rank = null;
-  p.lastBumpAt = 0;
-  p.bumpSlowUntil = 0;
   p.botPlan = new Map();
   if (p.bot) {
     // Mỗi ván random lại để thứ tự về đích không lặp lại.
@@ -101,12 +96,8 @@ function resetRacer(C, p, x) {
     p.botStyle = BOT_STYLES[Math.floor(Math.random() * BOT_STYLES.length)];
     p.botForm = 1; // phong độ lên xuống trong lúc chạy
     p.botFormAt = 0;
-    p.botSprintAt = rand(0.6, 0.85); // đoạn nào thì bắt đầu nước rút
   }
 }
-
-// starter: xuất phát nhanh rồi đuối; finisher: chậm đầu, bứt tốc cuối; wobbly: phong độ thất thường.
-const BOT_STYLES = ['steady', 'starter', 'finisher', 'wobbly'];
 
 function botPace(p, progress) {
   if (p.botStyle === 'starter') return progress < 0.4 ? 1.3 : 0.8;
@@ -126,8 +117,6 @@ function createRace(racers, now, level, startAt = null) {
     width,
     trackLen: C.TRACK_LEN,
     obstacles: createObstacles(C, lanes, laneW),
-    taken: new Set(),
-    contacts: new Set(), // các cặp đang chạm nhau ở tick trước
     startAt: startAt ?? now + C.COUNTDOWN_MS,
     firstFinishAt: null,
     finishCount: 0,
@@ -147,15 +136,7 @@ function move(race, p, level, now) {
   p.driveAt = now;
 }
 
-// Nút PHI!: có mana là bật TURBO; trong lúc TURBO mana giảm dần, hết mana thì hết TURBO.
-// (Đầy 100% thì được TURBO_MS; ít mana thì ngắn theo tỉ lệ.)
-function turbo(race, p, now) {
-  if (!isRunning(race, p, now)) return false;
-  if (p.mana <= 0 || p.turboOn) return false;
-  p.turboOn = true;
-  return true;
-}
-
+// Nhảy (điện thoại hất đầu máy hoặc giật máy lên).
 function jump(race, p, now) {
   if (!isRunning(race, p, now)) return false;
   if (now < p.nextJumpAt || now < p.stunUntil) return false;
@@ -177,29 +158,10 @@ function step(race, racers, now, dt) {
       p.z += p.speed * dt;
       continue;
     }
-    if (race.endedAt) {
-      p.turboOn = false;
-      continue;
-    }
+    if (race.endedAt) continue;
 
     const stunned = now < p.stunUntil;
     const jumping = now < p.jumpUntil;
-    const turboOn = p.turboOn;
-    if (turboOn) {
-      // Đang TURBO: tiêu mana dần.
-      p.mana -= (dt * 1000) / C.TURBO_MS;
-      if (p.mana <= 0) {
-        p.mana = 0;
-        p.turboOn = false;
-      }
-    } else if (p.mana < 1 && !stunned) {
-      // Chỉ tăng khi đang chạy: nhanh (≥ MANA_FULL_RATE_AT tốc độ tối đa) thì tăng đủ tốc, chậm thì tăng chậm, đứng yên thì không.
-      const runFactor = p.speed < C.MANA_MIN_SPEED ? 0 : Math.min(1, p.speed / (C.MAX_SPEED * C.MANA_FULL_RATE_AT));
-      if (runFactor > 0) {
-        p.mana = Math.min(1, p.mana + ((dt * 1000) / C.MANA_FILL_MS) * runFactor);
-        if (p.mana >= 1) events.push({ pid: p.id, type: 'manaFull' });
-      }
-    }
     p.x = p.lane; // chạy thẳng trong làn của mình
 
     // Tốc độ mục tiêu = mức lắc × tốc độ tối đa (không lắc thì 0); tốc độ thật đuổi dần theo.
@@ -207,10 +169,7 @@ function step(race, racers, now, dt) {
     const raw = fresh ? p.drive * C.DRIVE_GAIN : 0;
     const drive = raw < C.MIN_DRIVE ? 0 : Math.min(1, raw); // vùng chết: rung tay nhẹ = đứng yên
     p.driveEff = drive;
-    let target = 0;
-    if (!stunned) {
-      target = turboOn ? Math.max(drive, C.TURBO_MIN_DRIVE) * C.MAX_SPEED * C.TURBO_FACTOR : drive * C.MAX_SPEED;
-    }
+    let target = stunned ? 0 : drive * C.MAX_SPEED;
     let crashed = false;
 
     p.inMud = false;
@@ -219,7 +178,7 @@ function step(race, racers, now, dt) {
       if (Math.abs(p.x - o.x) > o.w + C.BODY_HALF_WIDTH) continue;
 
       if (o.type === 'mud') {
-        if (!jumping && !turboOn) p.inMud = true;
+        if (!jumping) p.inMud = true;
       } else if (o.type === 'fence') {
         if (p.hits.has(o.id)) continue;
         p.hits.add(o.id);
@@ -227,28 +186,18 @@ function step(race, racers, now, dt) {
           events.push({ pid: p.id, type: 'clear' });
         } else {
           p.stunUntil = now + C.STUN_MS;
-          p.mana = Math.max(0, p.mana - C.FENCE_MANA_LOSS);
-          p.turboOn = false; // đâm rào thì mất TURBO, mana còn lại vẫn giữ
           crashed = true;
           events.push({ pid: p.id, type: 'fence', side: p.x < o.x ? 'left' : 'right' });
         }
-      } else if (o.type === 'carrot' && !race.taken.has(o.id)) {
-        race.taken.add(o.id);
-        const wasFull = p.mana >= 1;
-        p.mana = Math.min(1, p.mana + C.CARROT_MANA);
-        events.push({ pid: p.id, type: 'carrot', oid: o.id });
-        if (!wasFull && p.mana >= 1) events.push({ pid: p.id, type: 'manaFull' });
       }
     }
 
     if (p.inMud) target *= C.MUD_FACTOR;
-    else if (!turboOn && now < p.bumpSlowUntil) target *= C.BUMP_SLOW_FACTOR;
     if (crashed) {
       // Đâm rào: dừng hẳn, hết khựng thì tăng tốc lại từ 0.
       p.speed = 0;
     } else if (target > p.speed) {
-      const accel = turboOn ? C.ACCEL * C.TURBO_ACCEL_MULT : C.ACCEL;
-      p.speed = Math.min(target, p.speed + accel * dt);
+      p.speed = Math.min(target, p.speed + C.ACCEL * dt);
     } else {
       p.speed = Math.max(target, p.speed - C.BRAKE * dt);
     }
@@ -256,76 +205,13 @@ function step(race, racers, now, dt) {
 
     if (p.z >= race.trackLen) {
       p.z = race.trackLen;
-      p.turboOn = false;
       p.finishMs = now - race.startAt;
       p.rank = ++race.finishCount;
       if (!race.firstFinishAt) race.firstFinishAt = now;
       events.push({ pid: p.id, type: 'finish', rank: p.rank });
     }
   }
-  if (C.COLLIDE && !race.endedAt) resolveCollisions(race, racers, now, events);
   return events;
-}
-
-// Mỗi cặp chồng lên nhau: đẩy ra hai bên (con TURBO hất mạnh hơn).
-// Con phía sau đang tông đuôi thì không cho xuyên qua, phải lách sang bên mới vượt được.
-function resolveCollisions(race, racers, now, events) {
-  const C = cfgOf(race);
-  const active = racers.filter(p => p.finishMs == null);
-  const minDx = C.BODY_HALF_WIDTH * 2;
-  const minDz = C.BODY_HALF_LEN * 2;
-  const halfWidth = race.width / 2 - 0.6;
-  const contacts = new Set();
-
-  for (let i = 0; i < active.length; i++) {
-    for (let j = i + 1; j < active.length; j++) {
-      const a = active[i];
-      const b = active[j];
-      const dx = b.x - a.x;
-      const dz = b.z - a.z;
-      const overlapX = minDx - Math.abs(dx);
-      const overlapZ = minDz - Math.abs(dz);
-      if (overlapX <= 0 || overlapZ <= 0) continue;
-
-      const key = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
-      contacts.add(key);
-
-      // Va nhau: cả hai chậm lại (con đang TURBO thì không).
-      for (const p of [a, b]) {
-        if (!p.turboOn) p.bumpSlowUntil = now + C.BUMP_SLOW_MS;
-      }
-
-      const aTurbo = a.turboOn;
-      const bTurbo = b.turboOn;
-      let shareA = 0.5;
-      if (aTurbo && !bTurbo) shareA = 1 - C.TURBO_PUSH_SHARE;
-      else if (bTurbo && !aTurbo) shareA = C.TURBO_PUSH_SHARE;
-
-      // Đẩy ngang. Đứng thẳng hàng thì chọn hướng ngẫu nhiên nhưng cố định theo cặp.
-      const dir = Math.abs(dx) > 0.01 ? Math.sign(dx) : key.length % 2 ? 1 : -1;
-      const push = overlapX * C.BUMP_PUSH;
-      a.x = clamp(a.x - dir * push * shareA, -halfWidth, halfWidth);
-      b.x = clamp(b.x + dir * push * (1 - shareA), -halfWidth, halfWidth);
-
-      // Tông đuôi: con phía sau rõ ràng (không phải đi song song) và không TURBO thì không được nhanh
-      // hơn con phía trước, phải chờ bị đẩy lệch sang ngang mới vượt được.
-      // Chỉ giới hạn tốc độ, KHÔNG kéo lùi vị trí (kéo lùi nhìn như con vật phi ngược).
-      if (Math.abs(dz) > minDz * 0.5) {
-        const back = dz > 0 ? a : b;
-        const front = dz > 0 ? b : a;
-        if (!back.turboOn) back.speed = Math.min(back.speed, front.speed);
-      }
-
-      if (!race.contacts.has(key)) {
-        for (const p of [a, b]) {
-          if (now - p.lastBumpAt < C.BUMP_FX_GAP_MS) continue;
-          p.lastBumpAt = now;
-          events.push({ pid: p.id, type: 'bump' });
-        }
-      }
-    }
-  }
-  race.contacts = contacts;
 }
 
 function isOver(race, racers, now) {
@@ -364,15 +250,12 @@ function flagsOf(p, now) {
   if (now < p.jumpUntil) f |= FLAG_JUMP;
   if (p.inMud) f |= FLAG_MUD;
   if (p.finishMs != null) f |= FLAG_FINISHED;
-  if (p.turboOn) f |= FLAG_TURBO;
-  if (now < p.bumpSlowUntil) f |= FLAG_BUMP;
   return f;
 }
 
-// Bot: "lắc" liên tục theo "tay nghề" (theo độ khó), nhảy qua rào/bùn trong làn mình nếu đủ giỏi
-// (bot kém hay quên nhảy); TURBO khi đầy, thỉnh thoảng dùng sớm (bot dễ hay phí), nước rút thì dùng ngay.
-function botThink(race, p, now, dt) {
-  if (!isRunning(race, p, now)) return false;
+// Bot: "lắc" liên tục theo "tay nghề" (theo độ khó), nhảy qua rào/bùn trong làn mình nếu đủ giỏi (bot kém hay quên nhảy).
+function botThink(race, p, now) {
+  if (!isRunning(race, p, now)) return;
   const C = cfgOf(race);
   const progress = p.z / race.trackLen;
 
@@ -382,25 +265,19 @@ function botThink(race, p, now, dt) {
     p.botFormAt = now + rand(2000, 4000);
   }
 
-  let usedTurbo = false;
   if (now < race.startAt + p.botDelay) {
     p.drive = 0; // chưa phản xạ kịp: đứng yên như người chưa lắc
-    p.driveAt = now;
   } else {
     // "Lắc" liên tục theo tay nghề, phong độ, kiểu chạy; chia DRIVE_GAIN để độ khó chỉ ảnh hưởng người chơi.
     const desired = (0.35 + 0.6 * p.botSkill) * p.botForm * botPace(p, progress) * rand(0.92, 1.05);
     p.drive = clamp(desired, 0, 1) / C.DRIVE_GAIN;
-    p.driveAt = now;
-    const sprint = progress > p.botSprintAt;
-    const early = p.mana >= C.BOT.turboMin && Math.random() < C.BOT.turboRate * dt;
-    const wantTurbo = sprint ? p.mana >= 0.3 : p.mana >= 1 || early;
-    usedTurbo = wantTurbo && turbo(race, p, now);
   }
+  p.driveAt = now;
 
   // Vật cản gần nhất phía trước trong làn mình: rào thì nhảy (bot giỏi hay nhảy đúng), bùn thì thỉnh thoảng nhảy qua.
   let nearest = null;
   for (const o of race.obstacles) {
-    if (o.type === 'carrot' || Math.abs(o.x - p.lane) > o.w) continue;
+    if (Math.abs(o.x - p.lane) > o.w) continue;
     const ahead = o.z - o.d - p.z;
     if (ahead < 0 || ahead > 12) continue;
     if (!nearest || ahead < nearest.ahead) nearest = { o, ahead };
@@ -414,7 +291,6 @@ function botThink(race, p, now, dt) {
     // Nhảy sớm hay muộn tuỳ tốc độ: chạy nhanh thì nhảy từ xa hơn.
     if (p.botPlan.get(o.id) === 'jump' && ahead < Math.max(1.5, p.speed * 0.25) * rand(0.9, 1.2)) jump(race, p, now);
   }
-  return usedTurbo;
 }
 
 module.exports = {
@@ -423,12 +299,11 @@ module.exports = {
   isLevel,
   step,
   move,
-  turbo,
   jump,
   isOver,
   standings,
   results,
   flagsOf,
   botThink,
-  FLAGS: { STUN: FLAG_STUN, JUMP: FLAG_JUMP, MUD: FLAG_MUD, FINISHED: FLAG_FINISHED, TURBO: FLAG_TURBO, BUMP: FLAG_BUMP },
+  FLAGS: { STUN: FLAG_STUN, JUMP: FLAG_JUMP, MUD: FLAG_MUD, FINISHED: FLAG_FINISHED },
 };

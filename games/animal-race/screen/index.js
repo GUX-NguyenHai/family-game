@@ -17,12 +17,25 @@ export function create(ctx) {
       <canvas class="race-minimap" aria-label="Bản đồ đường đua"></canvas>
     </div>`;
   const q = sel => root.querySelector(sel);
-  const scene = new RaceScene(q('.race-scene'), ctx.manifest, ctx.quality);
+  const scene = new RaceScene(q('.race-scene'), ctx.manifest, ctx.quality, q('.race-hud'));
   const minimap = new Minimap(q('.race-minimap'));
   let trackLen = 400;
   let racerIds = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
   let minimapAt = 0;
   let hudAt = 0;
+  let areaAt = 0;
+
+  // Chỗ trống 2 bên màn hình để đặt khung nhỏ cho người bị tụt lại:
+  // bên trái từ dưới bảng xếp hạng tới trên thanh tiến độ, bên phải từ trên cùng tới trên bản đồ nhỏ.
+  function updateMiniArea() {
+    const standings = q('.race-standings').getBoundingClientRect();
+    const progress = q('.race-progress').getBoundingClientRect();
+    const map = q('.race-minimap').getBoundingClientRect();
+    scene.setMiniArea({
+      left: { top: standings.bottom + 12, bottom: progress.top - 52 }, // chừa chỗ cho cờ 🏁 trên thanh tiến độ
+      right: { top: 16, bottom: map.top - 12 },
+    });
+  }
 
   function onKey(e) {
     if (e.target.closest?.('input, textarea')) return;
@@ -45,7 +58,7 @@ export function create(ctx) {
         const pl = ctx.player(p.id);
         return `<li style="--c:${pl?.color || '#fff'}">
           <span class="pos">${i + 1}.</span><span class="dot"></span>
-          <span>${esc(pl?.name || '?')}</span>${p.r ? '<span class="fin">🏁</span>' : p.f & FLAG.TURBO ? '<span class="fin">🔥</span>' : ''}
+          <span>${esc(pl?.name || '?')}</span>${p.r ? '<span class="fin">🏁</span>' : ''}
         </li>`;
       })
       .join('');
@@ -97,6 +110,10 @@ export function create(ctx) {
         hudAt = t;
         renderHud(s);
       }
+      if (t - areaAt > 500) {
+        areaAt = t;
+        updateMiniArea(); // bảng xếp hạng dài/ngắn theo số người, cửa sổ đổi cỡ…
+      }
     },
 
     onEvent(ev) {
@@ -105,15 +122,6 @@ export function create(ctx) {
       if (ev.type === 'fence') {
         toast(`${name} vấp rào! 💥`);
         beep(140, 0.2, 'sawtooth', 0.05);
-      } else if (ev.type === 'carrot') {
-        minimap.markTaken(ev.oid);
-        toast(`${name} ăn cà rốt! +10% năng lượng 🥕`);
-        beep(990, 0.12, 'triangle');
-      } else if (ev.type === 'turbo') {
-        toast(`${name} dùng TURBO! 🔥`);
-        beep(220, 0.1, 'sawtooth', 0.05);
-        setTimeout(() => beep(440, 0.12, 'sawtooth', 0.05), 90);
-        setTimeout(() => beep(880, 0.18, 'sawtooth', 0.05), 180);
       } else if (ev.type === 'finish') {
         toast(`${name} về đích hạng ${ev.rank}! 🏁`);
         if (ev.rank === 1) fanfare();

@@ -10,7 +10,7 @@ Nền tảng game cho cả nhà, chơi theo kiểu **TV + điện thoại làm t
 
 | Game | Tóm tắt | Chi tiết |
 |---|---|---|
-| 🏁 Đua thú | Mỗi con chạy thẳng một làn. Lắc máy để chạy, hất máy để nhảy rào, ăn cà rốt lấy năng lượng TURBO | [games/animal-race](games/animal-race/README.md) |
+| 🏁 Đua thú | Mỗi con chạy thẳng một làn. Lắc máy để chạy, hất hoặc giật máy để nhảy qua rào và bùn. Không có nút bấm | [games/animal-race](games/animal-race/README.md) |
 | 🚣 Đua thuyền | Lắc máy để chèo. Thi đơn hoặc theo đội. Kiểu Basic (đường thẳng) hoặc Pro (lái, né vật cản) | [games/boat-race](games/boat-race/README.md) |
 | 🪢 Kéo co | 2 đội bằng người, lắc máy để kéo dây, đội thua rơi xuống sông | [games/tug-of-war](games/tug-of-war/README.md) |
 | 🌴 Leo cây hái dừa | Chọn khỉ, lắc để leo, ngừng lắc là tụt, qua các đoạn thân trơn | [games/coconut-climb](games/coconut-climb/README.md) |

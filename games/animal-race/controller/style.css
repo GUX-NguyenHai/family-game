@@ -1,4 +1,4 @@
-/* Đua thú – tay cầm. Biến màu (--accent, --me...) lấy từ /css/play.css. */
+/* Đua thú – tay cầm (không có nút bấm). Biến màu (--accent, --me, --muted...) lấy từ /css/play.css. */
 
 /* Màn chơi */
 .race {
@@ -15,55 +15,6 @@
 .status { min-height: 2.2em; margin: 10px 0; text-align: center; font-size: 1.3rem; font-weight: 800; }
 .power { height: 22px; flex: none; }
 .power i { background: linear-gradient(90deg, #ffb020, #ff5a5a); transition: width 0.1s; }
-
-/* Hai nút to cạnh nhau: PHI! (trái) và NHẢY (phải). Không còn nút lái trái/phải. */
-.controls {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 14px;
-  min-height: 260px;
-}
-.controls button { font-size: 2rem; border-radius: 20px; touch-action: none; }
-/* Nút PHI! = TURBO: năng lượng dâng từ dưới lên; có mana là sáng (bấm được), đầy thì nhấp nháy. */
-.boost {
-  --mana: 0%;
-  position: relative;
-  overflow: hidden;
-  background: #3a2f4a;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 2.2rem !important;
-}
-.boost .mana-fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: var(--mana);
-  background: linear-gradient(0deg, rgba(255, 90, 90, 0.55), rgba(255, 176, 32, 0.55));
-  transition: height 0.15s linear;
-}
-.boost .lbl { position: relative; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
-.boost .lbl small { font-size: 1rem; font-weight: 700; opacity: 0.85; }
-.boost.ready { color: #fff; }
-.boost.ready .mana-fill { background: linear-gradient(0deg, rgba(255, 90, 90, 0.85), rgba(255, 176, 32, 0.85)); }
-.boost.full { animation: ready 0.8s ease-in-out infinite; }
-.boost.full .mana-fill { background: linear-gradient(0deg, #ff5a5a, #ffb020); }
-/* Đang TURBO: đổi sang màu xanh "nitro" để thấy rõ đang tiêu, thanh tụt dần theo mana còn lại. */
-.boost.turbo { color: #fff; background: #1c2b4a; }
-.boost.turbo .mana-fill { background: linear-gradient(0deg, #0077ff, #37e2ff); transition: height 0.12s linear; }
-.boost.nope { animation: nope 0.3s; }
-@keyframes ready {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 176, 32, 0.7); }
-  50% { transform: scale(1.04); box-shadow: 0 0 24px 6px rgba(255, 176, 32, 0.7); }
-}
-@keyframes nope {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  75% { transform: translateX(6px); }
-}
-.power i.flash { filter: brightness(1.5); }
 .noshake {
   margin: 8px 0 0;
   padding: 8px 10px;
@@ -72,8 +23,29 @@
   color: #ffd166;
   font-size: 0.85rem;
 }
-.jump { background: #42d4f4; color: #06222a; font-size: 2.2rem !important; }
-.jump.flash { background: #a8f0ff; }
+
+/* Khung lớn giữa màn hình: nhắc cách chơi; nháy xanh khi vừa nhảy */
+.race-pad {
+  flex: 1;
+  min-height: 220px;
+  margin-top: 14px;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #2b3558, #1f2740);
+  color: #e6ecff;
+  font-size: 1.4rem;
+  text-align: center;
+  transition: background 0.15s, transform 0.15s;
+}
+.race-pad span { font-size: 5rem; line-height: 1; }
+.race-pad small { color: var(--muted); font-size: 0.95rem; }
+.race-pad.jumping { background: linear-gradient(180deg, #42d4f4, #1f8fb0); color: #06222a; transform: translateY(-8px); }
+
+/* Phòng chờ: thử nhảy */
 .jump-hit {
   position: absolute;
   right: 6px;
