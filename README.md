@@ -1,200 +1,226 @@
 # 🎮 Party Game
 
-Bộ game cho cả nhà:
-- **TV hoặc laptop** làm màn hình chung, hiện mã QR.
-- **Mỗi người dùng điện thoại** quét QR, chọn một con vật làm avatar, rồi dùng máy làm tay cầm.
-- **Chủ phòng chọn game ở phòng chờ.** Đổi game không cần quét lại mã: cả nhà ở nguyên trong phòng.
+Nền tảng game cho cả nhà, chơi theo kiểu **TV + điện thoại làm tay cầm**:
+- **TV hoặc laptop** làm màn hình chung: hiện mã QR, phòng chờ, cảnh game.
+- **Mỗi người dùng điện thoại** quét QR, nhập tên, chọn một con vật làm avatar, rồi dùng máy làm tay cầm (lắc, nghiêng, hất máy, bấm nút).
+- **Chủ phòng chọn game** ở phòng chờ. Đổi game không cần quét lại mã, cả nhà ở nguyên trong phòng.
+- **Không có database.** Mọi dữ liệu nằm trong RAM, tắt server là mất.
 
-| Game | Cách chơi |
+**Mỗi game là một module** trong thư mục `games/`. Phần chung (phòng, QR, người chơi, bot, đội, gói Pro, cảm biến, đếm ngược, bảng kết quả) đã có sẵn. Người làm game chỉ cần viết luật chơi và giao diện riêng.
+
+| Game | Tóm tắt | Chi tiết |
+|---|---|---|
+| 🏁 Đua thú | Mỗi con chạy thẳng một làn. Lắc máy để chạy, hất máy để nhảy rào, ăn cà rốt lấy năng lượng TURBO | [games/animal-race](games/animal-race/README.md) |
+| 🚣 Đua thuyền | Lắc máy để chèo. Thi đơn hoặc theo đội. Kiểu Basic (đường thẳng) hoặc Pro (lái, né vật cản) | [games/boat-race](games/boat-race/README.md) |
+| 🪢 Kéo co | 2 đội bằng người, lắc máy để kéo dây, đội thua rơi xuống sông | [games/tug-of-war](games/tug-of-war/README.md) |
+| 🌴 Leo cây hái dừa | Chọn khỉ, lắc để leo, ngừng lắc là tụt, qua các đoạn thân trơn | [games/coconut-climb](games/coconut-climb/README.md) |
+
+---
+
+## Mục lục
+1. [Chạy thử trên máy](#1-chạy-thử-trên-máy)
+2. [Cách hệ thống hoạt động](#2-cách-hệ-thống-hoạt-động)
+3. [Cấu trúc thư mục](#3-cấu-trúc-thư-mục)
+4. [Làm một game mới](#4-làm-một-game-mới)
+5. [Quy ước bắt buộc](#5-quy-ước-bắt-buộc)
+6. [Phần chung có sẵn những gì](#6-phần-chung-có-sẵn-những-gì)
+7. [Miễn phí và Pro](#7-miễn-phí-và-pro)
+8. [Mẹo, lỗi hay gặp](#8-mẹo-lỗi-hay-gặp)
+9. [Dành cho AI / người mới đọc code](#9-dành-cho-ai--người-mới-đọc-code)
+
+---
+
+## 1. Chạy thử trên máy
+
+Cần **Node.js 18.11 trở lên** (khuyên dùng Node 22).
+
+```bash
+npm install
+npm run models      # không bắt buộc: làm nhẹ model con vật (bỏ hoạt ảnh thừa), chạy 1 lần
+npm run dev         # chạy server, tự khởi động lại khi sửa code
+```
+
+- Mở **http://localhost:3000/host** trên máy tính. Đây là màn hình chung.
+- Bấm **"+ Thêm bot"** vài lần rồi **"▶ Bắt đầu"** để xem game chạy mà không cần điện thoại.
+
+**Thử bằng điện thoại.** Điện thoại chỉ đọc được cảm biến (lắc, nghiêng) khi trang chạy **HTTPS**. Trên máy local, dùng cloudflared để có link HTTPS tạm:
+```bash
+brew install cloudflared                          # lần đầu (macOS)
+cloudflared tunnel --url http://localhost:3000
+```
+Mở link `https://xxx.trycloudflare.com/host` mà lệnh in ra. Mã QR trên màn hình sẽ tự dùng link này, điện thoại quét là chơi được, cả Android lẫn iPhone. Nếu chỉ thử giao diện mà không cần cảm biến thì điện thoại và máy tính dùng chung Wi-Fi là đủ: mã QR dùng sẵn IP mạng LAN.
+
+**Kiểm tra cú pháp** trước khi commit (không cần chạy server):
+```bash
+for f in server.js src/*.js games/index.js games/*/service/*.js; do node --check "$f" || echo "❌ LỖI: $f"; done
+for f in public/js/core/*.js games/*/screen/*.js games/*/controller/*.js; do node --input-type=module --check < "$f" || echo "❌ LỖI: $f"; done
+```
+
+---
+
+## 2. Cách hệ thống hoạt động
+
+```
+  📺 TV / laptop                    🖥️ Server (Node.js)                    📱 Điện thoại
+  /host                                                                    /play?room=ABCD
+  ┌──────────────────┐   Socket.IO   ┌───────────────────────────┐ Socket.IO ┌──────────────────┐
+  │ core/host.js     │◀─────────────│ src/rooms.js (phần chung)  │◀──────────│ core/play.js     │
+  │  phòng chờ, QR,  │  game:setup   │  phòng, người chơi, bot,   │game:input │  vào phòng,      │
+  │  kết quả         │  game:state   │  đội, vòng lặp tick        │──────────▶│  phòng chờ, kq   │
+  │ ┌──────────────┐ │  game:event   │ ┌───────────────────────┐ │ game:me   │ ┌──────────────┐ │
+  │ │ games/<id>/  │ │               │ │ games/<id>/service/   │ │ game:event│ │ games/<id>/  │ │
+  │ │   screen/    │ │               │ │   luật chơi           │ │           │ │  controller/ │ │
+  │ └──────────────┘ │               │ └───────────────────────┘ │           │ └──────────────┘ │
+  └──────────────────┘               └───────────────────────────┘           └──────────────────┘
+```
+
+- **Server là trọng tài.** Mọi tính toán (vị trí, va chạm, điểm, thắng thua, bot) chạy trên server trong `games/<id>/service/`. TV và điện thoại chỉ hiển thị.
+- **Điện thoại không nói chuyện trực tiếp với TV.** Điện thoại gửi thao tác lên server (`game:input`). Server tính toán rồi gửi kết quả cho TV (`game:state`, khoảng 10–30 lần/giây) và cho từng điện thoại (`game:me`).
+- **HTTP chỉ dùng để tải tài nguyên** (HTML, JS, CSS, model 3D). Mọi tương tác lúc chơi đi qua WebSocket (Socket.IO).
+- **Mỗi phòng độc lập.** Phòng có mã 4 chữ, danh sách người chơi, game đang chọn, tuỳ chọn và vòng lặp riêng. Nhiều phòng chơi nhiều game khác nhau cùng lúc mà không ảnh hưởng nhau.
+- **Một phòng đi qua 4 trạng thái:** `lobby` (phòng chờ) → `countdown` (đếm ngược) → `playing` → `finished` (bảng kết quả) → về `lobby` hoặc "Chơi lại".
+
+---
+
+## 3. Cấu trúc thư mục
+
+```
+server.js                     HTTP + Socket.IO + QR; mở thư mục screen/ controller/ assets/ của từng game
+src/                          ── PHẦN CHUNG phía server ──
+  config.js                   phiên bản, giới hạn phòng/gói, game mặc định, nhóm game, màu đội
+  rooms.js                    phòng, người chơi, bot, đội, vòng lặp, chuyển tin game ↔ TV ↔ điện thoại
+  games.js                    đọc danh sách game, kiểm tra khai báo, tuỳ chọn
+  license.js                  mã Pro (ký HMAC, không cần database)
+public/                       ── PHẦN CHUNG phía trình duyệt ──
+  host.html, play.html        khung trang TV và điện thoại
+  css/host.css, css/play.css  giao diện chung (biến màu dùng lại được trong game)
+  js/core/host.js             TV: phòng chờ, chọn game (thanh bên trái), QR, đếm ngược, kết quả; nạp games/<id>/screen
+  js/core/play.js             điện thoại: vào phòng, phòng chờ, chọn đội, màn kết quả; nạp games/<id>/controller
+  js/core/sensors.js          cảm biến: lắc lên xuống, nghiêng, hất đầu máy, giật máy lên
+  js/core/scene-kit.js        đồ nghề 3D (three.js): tải con vật/model, nhãn tên, chữ nổi, hạt hiệu ứng
+  js/core/util.js, audio.js   tiện ích nhỏ, âm thanh bíp
+  assets/animals.json         danh sách con vật (avatar người chơi) + hoạt ảnh
+games/                        ── MỖI GAME MỘT THƯ MỤC ──
+  index.js                    danh sách game được bật (thêm game = thêm 1 dòng)
+  README.md                   ★ hướng dẫn chi tiết cách làm game
+  <id>/
+    README.md                 luật chơi, tham số chỉnh
+    service/                  luật chơi, chạy trên server (KHÔNG mở ra ngoài)
+      index.js                khai báo game + createMatch()
+      config.js               tham số (tốc độ, thời gian, độ khó…)
+      simulation.js           mô phỏng thuần (không dính socket/đồ hoạ), bot
+    screen/                   hình ảnh trên TV: index.js (+ scene.js nếu 3D), style.css
+    controller/               tay cầm điện thoại: index.js, style.css
+    assets/                   (tuỳ chọn) model .glb, json, ảnh + CREDITS.md
+animal/                       model con vật gốc (Quaternius, CC0)
+build/models/                 model con vật đã tối ưu (npm run models tạo ra)
+deploy/                       cấu hình nginx, systemd
+Dockerfile, docker-compose.yml
+```
+
+---
+
+## 4. Làm một game mới
+
+Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép được ngay: [games/README.md](games/README.md).**
+
+1. Tạo thư mục `games/<id>/`. `<id>` là tiếng Anh, chữ thường, nối bằng `-`, ví dụ `tap-race`.
+2. Viết `service/index.js`: khai báo game (tên, emoji, nhóm, số người, tuỳ chọn…) và hàm `createMatch()` chứa luật chơi.
+3. Viết `screen/index.js` + `style.css`: vẽ game trên TV.
+4. Viết `controller/index.js` + `style.css`: tay cầm trên điện thoại.
+5. Thêm `require('./<id>/service')` vào [games/index.js](games/index.js), khởi động lại server. Game tự hiện trên thanh chọn game.
+
+**Không cần sửa phần chung** (`src/`, `public/js/core/`) để làm một game bình thường. Chỉ sửa phần chung khi cần một khả năng mới mà **nhiều game** sẽ dùng (như đội, lựa chọn riêng). Khi đó phải cập nhật luôn [games/README.md](games/README.md).
+
+---
+
+## 5. Quy ước bắt buộc
+
+| Quy ước | Chi tiết |
 |---|---|
-| 🏁 **Đua thú** | Đường đua 3D, mỗi con chạy thẳng một làn: lắc máy để chạy, hất máy để nhảy rào, TURBO (chi tiết ở dưới) |
-| 🪢 **Kéo co** | 2 đội Đỏ – Xanh (1–6 người/đội, **phải bằng người**, thiếu thì thêm bot) đứng hai bên bờ sông, lắc máy để kéo. Lực đội = trung bình mức lắc. Kéo dấu giữa dây qua vạch bên mình là thắng ván, đội kia ngã xuống sông. Hết 45 giây thì dây lệch bên nào bên đó thắng. Mỗi lần bắt đầu là 1 ván, muốn đấu tiếp thì bấm "Chơi lại". Tham số: `games/tug-of-war/service/config.js` |
-| 🌴 **Leo cây hái dừa** | Mỗi người chọn một chú khỉ (khỉ, khỉ mũ, khỉ sóc, đười ươi, gấu trúc… trong `assets/figures.json`) và một cây dừa, lắc máy để leo, **ngừng lắc là tụt xuống**. Thân cây có nhiều **đoạn trơn** (rêu xanh; Dễ 2 đoạn, Trung bình 3, Khó 4): phải lắc thật mạnh mới qua, lắc yếu là trượt. Ai lên ngọn hái dừa trước thì thắng, hết 45 giây xếp theo độ cao. Mỗi lần bắt đầu là 1 ván. Tham số: `games/coconut-climb/service/config.js` |
-| 🚣 **Đua thuyền** | Lắc máy lên xuống để chèo: lắc nhanh thì đi nhanh, ngừng lắc thì thuyền dừng. **Thi đơn** hoặc **theo đội** (2–4 người chung thuyền, tốc độ = trung bình mức lắc cả đội). Kiểu **Basic**: đường thẳng, không vật cản. Kiểu **Pro**: nghiêng để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Chọn xuồng hoặc thuyền chèo ở phòng chờ. Tham số: `games/boat-race/service/config.js` |
+| **Tên file, thư mục, biến: tiếng Anh, viết đầy đủ** | `simulation.js`, không phải `sim.js`; `boat-race`, không phải `dua-thuyen`. Không viết tắt khó hiểu |
+| **Chữ hiện cho người chơi và chú thích code: tiếng Việt** | Giao diện, thông báo, mô tả trong `description`/`options`, comment trong code |
+| **Game không import code của game khác** | Cái gì dùng chung thì đưa vào `public/js/core/` (trình duyệt) hoặc `src/` (server) |
+| **`service/` không bao giờ được trình duyệt tải** | Server chỉ mở `screen/`, `controller/`, `assets/`. Đừng để luật chơi hay bí mật trong 3 thư mục này |
+| **Server là trọng tài** | Thắng thua, điểm, va chạm tính trong `service/`. Điện thoại chỉ gửi thao tác, không tự quyết kết quả |
+| **Tách mô phỏng khỏi lớp nối** | `simulation.js` là hàm thuần (nhận trạng thái, trả trạng thái/sự kiện). `index.js` nối nó với nền tảng |
+| **Tham số để trong `config.js`** | Tốc độ, thời gian, độ khó… không viết cứng rải rác trong code |
+| **CSS có tiền tố riêng** | Mỗi game đặt tiền tố class riêng (`.race-…`, `.boat-…`, `.tug-…`, `.cc-…`) để không đè lên game khác |
+| **Model tải về ghi nguồn** | Mỗi thư mục model có `CREDITS.md` (tên gốc, tác giả, link). Nhiều model là CC-BY, phải ghi tên tác giả |
+| **Có bot** | Game nên có bot để thử một mình và để bù người |
+| **Chạy được trên cả Android và iPhone** | iPhone chỉ cho đọc cảm biến sau khi người chơi bấm nút. Phần chung đã lo, game chỉ cần dùng `ctx.sensors` |
+| **Không tăng `APP_VERSION` khi đang thử nghiệm** | Chỉ tăng khi phát hành bản chạy thật. Trang tự tải lại khi server khởi động lại, không phụ thuộc số version |
+| **Không commit bí mật** | `.env` (`LICENSE_SECRET`) không lên git, không vào Docker image |
 
-Mỗi game là một module trong `games/`. **Cách thêm game mới: xem [games/README.md](games/README.md).**
+---
 
-Không cần database. Mọi dữ liệu nằm trong RAM, tắt server là mất.
+## 6. Phần chung có sẵn những gì
 
-## 🏁 Đua thú: cách chơi (trên điện thoại)
-
-| Thao tác | Tác dụng |
+| Khả năng | Game dùng thế nào |
 |---|---|
-| (không lái) | Mỗi con chạy thẳng trong làn riêng. Mọi làn có **cùng một dãy rào, bùn, cà rốt ở cùng khoảng cách** nên công bằng cho mọi người |
-| **Lắc máy lên xuống** | **Không lắc thì đứng yên.** Lắc thì chạy, lắc càng nhanh và mạnh thì càng nhanh. Dừng tay thì chậm dần rồi dừng trong khoảng 1 giây. Lắc ngang không tính. Tốc độ **tăng dần**: từ đứng yên lên tối đa mất ~2,4 giây |
-| Nút **PHI!** (TURBO) | **Có năng lượng là bấm được.** Nhanh hơn 40% và lướt qua bùn. Trong lúc TURBO, thanh năng lượng **tụt dần**, cạn thì hết TURBO: đầy 100% dùng được 5 giây, 50% dùng được 2,5 giây… Chỉ cần bấm 1 lần, không cần giữ. Đang TURBO mà ăn cà rốt thì được kéo dài. Đâm rào thì mất TURBO |
-| **Giật cương** (hất nhanh đầu máy về phía mình rồi thả về) hoặc bấm nút **NHẢY** | Nhảy qua rào. Chỉnh độ nhạy hoặc tắt cử chỉ ở phòng chờ ("Nhảy bằng cử chỉ"). Máy không có con quay hồi chuyển thì chỉ dùng nút |
-| ⚡ Năng lượng | **Chỉ tăng khi đang chạy**: chạy nhanh (từ 60% tốc độ tối đa) thì đầy sau 12 giây, chạy chậm thì tăng chậm, đứng yên hoặc đang khựng thì không tăng. Không tăng trong lúc TURBO. Đầy thì điện thoại rung và nút PHI! nhấp nháy |
-| 🟫 Bùn | Chạy chậm lại (trừ khi đang TURBO) |
-| 🚧 Rào | Đâm vào thì dừng hẳn, khựng 1 giây, mất 20% năng lượng, rồi tăng tốc lại từ 0 |
-| 🥕 Cà rốt | +10% năng lượng. Ai tới trước người đó ăn |
+| Phòng, mã phòng, QR, vào/ra, nối lại khi rớt mạng | Tự có, không cần làm gì |
+| Thanh chọn game theo nhóm (Vận động, Phản xạ, Trí tuệ, Bí mật, Dân gian) | Khai báo `category` trong `service/index.js` |
+| Tuỳ chọn cho chủ phòng (độ khó, chế độ…) | Khai báo `options`, phần chung tự vẽ hàng nút và gửi giá trị vào `createMatch` |
+| Bot | Khai báo `bots: true`. Người chơi có `bot: true`, game tự cho bot hành động trong `tick()` |
+| Chơi theo đội (tối đa 4 màu đội, chọn đội, chia ngẫu nhiên, bắt bằng người) | Khai báo `teams: { min, max, count, equal, enabled }` |
+| Lựa chọn riêng của người chơi (loại thuyền, loại khỉ…) | Điện thoại gọi `ctx.setPref(key, value)`, server nhận trong `players[].prefs` |
+| Đếm ngược 3-2-1, chữ bắt đầu, bảng kết quả, "Chơi lại" | Khai báo `countdownMs`, `goText`; gọi `api.finish(results)` |
+| Gói Free/Pro, giới hạn số người | Khai báo `maxPlayers`, phần chung lấy số nhỏ hơn giữa gói và game |
+| Cảm biến điện thoại | `ctx.sensors.level` (lắc), `ctx.sensors.steer` (nghiêng), `onGesture('jump')` (hất hoặc giật máy) |
+| Đồ nghề 3D | Import từ `/js/core/scene-kit.js` |
+| Âm thanh, thông báo nổi trên TV | `ctx.beep()`, `ctx.fanfare()`, `ctx.toast()` |
+| Bắt lỗi | Lỗi trong code game được bắt và ghi log, không làm sập server |
 
-Các con số này chỉnh trong `games/animal-race/service/config.js`: `MANA_FILL_MS`, `CARROT_MANA`, `FENCE_MANA_LOSS`, `TURBO_MS`, `TURBO_FACTOR`. Va chạm giữa các con (`COLLIDE`) đang tắt vì mỗi con chạy riêng một làn.
+---
 
-## 🏁 Đua thú: độ khó
-
-Chủ phòng chọn ở phòng chờ trên màn hình chung (hoặc ở màn kết quả cho ván sau). **Mặc định: Dễ.** Mọi gói đều dùng được.
-
-| | 🟢 Dễ | 🟡 Trung bình | 🔴 Khó |
-|---|---|---|---|
-| Đường đua | 300m | 400m | 500m |
-| Vật cản | Ít rào, nhiều cà rốt, không có 2 vật cản cạnh nhau | Vừa phải | Nhiều rào, bùn to, hay có 2 vật cản cạnh nhau |
-| Đâm rào | Khựng 0,5s, không mất năng lượng | Khựng 1s, −20% | Khựng 1,5s, −30% |
-| Độ nặng tay | Lắc nhẹ đã chạy tối đa | Vừa | Phải lắc mạnh mới chạy tối đa |
-| Bot | Chậm, ít nhảy rào, hay phí TURBO | Khá | Nhanh, nhảy rào giỏi, dùng TURBO khôn |
-
-Tốc độ tối đa ở cả 3 mức đều là 19 m/s. Độ nặng tay là `DRIVE_GAIN` (1.3 / 1 / 0.8). Chỉnh các con số trong `DIFFICULTIES` ở `games/animal-race/service/config.js`.
-
-## Miễn phí và Pro
+## 7. Miễn phí và Pro
 
 | | Miễn phí | Pro |
 |---|---|---|
 | Số người mỗi phòng (tính cả bot) | 4 (`FREE_MAX_PLAYERS`) | Theo mã, tối đa 12 (`PRO_MAX_PLAYERS`) |
 
-- **Mã Pro** chủ phòng nhập trên màn hình chung: phòng chờ → "Nhập mã Pro".
-- **Mỗi mã chỉ dùng cho một phòng tại một thời điểm.** Nếu phòng đang giữ mã đã đóng màn hình, phòng khác nhập mã đó sẽ lấy được mã.
-- Mã được **ký bằng `LICENSE_SECRET`**, chứa sẵn hạn dùng và số người, nên **không cần database**. Việc bán và thanh toán nằm ngoài game.
-- Mã hết hạn thì phòng tự về bản miễn phí.
+- Chủ phòng nhập mã Pro ở phòng chờ ("Nhập mã Pro"). **Mỗi mã chỉ dùng cho một phòng tại một thời điểm.** Mã hết hạn thì phòng tự về bản miễn phí.
+- Mã được **ký bằng `LICENSE_SECRET`**, chứa sẵn hạn dùng và số người, nên không cần database. Việc bán và thanh toán nằm ngoài game.
 - Server tối đa `MAX_ROOMS` = 50 phòng cùng lúc.
 
-**Đặt khoá bí mật (làm một lần trên server):**
+**Đặt khoá bí mật trên server (một lần):**
 ```bash
-cd ~/family-game
-echo "LICENSE_SECRET=$(openssl rand -hex 32)" > .env
+echo "LICENSE_SECRET=$(openssl rand -hex 32)" > .env      # cạnh docker-compose.yml, KHÔNG đưa lên git
 docker compose up -d --build
 ```
-Giữ kín file `.env`, **không đưa lên git**. Đổi khoá thì mọi mã cũ mất hiệu lực. Chưa có khoá thì server tắt Pro, mọi phòng là bản miễn phí.
+Chưa có khoá thì server tắt Pro. Đổi khoá thì mọi mã cũ mất hiệu lực.
 
-**Tạo mã (trên server, sau khi đã đặt khoá):**
+**Tạo mã:**
 ```bash
 docker compose exec party-game node src/license.js --days 30 --players 12
 docker compose exec party-game node src/license.js --days 0 --count 5    # 5 mã vĩnh viễn
-```
-Khi chạy trên Mac không có `.env`, `npm run make-code -- --days 30` tạo **mã thử**. Mã này chỉ dùng được với server cũng chưa đặt khoá.
-
-## Cài đặt (lần đầu)
-
-```bash
-cd /Users/nguyenhai/workspaces/family_game
-npm install
-npm run models      # không bắt buộc: bỏ hoạt ảnh thừa, model nhẹ hơn khoảng một nửa
+npm run make-code -- --days 30                                          # trên máy local: mã thử
 ```
 
-## Chạy trên máy (Mac)
+---
 
-```bash
-npm run dev         # tự khởi động lại khi sửa code
-```
+## 8. Mẹo, lỗi hay gặp
 
-- Mở màn hình chung ở `http://localhost:3000/host`.
-- **Muốn test cảm biến trên điện thoại thì cần HTTPS.** Mở terminal thứ 2 và chạy:
+- **Thêm bot** để thử đông người. **Xem console trên điện thoại:** thêm `&debug=1` vào cuối link trang chơi.
+- **Phím tắt trên TV:** `F` bật/tắt toàn màn hình. `Y` xoay model 90° (Đua thú: con vật; Leo cây: khỉ) khi model quay sai hướng. Ghi số hiện ra vào file json tương ứng.
+- **Đồ hoạ Thấp/Cao:** nút ở phòng chờ. Dùng Thấp nếu TV hoặc laptop bị giật.
+- **Mở ra vẫn thấy bản cũ:** tải lại hẳn trang (Ctrl/Cmd+Shift+R). Trên server, kiểm tra container đã được thay chưa (`docker compose logs --tail=5`).
+- **Màn hình hiện "Lỗi: …"** thay vì chạy: thường là lỗi cú pháp JS. Chạy lệnh kiểm tra cú pháp ở mục 1.
+- **Điện thoại không lắc được:** trang phải là HTTPS. iPhone phải bấm "Bật cảm biến" và cho phép.
+- **Thêm con vật avatar:** chép `.glb` vào `animal/`, thêm 1 dòng vào `public/assets/animals.json`, chạy `npm run models`.
 
-```bash
-brew install cloudflared                          # lần đầu
-cloudflared tunnel --url http://localhost:3000
-```
+---
 
-  Mở link `https://xxx.trycloudflare.com/host` mà lệnh trên in ra (mở trên máy tính). Mã QR sẽ tự dùng link HTTPS đó, cả Android lẫn iPhone đều dùng được cảm biến.
+## 9. Dành cho AI / người mới đọc code
 
-### Mẹo khi test
-- **Thêm bot:** bấm nút "+ Thêm bot" ở phòng chờ để thử đua đông người.
-- **Xem console trên điện thoại:** thêm `&debug=1` vào cuối URL trang chơi.
-- **Phím tắt trên màn hình chung:**
-  - `F`: bật/tắt toàn màn hình.
-  - `Y`: xoay model 90°, dùng khi con vật chạy ngang hoặc chạy ngược. Xoay tới khi đúng, ghi số `modelYaw` hiện trên màn hình vào `public/assets/animals.json`.
-- **Chất lượng Thấp/Cao:** nút ở phòng chờ. Dùng chế độ Thấp nếu laptop chiếu bị giật.
-- **Cảm biến chạy ngược chiều:** trên điện thoại, tick "Đảo chiều" ở phòng chờ.
+Nên đọc theo thứ tự này:
+1. **README này**, để nắm ý tưởng, luồng dữ liệu và quy ước.
+2. **[games/README.md](games/README.md)**, phần **hợp đồng giữa game và phần chung**: game phải export gì, nhận gì, gửi gì. Đây là tài liệu quan trọng nhất khi làm game.
+3. **Một game mẫu đơn giản**: [games/tug-of-war](games/tug-of-war/), ít file và luật gọn. Sau đó xem [games/coconut-climb](games/coconut-climb/) (lựa chọn riêng `prefs`, model tải về) và [games/boat-race](games/boat-race/) (chơi theo đội, nhiều tuỳ chọn).
+4. Khi cần hiểu sâu phần chung: [src/rooms.js](src/rooms.js) (server), [public/js/core/host.js](public/js/core/host.js) (TV), [public/js/core/play.js](public/js/core/play.js) (điện thoại).
 
-## Deploy lên server bằng Docker (chưa có domain)
-
-Game chạy trong Docker. nginx và certbot cài thẳng trên server để lo HTTPS.
-
-Dùng **sslip.io**: server có IP `1.2.3.4` thì tự có domain `1-2-3-4.sslip.io`, lấy được HTTPS thật.
-Server hiện tại: `103.185.185.188`, tức domain `103-185-185-188.sslip.io`. Domain này đã điền sẵn trong `deploy/nginx.conf`.
-
-Code lấy từ GitHub: `GUX-NguyenHai/family-game`. Gốc repo chính là thư mục game.
-
-1. **Cài trên server (lần đầu):** Docker, nginx, certbot. Mở cổng 80 và 443 ở trang quản lý của nhà cung cấp server.
-   ```bash
-   curl -fsSL https://get.docker.com | sh           # bỏ qua nếu đã có docker
-   apt install -y nginx certbot python3-certbot-nginx
-   ```
-2. **Lấy code (lần đầu).** Repo private thì cần deploy key: tạo key trên server, thêm vào repo ở Settings → Deploy keys (chỉ đọc), và khai báo `Host github-family-game` trong `~/.ssh/config` của server.
-   ```bash
-   git clone git@github-family-game:GUX-NguyenHai/family-game.git ~/family-game
-   ```
-3. **Build và chạy:**
-   ```bash
-   cd ~/family-game
-   docker compose up -d --build
-   docker compose logs -f             # xem log, Ctrl+C để thoát
-   ```
-   Lúc build, image tự cài thư viện và tối ưu model. Container tự chạy lại khi lỗi và khi server reboot.
-4. **nginx + HTTPS (lần đầu):**
-   ```bash
-   cp deploy/nginx.conf /etc/nginx/sites-available/party-game
-   ln -sf /etc/nginx/sites-available/party-game /etc/nginx/sites-enabled/party-game
-   rm -f /etc/nginx/sites-enabled/default
-   nginx -t && systemctl reload nginx
-   certbot --nginx -d 103-185-185-188.sslip.io --redirect
-   ```
-   ⚠️ Certbot sửa trực tiếp file `/etc/nginx/sites-available/party-game` để thêm HTTPS. Sau đó **đừng chép đè `deploy/nginx.conf`** lên file này nữa. Lỡ chép đè thì chạy lại lệnh certbot ở trên.
-5. Mở `https://103-185-185-188.sslip.io/host` trên TV hoặc laptop.
-
-**Cập nhật code sau này:** trên Mac chạy `git push`, rồi trên server chạy:
-```bash
-cd ~/family-game && git pull && docker compose up -d --build --force-recreate
-```
-
-**Lệnh Docker hay dùng** (chạy trong `~/family-game`):
-- `docker compose ps`: xem trạng thái.
-- `docker compose restart`: khởi động lại (mọi phòng đang chơi sẽ mất).
-- `docker compose down`: tắt hẳn.
-- `docker image prune -f`: dọn image cũ sau nhiều lần build.
-
-### Không dùng Docker (tuỳ chọn)
-Cài Node 22 trên server, rồi chạy `npm install --omit=dev`. Tối ưu model bằng `npm run models` trên Mac, sau đó chép thêm thư mục `build/` lên server. Chạy bằng systemd theo file `deploy/party-game.service` (đang để `User=root`, `WorkingDirectory=/root/family-game`): copy vào `/etc/systemd/system/`, rồi chạy `systemctl enable --now party-game`.
-
-## Cấu trúc
-
-```
-server.js                     HTTP + Socket.IO + QR, mở thư mục giao diện của từng game
-src/                          ── phần chung (nền tảng) ──
-  config.js                   ★ phiên bản, giới hạn phòng/gói, game mặc định
-  rooms.js                    phòng, người chơi, bot, vòng lặp, chuyển tin giữa game ↔ màn hình ↔ điện thoại
-  games.js                    đọc danh sách game, tuỳ chọn của game
-  license.js                  mã Pro
-public/                       giao diện chung
-  host.html + js/core/host.js phòng chờ, QR, chọn game, đếm ngược, kết quả (màn hình chung)
-  play.html + js/core/play.js vào phòng, phòng chờ, màn kết quả (điện thoại)
-  js/core/sensors.js          cảm biến điện thoại (nghiêng, lắc, hất máy), game nào cũng dùng được
-  js/core/scene-kit.js        đồ nghề 3D dùng chung: tải con vật/model, nhãn tên, chữ nổi, hạt hiệu ứng
-  assets/animals.json         ★ danh sách con vật (avatar), tên hoạt ảnh, hướng model
-games/                        ── mỗi game một thư mục ──
-  index.js                    ★ danh sách game (thêm game = thêm 1 dòng)
-  animal-race/                🏁 Đua thú
-    service/                  luật chơi: config.js ★, simulation.js (mô phỏng cuộc đua + bot), index.js (khai báo)
-    screen/                   hình ảnh trên TV: cảnh 3D (three.js), bản đồ nhỏ, bảng xếp hạng
-    controller/               tay cầm điện thoại: PHI!/NHẢY, thử cảm biến ở phòng chờ
-  boat-race/                  🚣 Đua thuyền
-    service/                  luật chơi: config.js ★, simulation.js (thuyền, đội, vật cản, bot), index.js
-    screen/                   cảnh sông 3D, bản đồ nhỏ, bảng xếp hạng
-    controller/               tay cầm: chèo, lái (kiểu Pro), chọn thuyền ở phòng chờ
-    assets/                   boats.json (danh sách thuyền), models/ (thuyền, khúc gỗ, hải đăng + CREDITS.md)
-  tug-of-war/                 🪢 Kéo co
-    service/                  luật chơi: config.js ★, simulation.js (dây, ván, bot), index.js
-    screen/                   cảnh 3D hai bờ sông, tỉ số, lực hai đội
-    controller/               tay cầm: lắc để kéo, vị trí dây
-  coconut-climb/              🌴 Leo cây hái dừa
-    service/                  luật chơi: config.js ★, simulation.js (leo, tụt, đoạn trơn, bot), index.js
-    screen/                   cảnh bãi biển 3D, hàng cây dừa, bảng xếp hạng
-    controller/               tay cầm: lắc để leo, thanh độ cao có đoạn trơn
-    assets/                   figures.json (danh sách khỉ), models/ (khỉ trong figure/, cây dừa, quả dừa + CREDITS.md)
-animal/                       model gốc (Quaternius, CC0)
-build/models/                 model đã tối ưu (tạo bằng npm run models)
-```
-
-**Thêm con vật mới:**
-1. Chép file `.glb` vào `animal/`.
-2. Thêm một dòng vào `animals.json`.
-3. Chạy lại `npm run models`.
+**Khi sửa code:**
+- Làm game mới thì chỉ thêm thư mục trong `games/` và 1 dòng trong `games/index.js`.
+- Đổi hợp đồng ở phần chung thì cập nhật [games/README.md](games/README.md) và kiểm tra **mọi game** còn chạy.
+- Mỗi game có README riêng ghi luật chơi và tham số. Sửa luật thì sửa luôn README của game đó.
+- Giữ đúng các quy ước ở mục 5.
