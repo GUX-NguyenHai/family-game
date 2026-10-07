@@ -61,23 +61,3 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* Khung nhỏ cho người bị tụt lại: viền màu người chơi + tên, phần hình do canvas vẽ bên dưới */
-.race-mini {
-  position: absolute;
-  border: 3px solid var(--c);
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-}
-.race-mini b {
-  position: absolute;
-  left: -3px;
-  top: -3px;
-  padding: 2px 8px;
-  border-radius: 10px 0 10px 0;
-  background: var(--c);
-  color: #fff;
-  font-size: 0.85rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  white-space: nowrap;
-}

@@ -1,7 +1,6 @@
-// Đua thuyền – màn hình chung: cảnh sông 3D, bảng xếp hạng, thanh tiến độ, bản đồ nhỏ.
+// Đua thuyền – màn hình chung: cảnh sông 3D, bảng xếp hạng, thanh tiến độ, khung nhỏ cho thuyền bị tụt lại.
 // Ở phòng chờ cảnh 3D làm nền: các thuyền (theo người hoặc theo đội) xếp hàng ở vạch xuất phát.
 import { BoatScene } from './scene.js';
-import { Minimap } from './minimap.js';
 import { compile, decode } from '/js/core/state-codec.js';
 
 const catalog = await fetch('/games/boat-race/assets/boats.json').then(r => r.json());
@@ -46,17 +45,27 @@ export function create(ctx) {
     <div class="boat-hud" hidden>
       <ol class="boat-standings"></ol>
       <div class="boat-progress"><div class="finish">🏁</div></div>
-      <canvas class="boat-minimap" aria-label="Bản đồ khúc sông"></canvas>
     </div>`;
   const q = sel => root.querySelector(sel);
-  const scene = new BoatScene(q('.boat-scene'), ctx.manifest, catalog, ctx.quality, id => ctx.player(id));
-  const minimap = new Minimap(q('.boat-minimap'));
+  const scene = new BoatScene(q('.boat-scene'), ctx.manifest, catalog, ctx.quality, id => ctx.player(id), q('.boat-hud'));
   let trackLen = 400;
   let boatInfo = new Map(); // id thuyền → { name, color } của ván đang chơi
   let boatIds = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
-  let minimapAt = 0;
   let hudAt = 0;
+  let areaAt = 0;
   const islandToastAt = new Map();
+
+  // Chỗ trống 2 bên màn hình để đặt khung nhỏ cho thuyền bị tụt lại:
+  // bên trái từ dưới bảng xếp hạng tới đáy, bên phải cả chiều cao màn hình
+  // (thanh tiến độ nằm giữa phía trên, không đụng 2 cột này).
+  // Làm tròn để chỗ cố định của khung không bị tính lại vì lệch vài phần px.
+  function updateMiniArea() {
+    const standings = q('.boat-standings').getBoundingClientRect();
+    scene.setMiniArea({
+      left: { top: Math.round(standings.bottom + 12), bottom: window.innerHeight - 16 },
+      right: { top: 16, bottom: window.innerHeight - 16 },
+    });
+  }
 
   function boatName(id) {
     return boatInfo.get(id)?.name || '?';
@@ -91,7 +100,7 @@ export function create(ctx) {
         bar.append(m);
       }
       m.style.setProperty('--c', boatInfo.get(p.id)?.color || '#fff');
-      m.style.top = `${(1 - Math.min(1, p.z / trackLen)) * 100}%`;
+      m.style.left = `${Math.min(1, Math.max(0, p.z / trackLen)) * 100}%`;
     }
     for (const m of bar.querySelectorAll('.marker')) if (!seen.has(m.dataset.id)) m.remove();
   }
@@ -110,7 +119,6 @@ export function create(ctx) {
       boatInfo = new Map(info.boats.map(b => [b.id, b]));
       boatIds = info.boats.map(b => b.id);
       scene.setupRace(info);
-      minimap.setRace(info);
       q('.boat-progress').querySelectorAll('.marker').forEach(m => m.remove());
     },
 
@@ -118,14 +126,15 @@ export function create(ctx) {
       if (!boatIds.length) return; // chưa có setup thì chưa biết hàng nào là thuyền nào
       const s = decode(stateCodec, raw, boatIds);
       scene.pushSnapshot(s);
+      // Bảng xếp hạng vẽ lại ~5 lần/giây.
       const t = performance.now();
-      if (t - minimapAt > 100) {
-        minimapAt = t;
-        minimap.draw(s.p, scene.focus);
-      }
       if (t - hudAt > 200) {
         hudAt = t;
         renderHud(s);
+      }
+      if (t - areaAt > 500) {
+        areaAt = t;
+        updateMiniArea(); // bảng xếp hạng dài/ngắn theo số thuyền, cửa sổ đổi cỡ…
       }
     },
 
@@ -151,7 +160,6 @@ export function create(ctx) {
 
     destroy() {
       scene.destroy();
-      minimap.destroy();
       root.innerHTML = '';
     },
   };

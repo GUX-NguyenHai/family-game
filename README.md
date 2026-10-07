@@ -99,6 +99,7 @@ public/                       ── PHẦN CHUNG phía trình duyệt ──
   js/core/play.js             điện thoại: vào phòng, phòng chờ, chọn đội, màn kết quả; nạp games/<id>/controller
   js/core/sensors.js          cảm biến: lắc lên xuống, nghiêng, hất đầu máy, giật máy lên
   js/core/scene-kit.js        đồ nghề 3D (three.js): tải con vật/model, nhãn tên, chữ nổi, hạt hiệu ứng
+  js/core/mini-views.js       game đua 3D: khung nhỏ 2 bên màn hình cho người bị tụt lại (chỗ cố định theo làn)
   js/core/state-codec.js      giải mã trạng thái nhị phân từ server
   js/core/util.js, audio.js   tiện ích nhỏ, âm thanh bíp
   assets/animals.json         danh sách con vật (avatar người chơi) + hoạt ảnh
@@ -170,6 +171,7 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 | Gói Free/Pro, giới hạn số người | Khai báo `maxPlayers`, phần chung lấy số nhỏ hơn giữa gói và game |
 | Cảm biến điện thoại | `ctx.sensors.level` (lắc), `ctx.sensors.steer` (nghiêng), `onGesture('jump')` (hất hoặc giật máy) |
 | Đồ nghề 3D | Import từ `/js/core/scene-kit.js` |
+| Khung nhỏ cho người bị tụt lại (game đua) | `MiniViews` trong `/js/core/mini-views.js`, cách dùng ghi ở đầu file. Đua thú và Đua thuyền đang dùng |
 | Âm thanh, thông báo nổi trên TV | `ctx.beep()`, `ctx.fanfare()`, `ctx.toast()` |
 | Bắt lỗi | Lỗi trong code game được bắt và ghi log, không làm sập server |
 

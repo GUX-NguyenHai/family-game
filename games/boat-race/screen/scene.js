@@ -18,6 +18,7 @@ import {
   Label,
   Particles,
 } from '/js/core/scene-kit.js';
+import { MiniViews, behindText } from '/js/core/mini-views.js';
 
 export const FLAG = { STUN: 1, BUMP: 2, FINISHED: 4, BLOCKED: 8 };
 
@@ -422,11 +423,14 @@ function makeIsland(o, catalog) {
 // ---------- Cảnh chính ----------
 
 export class BoatScene {
-  constructor(canvas, manifest, catalog, quality = 'high', playerOf = () => null) {
+  // overlay: phần tử HTML phủ lên canvas để vẽ viền + tên cho các khung nhỏ.
+  constructor(canvas, manifest, catalog, quality = 'high', playerOf = () => null, overlay = null) {
     this.manifest = manifest;
     this.catalog = catalog;
     this.playerOf = playerOf;
     this.high = quality === 'high';
+    this.minis = []; // [{ id, v, p, rect }] các khung nhỏ của khung hình hiện tại
+    this.scenery = []; // cây, đồi, biển báo: ẩn khi vẽ khung nhỏ
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.high, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.high ? 2 : 1));
@@ -436,6 +440,8 @@ export class BoatScene {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x9fd8ff);
     this.scene.fog = new THREE.Fog(0xbfe6ff, 80, 240);
+    // Khung nhỏ cho thuyền bị tụt lại: chỗ cố định theo làn xuất phát (xem /js/core/mini-views.js).
+    this.miniViews = new MiniViews(this.renderer, this.scene, overlay, { high: this.high });
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.5, 600);
 
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x6a8f4e, 1.5));
@@ -490,6 +496,7 @@ export class BoatScene {
     const g = new THREE.Group();
     this.riverGroup = g;
     this.scene.add(g);
+    this.scenery = [];
 
     const len = trackLen + RIVER_EXTRA_BEFORE + RIVER_EXTRA_AFTER;
     const centerZ = -(len / 2 - RIVER_EXTRA_BEFORE);
@@ -547,6 +554,7 @@ export class BoatScene {
       const sign = textSprite(`${d}m`, { height: 0.7 });
       sign.position.set(-(half + 2.4), 1.6, -d);
       g.add(sign);
+      this.scenery.push(sign);
     }
 
     // Kiểu Basic: hàng phao chia làn.
@@ -587,6 +595,7 @@ export class BoatScene {
     }
     if (this.high) crowns.castShadow = true;
     g.add(trunks, crowns);
+    this.scenery.push(trunks, crowns);
 
     const hillMat = new THREE.MeshLambertMaterial({ color: 0x5da65a, flatShading: true });
     const hillGeo = new THREE.IcosahedronGeometry(1, 1);
@@ -596,6 +605,7 @@ export class BoatScene {
       hill.position.set(side * (70 + Math.random() * 40), -2, RIVER_EXTRA_BEFORE - (h / 16) * (len + 80));
       hill.scale.set(30 + Math.random() * 20, 10 + Math.random() * 10, 30 + Math.random() * 20);
       g.add(hill);
+      this.scenery.push(hill);
     }
   }
 
@@ -651,6 +661,8 @@ export class BoatScene {
       this.obstacleGroup.add(o.type === 'island' ? makeIsland(o, this.catalog) : makeLog(o, this.catalog));
     }
     for (const b of info.boats) this.boats.get(b.id)?.group.position.set(b.lane, 0, 0);
+    // Chỗ khung nhỏ theo làn xuất phát từ trái sang phải.
+    this.miniViews.setOrder([...info.boats].sort((a, b) => a.lane - b.lane).map(b => b.id));
     this.focus = 0;
   }
 
@@ -739,17 +751,31 @@ export class BoatScene {
     this.focus = damp(this.focus, target, 2.5, dt);
     this.updateCamera(this.focus);
 
+    // Tụt ra khỏi mép dưới khung hình: có khung nhỏ ở chỗ cố định của thuyền đó;
+    // không có chỗ (quá đông) thì chỉ hiện nhãn tên ở mép dưới.
+    // Khung hiện sớm/ẩn muộn quanh mép dưới (minZ) để không nhấp nháy, xem /js/core/mini-views.js.
     const minZ = this.focus - 3;
+    this.edgeZ = minZ;
+    const racing = s.state === 'racing';
+    const miniIds = this.miniViews.update(
+      s.boats.map(p => ({ id: p.id, z: p.z, active: racing && !(p.f & FLAG.FINISHED) })),
+      minZ,
+      now,
+    );
+    this.minis = [];
     const seen = new Set();
     for (const p of s.boats) {
       const v = this.boats.get(p.id);
       if (!v) continue;
       seen.add(p.id);
-      if (p.z < minZ) {
+      const mini = miniIds.get(p.id);
+      const out = p.z < minZ; // đã ra khỏi cảnh chính
+      if (out && !mini) {
         v.placeStraggler(p, this.focus - 2, this.focus - p.z);
         continue;
       }
       v.place(p, dt, now, s.state);
+      if (mini) this.minis.push({ id: p.id, v, p, rect: mini.rect, leaving: mini.leaving, out });
       // Bọt nước sau đuôi khi chèo nhanh.
       if (p.sp > 3 && Math.random() < (this.high ? 0.35 : 0.15)) {
         const tail = v.group.position.clone();
@@ -760,13 +786,62 @@ export class BoatScene {
       }
     }
     for (const [id, v] of this.boats) if (!seen.has(id)) v.group.visible = false;
+    // Thuyền vừa rời khung nhỏ: đánh dấu ở cảnh chính cho dễ tìm.
+    this.miniViews.updateMarkers(now, id => {
+      const v = this.boats.get(id);
+      return v?.group.visible && v.body.visible ? { pos: v.group.position, top: v.label.sprite.position.y, color: v.color, size: Math.max(1, v.halfLen / 1.4) } : null;
+    });
+  }
+
+  // Màn hình chung báo chỗ trống 2 bên (tránh bảng xếp hạng).
+  setMiniArea(area) {
+    this.miniViews.setArea(area);
+  }
+
+  // Vẽ các khung nhỏ: camera sau đuôi thuyền, bám theo thuyền cả khi lái sang ngang (kiểu Pro).
+  // Ẩn cây cối, đồi; vẫn thấy khúc gỗ, đảo và thuyền khác ở gần để còn né.
+  renderMinis() {
+    let saved = [];
+    const views = this.minis.map(({ id, v, p, rect, leaving }) => ({
+      id,
+      rect,
+      leaving,
+      color: v.color,
+      text: behindText(v.name, this.edgeZ - p.z),
+      aim: cam => {
+        cam.position.set(p.x, 3.6, -(p.z - 6.5 - v.halfLen));
+        cam.lookAt(p.x, 0.5, -(p.z + 9));
+      },
+    }));
+    this.miniViews.draw(views, {
+      begin: () => {
+        // Chỉ vẽ thuyền đang nổi trên sông (kể cả thuyền có khung), không vẽ nhãn tên.
+        saved = [...this.boats.values()].map(v => [v, v.group.visible]);
+        for (const v of this.boats.values()) {
+          v.group.visible = v.body.visible && (v.group.visible || this.minis.some(m => m.v === v));
+          v.label.sprite.visible = false;
+        }
+        for (const o of this.scenery) o.visible = false;
+      },
+      end: () => {
+        for (const [v, visible] of saved) {
+          v.group.visible = visible;
+          v.label.sprite.visible = true;
+        }
+        for (const o of this.scenery) o.visible = true;
+      },
+    });
   }
 
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
     const now = performance.now();
+    this.minis = [];
     if (this.mode === 'race') this.updateRace(dt, now);
-    else this.updateLobby(dt, now);
+    else {
+      this.updateLobby(dt, now);
+      this.miniViews.updateMarkers(now, () => null); // về phòng chờ: ẩn dấu còn sót
+    }
 
     // Nước chảy: trượt texture về phía người xem.
     if (this.water) this.water.material.map.offset.y -= dt * 0.08;
@@ -775,12 +850,16 @@ export class BoatScene {
     }
     for (const v of this.boats.values()) v.update(dt);
     this.particles.update(dt);
+    // Cảnh chính không vẽ những thuyền có khung nhỏ mà đã ra khỏi khung hình (ở sau lưng camera).
+    for (const m of this.minis) if (m.out) m.v.group.visible = false;
     this.renderer.render(this.scene, this.camera);
+    this.renderMinis();
   }
 
   destroy() {
     this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.onResize);
+    this.miniViews.destroy();
     for (const v of this.boats.values()) v.dispose();
     this.boats.clear();
     this.clearObstacles();

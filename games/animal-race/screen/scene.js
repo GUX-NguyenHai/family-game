@@ -15,6 +15,7 @@ import {
   Label,
   Particles,
 } from '/js/core/scene-kit.js';
+import { MiniViews, behindText } from '/js/core/mini-views.js';
 
 export const FLAG = { STUN: 1, JUMP: 2, MUD: 4, FINISHED: 8 };
 
@@ -285,27 +286,13 @@ function makeObstacle(o) {
 
 // ---------- Cảnh chính ----------
 
-// Khung nhỏ cho người bị tụt lại (ra khỏi cảnh chính): mỗi người một chỗ cố định cả ván, xếp 2 cột trái/phải theo làn.
-// Tụt lại thì khung hiện ở đúng chỗ đó, đuổi kịp thì ẩn. Khung chỉ vẽ làn của người đó (ẩn cây cối, người khác, vật cản làn khác) cho nhẹ.
-const MINI_RATIO = 0.62; // cao / rộng
-const MINI_MIN_H = 64; // nhỏ nhất; thu tới mức này vẫn không đủ chỗ thì người ở làn giữa không có khung, chỉ hiện nhãn tên ở mép dưới
-const MINI_GAP = 10;
-const MINI_MARGIN = 16;
-const MINI_LOW_MAX = 4; // Đồ hoạ Thấp: tối đa số khung vẽ cùng lúc (ưu tiên người gần nhất)
-
 export class RaceScene {
   // overlay: phần tử HTML phủ lên canvas để vẽ viền + tên cho các khung nhỏ.
   constructor(canvas, manifest, quality = 'high', overlay = null) {
     this.manifest = manifest;
     this.high = quality === 'high';
     this.modelYaw = manifest.modelYaw;
-    this.overlay = overlay;
-    this.miniCam = new THREE.PerspectiveCamera(45, 1.6, 0.3, 90);
-    this.miniArea = null; // { left: {top, bottom}, right: {top, bottom} } (px): chỗ trống 2 bên để đặt khung
     this.minis = []; // [{ id, r, p, rect }] các khung nhỏ của khung hình hiện tại
-    this.miniFrames = new Map(); // id → phần tử viền + tên
-    this.slots = new Map(); // id → chỗ cố định của khung (xem miniSlots)
-    this.slotKey = null;
     this.scenery = []; // cây, đồi, rào biên, biển báo: ẩn khi vẽ khung nhỏ
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.high, powerPreference: 'high-performance' });
@@ -316,6 +303,8 @@ export class RaceScene {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x9fd8ff);
     this.scene.fog = new THREE.Fog(0xbfe6ff, 80, 240);
+    // Khung nhỏ cho người bị tụt lại: chỗ cố định theo làn, chỉ vẽ làn của người đó (xem /js/core/mini-views.js).
+    this.miniViews = new MiniViews(this.renderer, this.scene, overlay, { high: this.high });
 
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.5, 600);
 
@@ -353,8 +342,7 @@ export class RaceScene {
   destroy() {
     this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.onResize);
-    for (const el of this.miniFrames.values()) el.remove();
-    this.miniFrames.clear();
+    this.miniViews.destroy();
     for (const r of this.runners.values()) r.dispose();
     this.runners.clear();
     this.clearObstacles();
@@ -545,8 +533,7 @@ export class RaceScene {
     this.snapshots = [];
     this.jumpMs = info.jumpMs || 900;
     this.racerIds = new Set(info.racers);
-    this.racerOrder = info.racers; // thứ tự làn từ trái sang phải
-    this.slotKey = null;
+    this.miniViews.setOrder(info.racers); // thứ tự làn từ trái sang phải
     this.buildTrack(info.width, info.trackLen);
     this.clearObstacles();
     for (const o of info.obstacles) {
@@ -655,132 +642,80 @@ export class RaceScene {
     // Tụt ra khỏi mép dưới khung hình: có khung nhỏ riêng (gần nhất được ưu tiên);
     // hết chỗ đặt khung thì chỉ hiện nhãn tên ở mép dưới như cũ.
     // Mỗi người có chỗ cố định cả ván (theo làn), chỉ hiện/ẩn khung, không đổi chỗ.
+    // Khung hiện sớm/ẩn muộn quanh mép dưới (minZ) để không nhấp nháy, xem /js/core/mini-views.js.
     const minZ = this.focus - 2.5;
-    const slots = this.miniSlots();
-    let behind = s.state === 'racing' ? s.players.filter(p => p.z < minZ && !(p.f & FLAG.FINISHED) && slots.has(p.id)) : [];
-    if (!this.high) behind = behind.sort((a, b) => b.z - a.z).slice(0, MINI_LOW_MAX); // máy yếu: giới hạn số khung vẽ cùng lúc
-    const miniIds = new Map(behind.map(p => [p.id, slots.get(p.id)]));
+    this.edgeZ = minZ;
+    const racing = s.state === 'racing';
+    const miniIds = this.miniViews.update(
+      s.players.map(p => ({ id: p.id, z: p.z, active: racing && !(p.f & FLAG.FINISHED) })),
+      minZ,
+      now,
+    );
     this.minis = [];
     const seen = new Set();
     for (const p of s.players) {
       const r = this.runners.get(p.id);
       if (!r) continue;
       seen.add(p.id);
-      if (miniIds.has(p.id)) {
-        r.placeRace(p, p.z, 0, dt, now, s.state, this.jumpMs);
-        this.minis.push({ id: p.id, r, p, rect: miniIds.get(p.id), behind: this.focus - p.z });
-        continue;
-      }
-      if (p.z < minZ) {
+      const mini = miniIds.get(p.id);
+      const out = p.z < minZ; // đã ra khỏi cảnh chính
+      if (out && !mini) {
         r.placeStraggler(p, this.focus - 2, this.focus - p.z);
         continue;
       }
       r.placeRace(p, p.z, 0, dt, now, s.state, this.jumpMs);
+      if (mini) this.minis.push({ id: p.id, r, p, rect: mini.rect, leaving: mini.leaving, out });
     }
     for (const [id, r] of this.runners) if (!seen.has(id)) r.group.visible = false;
+    // Người vừa rời khung nhỏ: đánh dấu ở cảnh chính cho dễ tìm.
+    this.miniViews.updateMarkers(now, id => {
+      const r = this.runners.get(id);
+      return r?.group.visible ? { pos: r.group.position, top: r.label.sprite.position.y, color: r.color } : null;
+    });
   }
 
   // ---------- Khung nhỏ cho người bị tụt lại ----------
 
   // Màn hình chung báo chỗ trống 2 bên (tránh bảng xếp hạng).
   setMiniArea(area) {
-    this.miniArea = area;
+    this.miniViews.setArea(area);
   }
 
-  // Chỗ cố định của từng người (id → {x, y, w, h} px, gốc trên-trái), tính theo thứ tự làn:
-  // các làn bên trái xếp cột trái, các làn bên phải xếp cột phải, từ trên xuống.
-  // Mọi khung cùng cỡ, cỡ lớn nhất mà vẫn đủ chỗ cho cả ván. Chỉ tính lại khi chỗ trống/cửa sổ đổi.
-  miniSlots() {
-    const area = this.miniArea;
-    const ids = this.racerOrder || [];
-    const W = window.innerWidth;
-    const key = area ? `${W}|${area.left.top}|${area.left.bottom}|${area.right.top}|${area.right.bottom}|${ids.join(',')}` : '';
-    if (key === this.slotKey) return this.slots;
-    this.slotKey = key;
-    this.slots = new Map();
-    const n = ids.length;
-    if (!area || !n) return this.slots;
-
-    const bandH = side => Math.max(0, area[side].bottom - area[side].top);
-    const cap = (side, h) => Math.floor((bandH(side) + MINI_GAP) / (h + MINI_GAP));
-    // Thu nhỏ dần tới khi 2 cột đủ chỗ cho tất cả; nhỏ tới mức tối thiểu vẫn thiếu thì một số người không có khung.
-    let h = Math.max(MINI_MIN_H, W * 0.17 * MINI_RATIO);
-    while (h > MINI_MIN_H && cap('left', h) + cap('right', h) < n) h -= 2;
-    const capL = cap('left', h);
-    const capR = cap('right', h);
-    // Chia đôi theo làn; một bên thiếu chỗ thì bên kia nhận thêm.
-    const nLeft = Math.min(capL, Math.max(Math.ceil(n / 2), n - capR));
-    const nRight = Math.min(capR, n - nLeft);
-    const w = h / MINI_RATIO;
-    ids.slice(0, nLeft).forEach((id, i) => {
-      this.slots.set(id, { x: MINI_MARGIN, y: area.left.top + i * (h + MINI_GAP), w, h });
-    });
-    ids.slice(n - nRight).forEach((id, i) => {
-      this.slots.set(id, { x: W - MINI_MARGIN - w, y: area.right.top + i * (h + MINI_GAP), w, h });
-    });
-    return this.slots;
-  }
-
-  // Vẽ từng khung nhỏ: camera sau lưng con vật, chỉ hiện làn của nó.
+  // Vẽ các khung nhỏ: camera sau lưng con vật, chỉ hiện con đó và vật cản trong làn của nó.
   renderMinis() {
-    const H = window.innerHeight;
-    const renderer = this.renderer;
-    const shadowAuto = renderer.shadowMap.autoUpdate;
-    renderer.shadowMap.autoUpdate = false; // dùng lại bóng đã tính cho cảnh chính, không tính lại
-    const visibleRunners = [...this.runners.values()].filter(r => r.group.visible);
-    for (const r of visibleRunners) r.group.visible = false;
-    for (const o of this.scenery) o.visible = false;
-    renderer.setScissorTest(true);
-
-    for (const m of this.minis) {
-      const { r, p, rect } = m;
-      r.group.visible = true;
-      r.label.sprite.visible = false; // tên đã có ở viền khung
-      for (const o of this.obstacles.values()) o.visible = Math.abs(o.position.x - p.x) < 0.5;
-      this.miniCam.aspect = rect.w / rect.h;
-      this.miniCam.updateProjectionMatrix();
-      this.miniCam.position.set(p.x, 3.4, -(p.z - 6.5));
-      this.miniCam.lookAt(p.x, 0.6, -(p.z + 9));
-      const y = H - rect.y - rect.h; // WebGL tính từ dưới lên
-      renderer.setViewport(rect.x, y, rect.w, rect.h);
-      renderer.setScissor(rect.x, y, rect.w, rect.h);
-      renderer.render(this.scene, this.miniCam);
-      r.group.visible = false;
-      r.label.sprite.visible = true;
-    }
-
-    renderer.setScissorTest(false);
-    renderer.setViewport(0, 0, window.innerWidth, H);
-    renderer.shadowMap.autoUpdate = shadowAuto;
-    for (const o of this.obstacles.values()) o.visible = true;
-    for (const o of this.scenery) o.visible = true;
-    for (const r of visibleRunners) r.group.visible = true;
-  }
-
-  // Viền màu + tên + khoảng cách cho từng khung (HTML phủ lên canvas).
-  syncMiniFrames() {
-    if (!this.overlay) return;
-    const keep = new Set();
-    for (const m of this.minis) {
-      keep.add(m.id);
-      let el = this.miniFrames.get(m.id);
-      if (!el) {
-        el = document.createElement('div');
-        el.className = 'race-mini';
-        el.innerHTML = '<b></b>';
-        this.overlay.append(el);
-        this.miniFrames.set(m.id, el);
-      }
-      const { x, y, w, h } = m.rect;
-      el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;--c:${m.r.color}`;
-      const text = `${m.r.name} ↓${Math.max(5, Math.round(m.behind / 5) * 5)}m`;
-      if (el.firstChild.textContent !== text) el.firstChild.textContent = text;
-    }
-    for (const [id, el] of this.miniFrames) {
-      if (keep.has(id)) continue;
-      el.remove();
-      this.miniFrames.delete(id);
-    }
+    let shown = [];
+    const views = this.minis.map(({ id, r, p, rect, leaving }) => ({
+      id,
+      rect,
+      leaving,
+      color: r.color,
+      text: behindText(r.name, this.edgeZ - p.z),
+      aim: cam => {
+        cam.position.set(p.x, 3.4, -(p.z - 6.5));
+        cam.lookAt(p.x, 0.6, -(p.z + 9));
+      },
+      before: () => {
+        r.group.visible = true;
+        r.label.sprite.visible = false; // tên đã có ở viền khung
+        for (const o of this.obstacles.values()) o.visible = Math.abs(o.position.x - p.x) < 0.5;
+      },
+      after: () => {
+        r.group.visible = false;
+        r.label.sprite.visible = true;
+      },
+    }));
+    this.miniViews.draw(views, {
+      begin: () => {
+        shown = [...this.runners.values()].filter(r => r.group.visible);
+        for (const r of shown) r.group.visible = false;
+        for (const o of this.scenery) o.visible = false;
+      },
+      end: () => {
+        for (const o of this.obstacles.values()) o.visible = true;
+        for (const o of this.scenery) o.visible = true;
+        for (const r of shown) r.group.visible = true;
+      },
+    });
   }
 
   frame() {
@@ -788,14 +723,16 @@ export class RaceScene {
     const now = performance.now();
     this.minis = [];
     if (this.mode === 'race') this.updateRace(dt, now);
-    else this.updateLobby(dt, now);
+    else {
+      this.updateLobby(dt, now);
+      this.miniViews.updateMarkers(now, () => null); // về phòng chờ: ẩn dấu còn sót
+    }
 
     for (const r of this.runners.values()) r.mixer?.update(dt);
     this.particles.update(dt);
-    // Cảnh chính không vẽ những con đang có khung nhỏ (chúng ở sau lưng camera).
-    for (const m of this.minis) m.r.group.visible = false;
+    // Cảnh chính không vẽ những con có khung nhỏ mà đã ra khỏi khung hình (ở sau lưng camera).
+    for (const m of this.minis) if (m.out) m.r.group.visible = false;
     this.renderer.render(this.scene, this.camera);
-    if (this.minis.length) this.renderMinis();
-    this.syncMiniFrames();
+    this.renderMinis();
   }
 }
