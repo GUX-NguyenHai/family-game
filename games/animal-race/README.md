@@ -34,8 +34,7 @@ Tốc độ tối đa ở cả 3 mức là 19 m/s.
 | `service/simulation.js` | Mô phỏng: tạo vật cản theo làn, chạy, nhảy, về đích, bot |
 | `service/index.js` | Khai báo game, nối input (`move`, `jump`) với mô phỏng, gửi trạng thái nhị phân cho TV |
 | `assets/schema.json` | Định dạng trạng thái nhị phân gửi cho TV |
-| `screen/scene.js` | Cảnh 3D: đường đua, con vật, vật cản, camera bám đoàn dẫn đầu. **Người bị tụt lại có khung nhỏ riêng** ở 2 bên màn hình (chỉ vẽ làn của người đó, thấy rào/bùn sắp tới để canh nhảy); tối đa 4 khung mỗi bên (2 khi Đồ hoạ Thấp), hết chỗ thì chỉ hiện nhãn tên ở mép dưới |
-| `screen/minimap.js` | Bản đồ nhỏ góc dưới phải |
+| `screen/scene.js` | Cảnh 3D: đường đua, con vật, vật cản, camera bám đoàn dẫn đầu. **Người bị tụt lại có khung nhỏ riêng** ở 2 bên màn hình (chỉ vẽ làn của người đó, thấy rào/bùn sắp tới để canh nhảy). Mỗi người **một chỗ cố định cả ván** theo làn (làn bên trái → cột trái, làn bên phải → cột phải, từ trên xuống): tụt lại thì khung hiện đúng chỗ đó, đuổi kịp thì ẩn. Đồ hoạ Thấp vẽ tối đa 4 khung cùng lúc; quá đông không đủ chỗ thì người không có khung chỉ hiện nhãn tên ở mép dưới |
 | `controller/index.js` | Tay cầm không nút: thanh lắc, khung lớn nháy khi nhảy, thử cảm biến ở phòng chờ |
 
 Phím `Y` trên TV xoay model con vật 90° nếu con vật chạy sai hướng. Ghi số hiện ra vào `modelYaw` trong `public/assets/animals.json`.

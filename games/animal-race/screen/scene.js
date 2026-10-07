@@ -285,12 +285,13 @@ function makeObstacle(o) {
 
 // ---------- Cảnh chính ----------
 
-// Khung nhỏ cho người bị tụt lại (ra khỏi cảnh chính): mỗi người một khung, xếp 2 cột trái/phải.
-// Khung chỉ vẽ làn của người đó (ẩn cây cối, người khác, vật cản làn khác) cho nhẹ.
+// Khung nhỏ cho người bị tụt lại (ra khỏi cảnh chính): mỗi người một chỗ cố định cả ván, xếp 2 cột trái/phải theo làn.
+// Tụt lại thì khung hiện ở đúng chỗ đó, đuổi kịp thì ẩn. Khung chỉ vẽ làn của người đó (ẩn cây cối, người khác, vật cản làn khác) cho nhẹ.
 const MINI_RATIO = 0.62; // cao / rộng
-const MINI_MIN_H = 64; // khung thấp hơn mức này thì không đủ chỗ, người đó chỉ hiện nhãn tên ở mép dưới
+const MINI_MIN_H = 64; // nhỏ nhất; thu tới mức này vẫn không đủ chỗ thì người ở làn giữa không có khung, chỉ hiện nhãn tên ở mép dưới
 const MINI_GAP = 10;
 const MINI_MARGIN = 16;
+const MINI_LOW_MAX = 4; // Đồ hoạ Thấp: tối đa số khung vẽ cùng lúc (ưu tiên người gần nhất)
 
 export class RaceScene {
   // overlay: phần tử HTML phủ lên canvas để vẽ viền + tên cho các khung nhỏ.
@@ -303,6 +304,8 @@ export class RaceScene {
     this.miniArea = null; // { left: {top, bottom}, right: {top, bottom} } (px): chỗ trống 2 bên để đặt khung
     this.minis = []; // [{ id, r, p, rect }] các khung nhỏ của khung hình hiện tại
     this.miniFrames = new Map(); // id → phần tử viền + tên
+    this.slots = new Map(); // id → chỗ cố định của khung (xem miniSlots)
+    this.slotKey = null;
     this.scenery = []; // cây, đồi, rào biên, biển báo: ẩn khi vẽ khung nhỏ
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.high, powerPreference: 'high-performance' });
@@ -542,6 +545,8 @@ export class RaceScene {
     this.snapshots = [];
     this.jumpMs = info.jumpMs || 900;
     this.racerIds = new Set(info.racers);
+    this.racerOrder = info.racers; // thứ tự làn từ trái sang phải
+    this.slotKey = null;
     this.buildTrack(info.width, info.trackLen);
     this.clearObstacles();
     for (const o of info.obstacles) {
@@ -649,10 +654,12 @@ export class RaceScene {
 
     // Tụt ra khỏi mép dưới khung hình: có khung nhỏ riêng (gần nhất được ưu tiên);
     // hết chỗ đặt khung thì chỉ hiện nhãn tên ở mép dưới như cũ.
+    // Mỗi người có chỗ cố định cả ván (theo làn), chỉ hiện/ẩn khung, không đổi chỗ.
     const minZ = this.focus - 2.5;
-    const behind = s.state === 'racing' ? s.players.filter(p => p.z < minZ && !(p.f & FLAG.FINISHED)).sort((a, b) => b.z - a.z) : [];
-    const rects = this.layoutMinis(behind.length);
-    const miniIds = new Map(behind.slice(0, rects.length).map((p, i) => [p.id, rects[i]]));
+    const slots = this.miniSlots();
+    let behind = s.state === 'racing' ? s.players.filter(p => p.z < minZ && !(p.f & FLAG.FINISHED) && slots.has(p.id)) : [];
+    if (!this.high) behind = behind.sort((a, b) => b.z - a.z).slice(0, MINI_LOW_MAX); // máy yếu: giới hạn số khung vẽ cùng lúc
+    const miniIds = new Map(behind.map(p => [p.id, slots.get(p.id)]));
     this.minis = [];
     const seen = new Set();
     for (const p of s.players) {
@@ -675,41 +682,43 @@ export class RaceScene {
 
   // ---------- Khung nhỏ cho người bị tụt lại ----------
 
-  // Màn hình chung báo chỗ trống 2 bên (tránh bảng xếp hạng, thanh tiến độ, bản đồ nhỏ).
+  // Màn hình chung báo chỗ trống 2 bên (tránh bảng xếp hạng).
   setMiniArea(area) {
     this.miniArea = area;
   }
 
-  // Vị trí các khung (px, gốc trên-trái), xen kẽ trái/phải theo thứ tự ưu tiên. Thiếu chỗ thì trả về ít hơn n.
-  layoutMinis(n) {
+  // Chỗ cố định của từng người (id → {x, y, w, h} px, gốc trên-trái), tính theo thứ tự làn:
+  // các làn bên trái xếp cột trái, các làn bên phải xếp cột phải, từ trên xuống.
+  // Mọi khung cùng cỡ, cỡ lớn nhất mà vẫn đủ chỗ cho cả ván. Chỉ tính lại khi chỗ trống/cửa sổ đổi.
+  miniSlots() {
     const area = this.miniArea;
-    if (!area || !n) return [];
+    const ids = this.racerOrder || [];
     const W = window.innerWidth;
-    const maxPerSide = this.high ? 4 : 2;
-    const cols = { left: [], right: [] };
-    const want = { left: Math.min(maxPerSide, Math.ceil(n / 2)), right: Math.min(maxPerSide, Math.floor(n / 2)) };
-    if (n === 1) want.right = 0;
-    for (const side of ['left', 'right']) {
-      const band = area[side];
-      let k = want[side];
-      if (!band || !k) continue;
-      const bandH = band.bottom - band.top;
-      // Thu nhỏ khung cho vừa; thấp quá thì bớt số khung bên này.
-      while (k > 0 && (bandH - (k - 1) * MINI_GAP) / k < MINI_MIN_H) k--;
-      if (!k) continue;
-      const h = Math.min(W * 0.17 * MINI_RATIO, (bandH - (k - 1) * MINI_GAP) / k);
-      const w = h / MINI_RATIO;
-      for (let i = 0; i < k; i++) {
-        cols[side].push({ x: side === 'left' ? MINI_MARGIN : W - MINI_MARGIN - w, y: band.top + i * (h + MINI_GAP), w, h });
-      }
-    }
-    // Ưu tiên xen kẽ: trái 1, phải 1, trái 2, phải 2…
-    const out = [];
-    for (let i = 0; i < maxPerSide; i++) {
-      if (cols.left[i]) out.push(cols.left[i]);
-      if (cols.right[i]) out.push(cols.right[i]);
-    }
-    return out.slice(0, n);
+    const key = area ? `${W}|${area.left.top}|${area.left.bottom}|${area.right.top}|${area.right.bottom}|${ids.join(',')}` : '';
+    if (key === this.slotKey) return this.slots;
+    this.slotKey = key;
+    this.slots = new Map();
+    const n = ids.length;
+    if (!area || !n) return this.slots;
+
+    const bandH = side => Math.max(0, area[side].bottom - area[side].top);
+    const cap = (side, h) => Math.floor((bandH(side) + MINI_GAP) / (h + MINI_GAP));
+    // Thu nhỏ dần tới khi 2 cột đủ chỗ cho tất cả; nhỏ tới mức tối thiểu vẫn thiếu thì một số người không có khung.
+    let h = Math.max(MINI_MIN_H, W * 0.17 * MINI_RATIO);
+    while (h > MINI_MIN_H && cap('left', h) + cap('right', h) < n) h -= 2;
+    const capL = cap('left', h);
+    const capR = cap('right', h);
+    // Chia đôi theo làn; một bên thiếu chỗ thì bên kia nhận thêm.
+    const nLeft = Math.min(capL, Math.max(Math.ceil(n / 2), n - capR));
+    const nRight = Math.min(capR, n - nLeft);
+    const w = h / MINI_RATIO;
+    ids.slice(0, nLeft).forEach((id, i) => {
+      this.slots.set(id, { x: MINI_MARGIN, y: area.left.top + i * (h + MINI_GAP), w, h });
+    });
+    ids.slice(n - nRight).forEach((id, i) => {
+      this.slots.set(id, { x: W - MINI_MARGIN - w, y: area.right.top + i * (h + MINI_GAP), w, h });
+    });
+    return this.slots;
   }
 
   // Vẽ từng khung nhỏ: camera sau lưng con vật, chỉ hiện làn của nó.

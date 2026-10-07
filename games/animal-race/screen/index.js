@@ -1,7 +1,6 @@
-// Đua thú – màn hình chung: cảnh 3D, bảng xếp hạng, thanh tiến độ, bản đồ nhỏ.
+// Đua thú – màn hình chung: cảnh 3D, bảng xếp hạng, thanh tiến độ, khung nhỏ cho người bị tụt lại.
 // Ở phòng chờ cảnh 3D làm nền (các con vật đứng ở vạch xuất phát).
 import { RaceScene, FLAG } from './scene.js';
-import { Minimap } from './minimap.js';
 import { compile, decode } from '/js/core/state-codec.js';
 
 // Trạng thái từ server là nhị phân, giải mã theo cùng schema với server.
@@ -14,26 +13,23 @@ export function create(ctx) {
     <div class="race-hud" hidden>
       <ol class="race-standings"></ol>
       <div class="race-progress"><div class="finish">🏁</div></div>
-      <canvas class="race-minimap" aria-label="Bản đồ đường đua"></canvas>
     </div>`;
   const q = sel => root.querySelector(sel);
   const scene = new RaceScene(q('.race-scene'), ctx.manifest, ctx.quality, q('.race-hud'));
-  const minimap = new Minimap(q('.race-minimap'));
   let trackLen = 400;
   let racerIds = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
-  let minimapAt = 0;
   let hudAt = 0;
   let areaAt = 0;
 
   // Chỗ trống 2 bên màn hình để đặt khung nhỏ cho người bị tụt lại:
-  // bên trái từ dưới bảng xếp hạng tới trên thanh tiến độ, bên phải từ trên cùng tới trên bản đồ nhỏ.
+  // bên trái từ dưới bảng xếp hạng tới đáy, bên phải cả chiều cao màn hình
+  // (thanh tiến độ nằm giữa phía trên, không đụng 2 cột này).
+  // Làm tròn để chỗ cố định của khung không bị tính lại vì lệch vài phần px.
   function updateMiniArea() {
     const standings = q('.race-standings').getBoundingClientRect();
-    const progress = q('.race-progress').getBoundingClientRect();
-    const map = q('.race-minimap').getBoundingClientRect();
     scene.setMiniArea({
-      left: { top: standings.bottom + 12, bottom: progress.top - 52 }, // chừa chỗ cho cờ 🏁 trên thanh tiến độ
-      right: { top: 16, bottom: map.top - 12 },
+      left: { top: Math.round(standings.bottom + 12), bottom: window.innerHeight - 16 },
+      right: { top: 16, bottom: window.innerHeight - 16 },
     });
   }
 
@@ -75,7 +71,7 @@ export function create(ctx) {
         bar.append(m);
       }
       m.style.setProperty('--c', ctx.player(p.id)?.color || '#fff');
-      m.style.top = `${(1 - Math.min(1, p.z / trackLen)) * 100}%`;
+      m.style.left = `${Math.min(1, Math.max(0, p.z / trackLen)) * 100}%`;
     }
     for (const m of bar.querySelectorAll('.marker')) if (!seen.has(m.dataset.id)) m.remove();
   }
@@ -83,7 +79,6 @@ export function create(ctx) {
   return {
     onRoom(info) {
       if (info.state === 'lobby' && info.preview?.trackLen) trackLen = info.preview.trackLen;
-      minimap.setColors(info.players);
       scene.setPlayers(info.players, info.state, trackLen);
       q('.race-hud').hidden = info.state === 'lobby';
     },
@@ -93,19 +88,14 @@ export function create(ctx) {
       trackLen = info.trackLen;
       racerIds = info.racers;
       scene.setupRace(info);
-      minimap.setRace(info);
     },
 
     onState(raw) {
       if (!racerIds.length) return; // chưa có setup thì chưa biết hàng nào là ai
       const s = decode(stateCodec, raw, racerIds);
       scene.pushSnapshot(s);
-      // Bản đồ nhỏ vẽ lại ~10 lần/giây, bảng xếp hạng ~5 lần/giây.
+      // Bảng xếp hạng vẽ lại ~5 lần/giây.
       const t = performance.now();
-      if (t - minimapAt > 100) {
-        minimapAt = t;
-        minimap.draw(s.p, scene.focus);
-      }
       if (t - hudAt > 200) {
         hudAt = t;
         renderHud(s);
@@ -132,7 +122,6 @@ export function create(ctx) {
     destroy() {
       window.removeEventListener('keydown', onKey);
       scene.destroy();
-      minimap.destroy();
       root.innerHTML = '';
     },
   };
