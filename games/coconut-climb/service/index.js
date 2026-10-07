@@ -3,6 +3,10 @@
 const C = require('./config');
 const simulation = require('./simulation');
 const catalog = require('../assets/figures.json');
+const codec = require('../../../src/state-codec');
+
+// Trạng thái gửi cho TV mã hoá nhị phân theo schema (TV giải mã bằng cùng file).
+const stateCodec = codec.compile(require('../assets/schema.json'));
 
 const FIGURE_IDS = catalog.figures.map(f => f.id);
 
@@ -61,18 +65,13 @@ function createMatch({ players, options, now, startAt, api }) {
       if (g.phase === 'done' && g.endedAt === now) api.finish(simulation.results(g));
     },
 
+    // Nhị phân ~3 byte + 5 byte mỗi người, theo thứ tự setup().players.
     hostState(now) {
-      return {
+      return codec.encode(stateCodec, {
         phase: g.phase,
         timeLeft: timeLeft(now),
-        p: g.climbers.map(c => ({
-          id: c.id,
-          y: round(c.y, 100),
-          d: round(c.driveEff, 10),
-          f: simulation.flagsOf(c),
-          r: c.rank,
-        })),
-      };
+        p: g.climbers.map(c => ({ y: c.y, d: c.driveEff, f: simulation.flagsOf(c), r: c.rank })),
+      });
     },
 
     playerState(pid, now) {
@@ -109,6 +108,7 @@ module.exports = {
   bots: true,
   sensors: true,
   tickHz: C.TICK_HZ,
+  hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
   goText: 'LEO!',

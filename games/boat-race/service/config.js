@@ -2,6 +2,7 @@
 // Các tham số trong DIFFICULTIES (cuối file) ghi đè theo độ khó phòng chọn.
 module.exports = {
   TICK_HZ: 30,
+  HOST_UPDATE_EVERY: 2, // gửi trạng thái cho TV ~15 lần/giây (TV tự nội suy cho mượt)
   PLAYER_UPDATE_EVERY: 3, // gửi trạng thái riêng cho điện thoại ~10 lần/giây
   COUNTDOWN_MS: 3000,
   FINISH_TIMEOUT_MS: 15000, // thuyền đầu tiên về đích rồi, chờ các thuyền khác tối đa bấy nhiêu

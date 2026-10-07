@@ -1,0 +1,13 @@
+{
+  "_ghi_chu": "Trạng thái gửi cho TV dạng nhị phân (xem src/state-codec.js). Mỗi hàng là 1 người kéo, theo thứ tự setup().order. rope: vị trí dấu giữa dây (m, âm = về phía Đỏ); forces: lực 2 đội (0..1); winner: đội thắng (null = chưa); timeLeft: ms còn lại (bước 10ms); d: mức kéo từng người (0..1).",
+  "rows": "p",
+  "head": [
+    ["phase", "enum", ["countdown", "pull", "end", "done"]],
+    ["rope", "i16", 100],
+    ["forces", "u8*2", 100],
+    ["winner", "u8?"],
+    ["byTime", "bool"],
+    ["timeLeft", "u16", 0.1]
+  ],
+  "row": [["d", "u8", 100]]
+}

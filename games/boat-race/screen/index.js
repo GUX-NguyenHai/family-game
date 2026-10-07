@@ -2,8 +2,11 @@
 // Ở phòng chờ cảnh 3D làm nền: các thuyền (theo người hoặc theo đội) xếp hàng ở vạch xuất phát.
 import { BoatScene } from './scene.js';
 import { Minimap } from './minimap.js';
+import { compile, decode } from '/js/core/state-codec.js';
 
 const catalog = await fetch('/games/boat-race/assets/boats.json').then(r => r.json());
+// Trạng thái từ server là nhị phân, giải mã theo cùng schema với server.
+const stateCodec = compile(await fetch('/games/boat-race/assets/schema.json').then(r => r.json()));
 
 // Phải khớp với BOAT_HALF_LEN_BASE / BOAT_HALF_LEN_PER_SEAT trong service/config.js.
 const halfLenFor = seats => 1.3 + 0.35 * seats;
@@ -50,6 +53,7 @@ export function create(ctx) {
   const minimap = new Minimap(q('.boat-minimap'));
   let trackLen = 400;
   let boatInfo = new Map(); // id thuyền → { name, color } của ván đang chơi
+  let boatIds = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
   let minimapAt = 0;
   let hudAt = 0;
   const islandToastAt = new Map();
@@ -104,12 +108,15 @@ export function create(ctx) {
       if (!info) return;
       trackLen = info.trackLen;
       boatInfo = new Map(info.boats.map(b => [b.id, b]));
+      boatIds = info.boats.map(b => b.id);
       scene.setupRace(info);
       minimap.setRace(info);
       q('.boat-progress').querySelectorAll('.marker').forEach(m => m.remove());
     },
 
-    onState(s) {
+    onState(raw) {
+      if (!boatIds.length) return; // chưa có setup thì chưa biết hàng nào là thuyền nào
+      const s = decode(stateCodec, raw, boatIds);
       scene.pushSnapshot(s);
       const t = performance.now();
       if (t - minimapAt > 100) {

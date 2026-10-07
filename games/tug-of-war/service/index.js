@@ -2,6 +2,10 @@
 // Mỗi lần bắt đầu là 1 ván; chủ phòng muốn đấu tiếp thì bấm "Chơi lại" (ván nào tính ván đó).
 const C = require('./config');
 const simulation = require('./simulation');
+const codec = require('../../../src/state-codec');
+
+// Trạng thái gửi cho TV mã hoá nhị phân theo schema (TV giải mã bằng cùng file).
+const stateCodec = codec.compile(require('../assets/schema.json'));
 
 function round(v, k) {
   return Math.round(v * k) / k;
@@ -20,6 +24,7 @@ function createMatch({ players, options, teams, now, startAt, api }) {
         win: g.cfg.WIN_DISTANCE,
         riverHalf: g.cfg.RIVER_HALF,
         teams: g.sides.map(s => ({ ...s.team, members: s.members.map(p => p.id) })),
+        order: g.pullers.map(p => p.id), // thứ tự các hàng trong trạng thái nhị phân
       };
     },
 
@@ -42,17 +47,17 @@ function createMatch({ players, options, teams, now, startAt, api }) {
       if (g.phase === 'done' && g.endedAt === now) api.finish(simulation.results(g));
     },
 
+    // Nhị phân ~10 byte + 1 byte mỗi người, theo thứ tự setup().order.
     hostState(now) {
-      return {
+      return codec.encode(stateCodec, {
         phase: g.phase,
-        rope: round(g.rope, 100),
-        win: g.cfg.WIN_DISTANCE,
-        forces: g.sides.map(s => round(s.force, 100)),
+        rope: g.rope,
+        forces: g.sides.map(s => s.force),
         winner: g.winner,
         byTime: g.byTime,
         timeLeft: timeLeft(now),
-        p: g.pullers.map(p => ({ id: p.id, d: round(p.driveEff, 10) })),
-      };
+        p: g.pullers.map(p => ({ d: p.driveEff })),
+      });
     },
 
     playerState(pid, now) {
@@ -83,6 +88,7 @@ module.exports = {
   sensors: true,
   teams: { min: 1, max: 6, count: 2, equal: true }, // luôn 2 đội Đỏ/Xanh, phải bằng người
   tickHz: C.TICK_HZ,
+  hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
   goText: 'KÉO!',

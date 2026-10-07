@@ -2,6 +2,7 @@
 // Lưu ý: các tham số có trong DIFFICULTIES (cuối file) sẽ bị ghi đè theo độ khó phòng chọn.
 module.exports = {
   TICK_HZ: 30,
+  HOST_UPDATE_EVERY: 2, // gửi trạng thái cho TV mỗi 2 tick (~15 lần/giây; TV tự nội suy cho mượt)
   PLAYER_UPDATE_EVERY: 3, // gửi trạng thái riêng cho điện thoại mỗi 3 tick (~10 lần/giây)
 
   TRACK_LEN: 400,

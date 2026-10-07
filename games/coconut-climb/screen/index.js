@@ -2,8 +2,11 @@
 // Ở phòng chờ cảnh 3D làm nền: mỗi người một cây, khỉ (theo lựa chọn trên điện thoại) bám sẵn dưới gốc.
 // Phím Y: xoay thử khỉ 90° nếu model quay sai hướng.
 import { ClimbScene, FLAG } from './scene.js';
+import { compile, decode } from '/js/core/state-codec.js';
 
 const catalog = await fetch('/games/coconut-climb/assets/figures.json').then(r => r.json());
+// Trạng thái từ server là nhị phân, giải mã theo cùng schema với server.
+const stateCodec = compile(await fetch('/games/coconut-climb/assets/schema.json').then(r => r.json()));
 const FIGURE_IDS = catalog.figures.map(f => f.id);
 
 // Khỉ của người chơi: lựa chọn ở phòng chờ, chưa chọn thì lấy theo id. Phải khớp với figureOf() trong service/index.js.
@@ -25,6 +28,7 @@ export function create(ctx) {
     </div>`;
   const q = sel => root.querySelector(sel);
   const scene = new ClimbScene(q('.cc-scene'), catalog, ctx.quality);
+  let order = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
   let hudAt = 0;
 
   function onKey(e) {
@@ -73,11 +77,14 @@ export function create(ctx) {
 
     onSetup(info) {
       if (!info) return;
+      order = info.players;
       scene.setPhase('play');
       scene.setPlayers(info.players, id => ctx.player(id), info, id => info.figures?.[id] || defaultFigure(ctx.player(id)));
     },
 
-    onState(s) {
+    onState(raw) {
+      if (!order.length) return; // chưa có setup thì chưa biết hàng nào là ai
+      const s = decode(stateCodec, raw, order);
       scene.setState(s);
       const t = performance.now();
       if (t - hudAt > 200) {

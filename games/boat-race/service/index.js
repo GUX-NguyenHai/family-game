@@ -2,6 +2,10 @@
 const C = require('./config');
 const simulation = require('./simulation');
 const catalog = require('../assets/boats.json');
+const codec = require('../../../src/state-codec');
+
+// Trạng thái gửi cho TV mã hoá nhị phân theo schema (TV giải mã bằng cùng file).
+const stateCodec = codec.compile(require('../assets/schema.json'));
 
 const BOAT_IDS = catalog.boats.map(b => b.id);
 
@@ -83,19 +87,19 @@ function createMatch({ players, options, teams, now, startAt, api }) {
       }
     },
 
+    // Nhị phân ~11 byte mỗi thuyền, theo thứ tự setup().boats.
     hostState(now) {
-      return {
+      return codec.encode(stateCodec, {
         state: phase(now),
         p: race.boats.map(b => ({
-          id: b.id,
-          x: round(b.x, 100),
-          z: round(b.z, 100),
-          sp: round(b.speed, 10),
+          x: b.x,
+          z: b.z,
+          sp: b.speed,
           f: simulation.flagsOf(b, now),
           r: b.rank,
-          c: b.crew.map(r => round(r.driveEff, 10)), // mức chèo từng người, để vẽ ai đang chèo
+          c: b.crew.map(r => r.driveEff), // mức chèo từng người, để vẽ ai đang chèo
         })),
-      };
+      });
     },
 
     playerState(pid, now) {
@@ -133,6 +137,7 @@ module.exports = {
   sensors: true,
   teams: { min: 2, max: 4, enabled: options => options.mode === 'team' },
   tickHz: C.TICK_HZ,
+  hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
   goText: 'CHÈO!',

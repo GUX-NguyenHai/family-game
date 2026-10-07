@@ -91,6 +91,7 @@ src/                          ── PHẦN CHUNG phía server ──
   rooms.js                    phòng, người chơi, bot, đội, vòng lặp, chuyển tin game ↔ TV ↔ điện thoại
   games.js                    đọc danh sách game, kiểm tra khai báo, tuỳ chọn
   license.js                  mã Pro (ký HMAC, không cần database)
+  state-codec.js              mã hoá trạng thái gửi cho TV thành nhị phân gọn (theo schema của từng game)
 public/                       ── PHẦN CHUNG phía trình duyệt ──
   host.html, play.html        khung trang TV và điện thoại
   css/host.css, css/play.css  giao diện chung (biến màu dùng lại được trong game)
@@ -98,6 +99,7 @@ public/                       ── PHẦN CHUNG phía trình duyệt ──
   js/core/play.js             điện thoại: vào phòng, phòng chờ, chọn đội, màn kết quả; nạp games/<id>/controller
   js/core/sensors.js          cảm biến: lắc lên xuống, nghiêng, hất đầu máy, giật máy lên
   js/core/scene-kit.js        đồ nghề 3D (three.js): tải con vật/model, nhãn tên, chữ nổi, hạt hiệu ứng
+  js/core/state-codec.js      giải mã trạng thái nhị phân từ server
   js/core/util.js, audio.js   tiện ích nhỏ, âm thanh bíp
   assets/animals.json         danh sách con vật (avatar người chơi) + hoạt ảnh
 games/                        ── MỖI GAME MỘT THƯ MỤC ──
@@ -111,7 +113,7 @@ games/                        ── MỖI GAME MỘT THƯ MỤC ──
       simulation.js           mô phỏng thuần (không dính socket/đồ hoạ), bot
     screen/                   hình ảnh trên TV: index.js (+ scene.js nếu 3D), style.css
     controller/               tay cầm điện thoại: index.js, style.css
-    assets/                   (tuỳ chọn) model .glb, json, ảnh + CREDITS.md
+    assets/                   schema.json (định dạng trạng thái nhị phân), model .glb, json, ảnh + CREDITS.md
 animal/                       model con vật gốc (Quaternius, CC0)
 build/models/                 model con vật đã tối ưu (npm run models tạo ra)
 deploy/                       cấu hình nginx, systemd

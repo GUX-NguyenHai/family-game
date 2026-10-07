@@ -327,6 +327,7 @@ function startGame(io, room) {
   room.results = null;
   room.tick = 0;
   room.lastTick = now;
+  room.lastSent = new Map(); // tin gửi lần trước (để bỏ tin trùng), làm mới mỗi ván
   room.matchGame = game;
   const match = safe(room, 'createMatch', () =>
     game.createMatch({
@@ -375,6 +376,19 @@ function finishMatch(io, room, results) {
   broadcastRoom(io, room);
 }
 
+// Không gửi lại tin giống hệt lần trước (VD mọi người đứng yên, đã về đích); vẫn gửi lại mỗi RESEND_MS
+// để máy vừa nối lại chắc chắn có dữ liệu. data là Buffer (nhị phân) hoặc object (JSON).
+const RESEND_MS = 1000;
+function shouldSend(room, key, data, now) {
+  room.lastSent ??= new Map();
+  const prev = room.lastSent.get(key);
+  const body = Buffer.isBuffer(data) ? data : JSON.stringify(data);
+  const same = prev && (Buffer.isBuffer(body) ? Buffer.isBuffer(prev.body) && body.equals(prev.body) : body === prev.body);
+  if (same && now - prev.at < RESEND_MS) return false;
+  room.lastSent.set(key, { body, at: now });
+  return true;
+}
+
 function tick(io, room) {
   const match = room.match;
   const game = room.matchGame;
@@ -396,13 +410,13 @@ function tick(io, room) {
 
   if (match.hostState && room.tick % (game.hostEvery || 1) === 0) {
     const s = safe(room, 'hostState', () => match.hostState(now));
-    if (s) io.to(`h:${room.code}`).emit('game:state', s);
+    if (s && shouldSend(room, 'host', s, now)) io.to(`h:${room.code}`).emit('game:state', s);
   }
   if (match.playerState && room.tick % (game.playerEvery || 1) === 0) {
     for (const p of room.players.values()) {
       if (!p.inGame || !p.socketId) continue;
       const m = safe(room, 'playerState', () => match.playerState(p.id, now));
-      if (m) io.to(p.socketId).emit('game:me', m);
+      if (m && shouldSend(room, `p:${p.id}`, m, now)) io.to(p.socketId).emit('game:me', m);
     }
   }
 

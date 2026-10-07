@@ -2,6 +2,7 @@
 // Các tham số trong DIFFICULTIES (cuối file) ghi đè theo độ khó phòng chọn.
 module.exports = {
   TICK_HZ: 30,
+  HOST_UPDATE_EVERY: 2, // gửi trạng thái cho TV ~15 lần/giây (TV tự làm mượt độ cao)
   PLAYER_UPDATE_EVERY: 3, // gửi trạng thái riêng cho điện thoại ~10 lần/giây
   COUNTDOWN_MS: 3000,
   ROUND_MS: 45000, // hết giờ thì ai chưa lên ngọn xếp theo độ cao

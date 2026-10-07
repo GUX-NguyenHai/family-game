@@ -1,6 +1,10 @@
 // Kéo co – màn hình chung: cảnh 3D hai đội hai bên bờ sông, tên hai đội, đồng hồ, lực hai đội, thông báo đội thắng.
 // Mỗi lần bắt đầu là 1 ván. Ở phòng chờ cảnh 3D làm nền: hai đội đứng sẵn hai bên bờ theo đội đã chọn.
 import { TugScene } from './scene.js';
+import { compile, decode } from '/js/core/state-codec.js';
+
+// Trạng thái từ server là nhị phân, giải mã theo cùng schema với server.
+const stateCodec = compile(await fetch('/games/tug-of-war/assets/schema.json').then(r => r.json()));
 
 export function create(ctx) {
   const { root, toast, beep } = ctx;
@@ -21,6 +25,7 @@ export function create(ctx) {
   const q = sel => root.querySelector(sel);
   const scene = new TugScene(q('.tug-scene'), ctx.manifest, ctx.quality);
   let teams = [];
+  let order = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
 
   function teamOf(i) {
     return teams[i] || { emoji: i ? '🔵' : '🔴', name: i ? 'Xanh' : 'Đỏ', color: i ? '#4363d8' : '#e6194b' };
@@ -61,6 +66,7 @@ export function create(ctx) {
     onSetup(info) {
       if (!info) return;
       teams = info.teams;
+      order = info.order || [];
       scene.reset();
       scene.setField(info.riverHalf, info.win);
       scene.setTeams(info.teams, [], id => ctx.player(id));
@@ -68,7 +74,9 @@ export function create(ctx) {
       banner('');
     },
 
-    onState(s) {
+    onState(raw) {
+      if (!order.length) return; // chưa có setup thì chưa biết hàng nào là ai
+      const s = decode(stateCodec, raw, order);
       scene.setState(s);
       q('.tug-board .timer').textContent = s.phase === 'pull' ? `${Math.ceil(s.timeLeft / 1000)}s` : '';
       q('.tug-forces .red i').style.width = `${s.forces[0] * 100}%`;

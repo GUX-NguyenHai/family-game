@@ -1,0 +1,13 @@
+{
+  "_ghi_chu": "Trạng thái gửi cho TV dạng nhị phân (xem src/state-codec.js). Mỗi hàng là 1 thuyền, theo thứ tự setup().boats. x: lệch ngang (m); z: quãng đường (m, bước 2cm); sp: tốc độ (m/s, bước 0.2); f: cờ; r: hạng (null = chưa về); c: mức chèo của tối đa 4 người trên thuyền (0..1).",
+  "rows": "p",
+  "head": [["state", "enum", ["countdown", "racing", "finished"]]],
+  "row": [
+    ["x", "i16", 100],
+    ["z", "u16", 50],
+    ["sp", "u8", 5],
+    ["f", "u8"],
+    ["r", "u8?"],
+    ["c", "u8*4", 100]
+  ]
+}

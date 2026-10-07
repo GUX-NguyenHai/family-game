@@ -2,6 +2,10 @@
 // Ở phòng chờ cảnh 3D làm nền (các con vật đứng ở vạch xuất phát).
 import { RaceScene, FLAG } from './scene.js';
 import { Minimap } from './minimap.js';
+import { compile, decode } from '/js/core/state-codec.js';
+
+// Trạng thái từ server là nhị phân, giải mã theo cùng schema với server.
+const stateCodec = compile(await fetch('/games/animal-race/assets/schema.json').then(r => r.json()));
 
 export function create(ctx) {
   const { root, esc, toast, beep, fanfare } = ctx;
@@ -16,6 +20,7 @@ export function create(ctx) {
   const scene = new RaceScene(q('.race-scene'), ctx.manifest, ctx.quality);
   const minimap = new Minimap(q('.race-minimap'));
   let trackLen = 400;
+  let racerIds = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
   let minimapAt = 0;
   let hudAt = 0;
 
@@ -73,14 +78,16 @@ export function create(ctx) {
     onSetup(info) {
       if (!info) return;
       trackLen = info.trackLen;
+      racerIds = info.racers;
       scene.setupRace(info);
       minimap.setRace(info);
     },
 
-    onState(s) {
+    onState(raw) {
+      if (!racerIds.length) return; // chưa có setup thì chưa biết hàng nào là ai
+      const s = decode(stateCodec, raw, racerIds);
       scene.pushSnapshot(s);
       // Bản đồ nhỏ vẽ lại ~10 lần/giây, bảng xếp hạng ~5 lần/giây.
-      if (s.taken) for (const id of s.taken) minimap.markTaken(id);
       const t = performance.now();
       if (t - minimapAt > 100) {
         minimapAt = t;
@@ -99,6 +106,7 @@ export function create(ctx) {
         toast(`${name} vấp rào! 💥`);
         beep(140, 0.2, 'sawtooth', 0.05);
       } else if (ev.type === 'carrot') {
+        minimap.markTaken(ev.oid);
         toast(`${name} ăn cà rốt! +10% năng lượng 🥕`);
         beep(990, 0.12, 'triangle');
       } else if (ev.type === 'turbo') {

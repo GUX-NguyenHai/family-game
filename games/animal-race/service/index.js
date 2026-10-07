@@ -1,6 +1,10 @@
 // Game Đua thú: khai báo cho nền tảng + nối các sự kiện chung với phần mô phỏng (simulation.js).
 const C = require('./config');
 const simulation = require('./simulation');
+const codec = require('../../../src/state-codec');
+
+// Trạng thái gửi cho TV mã hoá nhị phân theo schema (TV giải mã bằng cùng file).
+const stateCodec = codec.compile(require('../assets/schema.json'));
 
 function round(v, k) {
   return Math.round(v * k) / k;
@@ -71,20 +75,12 @@ function createMatch({ players, options, now, startAt, api }) {
       }
     },
 
+    // Nhị phân ~7 byte mỗi con (JSON cũ ~95 byte, chủ yếu vì id). Cà rốt bị ăn báo qua sự kiện 'carrot'.
     hostState(now) {
-      return {
+      return codec.encode(stateCodec, {
         state: phase(now),
-        el: Math.max(0, now - race.startAt),
-        taken: race.taken.size ? [...race.taken] : undefined,
-        p: racers.map(p => ({
-          id: p.id,
-          x: round(p.x, 100),
-          z: round(p.z, 100),
-          sp: round(p.speed, 10),
-          f: simulation.flagsOf(p, now),
-          r: p.rank,
-        })),
-      };
+        p: racers.map(p => ({ x: p.x, z: p.z, sp: p.speed, f: simulation.flagsOf(p, now), r: p.rank })),
+      });
     },
 
     playerState(pid, now) {
@@ -118,6 +114,7 @@ module.exports = {
   bots: true,
   sensors: true, // điện thoại cần cảm biến (lắc, nghiêng)
   tickHz: C.TICK_HZ,
+  hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
   goText: 'CHẠY!',

@@ -144,8 +144,45 @@ Gọi mỗi lần bấm Bắt đầu hoặc Chơi lại. Trả về đối tư�
 **Ghi nhớ:**
 - `input()` có thể tới **bất cứ lúc nào**, kể cả lúc đếm ngược hay sau khi đã xong. Game tự chặn nếu chưa cho chơi.
 - Dữ liệu gửi đi (`hostState`, `playerState`) nên **gọn**: làm tròn số, chỉ gửi thứ cần vẽ. Nó được gửi 10–30 lần mỗi giây.
+  - Phần chung **tự bỏ tin giống hệt tin trước**, vẫn gửi lại mỗi giây một lần. Không cần tự lo việc này.
+  - Game có chuyển động liên tục nên gửi `hostState` **dạng nhị phân** (xem mục "Gửi trạng thái nhị phân" bên dưới) với `hostEvery: 2` (15 lần/giây), rồi để TV tự làm mượt.
 - Bot là người chơi có `bot: true`. Cho bot hành động trong `tick()`, thường là tự gọi cùng hàm xử lý với `input()`.
 - Lỗi trong code game được phần chung bắt và ghi log. Server không sập, nhưng ván đó có thể đứng.
+
+### Gửi trạng thái nhị phân (khuyên dùng cho game chuyển động)
+JSON có tên trường và id người chơi (36 ký tự) lặp lại mỗi lần gửi, nên nặng. Gửi dạng nhị phân nhẹ hơn khoảng **10–20 lần**.
+1. Khai báo `games/<id>/assets/schema.json`:
+   ```json
+   {
+     "rows": "p",
+     "head": [["state", "enum", ["countdown", "racing", "finished"]], ["timeLeft", "u16", 0.1]],
+     "row":  [["x", "i16", 100], ["z", "u16", 50], ["f", "u8"], ["r", "u8?"], ["c", "u8*4", 100]]
+   }
+   ```
+   - Mỗi trường gồm `[tên, kiểu, tham số]`.
+   - Kiểu: `u8 i8 u16 i16 u32 f32 bool enum`. Thêm `?` cho trường có thể null, thêm `*N` cho mảng N phần tử.
+   - Tham số là hệ số nhân trước khi làm tròn: `100` giữ 2 chữ số lẻ, `0.1` làm tròn tới hàng chục. Với `enum` thì tham số là danh sách giá trị.
+   - Mô tả đầy đủ ở [src/state-codec.js](../src/state-codec.js).
+2. Server (`service/index.js`):
+   ```js
+   const codec = require('../../../src/state-codec');
+   const stateCodec = codec.compile(require('../assets/schema.json'));
+   // …
+   hostState(now) {
+     return codec.encode(stateCodec, { state: …, p: list.map(p => ({ x: p.x, z: p.z, f: …, r: p.rank })) });
+   }
+   ```
+   Hàng không chứa id. **`setup()` phải trả về thứ tự id các hàng** (VD `players: list.map(p => p.id)`).
+3. TV (`screen/index.js`):
+   ```js
+   import { compile, decode } from '/js/core/state-codec.js';
+   const stateCodec = compile(await fetch('/games/<id>/assets/schema.json').then(r => r.json()));
+   // …
+   onSetup(info) { ids = info.players; },
+   onState(raw) { if (!ids.length) return; const s = decode(stateCodec, raw, ids); /* s.p[i].id đã có */ },
+   ```
+
+Kiểm tra giới hạn giá trị khi chọn kiểu. Ví dụ `u16` với hệ số 50 thì giữ được tối đa 1310 m. Giá trị vượt giới hạn bị cắt về số lớn nhất.
 
 ---
 
@@ -449,6 +486,7 @@ import { loadAnimalTemplate, loadModel, cloneModel, Label, textSprite, Particles
 - [ ] Có bot (nếu `bots: true`) và bot chơi được tới khi kết thúc.
 - [ ] Ván luôn kết thúc: có giới hạn thời gian hoặc điều kiện thắng chắc chắn xảy ra, rồi gọi `api.finish()` đúng 1 lần.
 - [ ] TV vẽ được ở phòng chờ (`onRoom` với `state === 'lobby'`) và khi tải lại giữa ván (`onSetup`).
+- [ ] Game chuyển động liên tục: `hostState` gửi nhị phân theo `assets/schema.json`, `hostEvery: 2`.
 - [ ] `destroy()` dọn sạch: interval, listener, vòng vẽ 3D.
 - [ ] CSS có tiền tố riêng của game.
 - [ ] Model tải về có `CREDITS.md`.
