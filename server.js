@@ -7,6 +7,8 @@ const QRCode = require('qrcode');
 const rooms = require('./src/rooms');
 const games = require('./src/games');
 const license = require('./src/license');
+const ads = require('./src/ads');
+const pages = require('./src/pages');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -16,10 +18,25 @@ app.disable('x-powered-by');
 const server = http.createServer(app);
 const io = new Server(server, { pingInterval: 10000, pingTimeout: 8000 });
 
+// Trang giới thiệu + chính sách bảo mật: HTML dựng sẵn trên server (xem src/pages.js), dựng 1 lần rồi dùng lại.
+const landingHtml = pages.landing();
+const privacyHtml = pages.privacy();
+app.get('/', (req, res) => res.type('html').setHeader('Cache-Control', 'no-cache').send(landingHtml));
+app.get('/privacy', (req, res) => res.type('html').setHeader('Cache-Control', 'no-cache').send(privacyHtml));
+
+// Quảng cáo Google AdSense (mã đặt trong .env, xem src/ads.js). Chưa có mã thì /ads.txt trả 404.
+app.get('/api/ads', (req, res) => res.json(ads.publicConfig()));
+app.get('/ads.txt', (req, res) => {
+  const txt = ads.adsTxt();
+  if (!txt) return res.status(404).end();
+  res.type('text/plain').send(txt);
+});
+
 // HTML/JS/CSS của game: bắt trình duyệt luôn hỏi lại server (không dùng bản cũ trong bộ nhớ đệm).
 app.use(
   express.static(path.join(__dirname, 'public'), {
     extensions: ['html'],
+    index: false, // trang "/" do route ở trên lo
     setHeaders: res => res.setHeader('Cache-Control', 'no-cache'),
   }),
 );
@@ -80,4 +97,5 @@ server.listen(PORT, HOST, () => {
         : '⚠️  Chưa đặt LICENSE_SECRET: tắt mã Pro, mọi phòng là bản miễn phí.',
     );
   }
+  if (!ads.enabled()) console.log('ℹ️  Chưa đặt ADSENSE_CLIENT: không hiện quảng cáo.');
 });

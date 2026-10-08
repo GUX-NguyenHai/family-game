@@ -4,6 +4,7 @@
 //   { onShow(screen, prev), onRoom(info), onMe(m), onEvent(e), onGesture(name), frame(t), destroy() } (hàm nào không cần thì bỏ).
 import { $, esc, store, loadCss, vibrate, watchVersion, MEDALS } from './util.js';
 import { createSensors } from './sensors.js';
+import { adSlot } from './ads.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -48,10 +49,14 @@ let cdTimer = null;
 let prefs = store.get('fg:prefs', {}) || {}; // lựa chọn riêng cho các game (VD loại thuyền), nhớ trên máy
 
 // ---------- Màn hình ----------
+const ad = adSlot($('#adPlay'), 'play'); // quảng cáo chỉ ở phòng chờ
+
 function show(screen) {
   const prev = current;
   current = screen;
   for (const id of ['join', 'lobby', 'game', 'done']) $(`#scr-${id}`).hidden = id !== screen;
+  if (screen === 'lobby') ad.show();
+  else ad.hide();
   if (screen !== 'game') stopCountdown();
   if (prev !== screen) gameCall('onShow', screen, prev);
 }

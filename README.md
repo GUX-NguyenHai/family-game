@@ -93,6 +93,7 @@ src/                          ── PHẦN CHUNG phía server ──
   rooms.js                    phòng, người chơi, bot, đội, vòng lặp, chuyển tin game ↔ TV ↔ điện thoại
   games.js                    đọc danh sách game, kiểm tra khai báo, tuỳ chọn
   license.js                  mã Pro (ký HMAC, không cần database)
+  ads.js, pages.js            quảng cáo AdSense (mã từ .env, /ads.txt); trang giới thiệu "/" và "/privacy"
   state-codec.js              mã hoá trạng thái gửi cho TV thành nhị phân gọn (theo schema của từng game)
 public/                       ── PHẦN CHUNG phía trình duyệt ──
   host.html, play.html        khung trang TV và điện thoại
@@ -104,6 +105,7 @@ public/                       ── PHẦN CHUNG phía trình duyệt ──
   js/core/mini-views.js       game đua 3D: khung nhỏ 2 bên màn hình cho người bị tụt lại (chỗ cố định theo làn)
   js/core/state-codec.js      giải mã trạng thái nhị phân từ server
   js/core/util.js, audio.js   tiện ích nhỏ, âm thanh bíp
+  js/core/ads.js              ô quảng cáo ở phòng chờ (TV + điện thoại)
   assets/animals.json         danh sách con vật (avatar người chơi) + hoạt ảnh
 games/                        ── MỖI GAME MỘT THƯ MỤC ──
   index.js                    danh sách game được bật (thêm game = thêm 1 dòng)
@@ -191,7 +193,7 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 
 **Đặt khoá bí mật trên server (một lần):**
 ```bash
-echo "LICENSE_SECRET=$(openssl rand -hex 32)" > .env      # cạnh docker-compose.yml, KHÔNG đưa lên git
+echo "LICENSE_SECRET=$(openssl rand -hex 32)" >> .env     # cạnh docker-compose.yml, KHÔNG đưa lên git
 docker compose up -d --build
 ```
 Chưa có khoá thì server tắt Pro. Đổi khoá thì mọi mã cũ mất hiệu lực.
@@ -202,6 +204,21 @@ docker compose exec party-game node src/license.js --days 30 --players 12
 docker compose exec party-game node src/license.js --days 0 --count 5    # 5 mã vĩnh viễn
 npm run make-code -- --days 30                                          # trên máy local: mã thử
 ```
+
+### Quảng cáo (Google AdSense)
+- Chỉ hiện ở **phòng chờ**, trên TV (dưới mã QR) và điện thoại (cuối trang). Không hiện lúc chơi. Phòng Pro cũng có quảng cáo.
+- Bắt đầu chơi thì gỡ ô quảng cáo, về phòng chờ thì tạo ô mới. Không tự làm mới quảng cáo (quy định AdSense).
+- Mã đặt trong `.env`, chưa có thì không hiện gì và không tải gì của Google:
+  ```bash
+  ADSENSE_CLIENT=ca-pub-1234567890123456   # mã nhà xuất bản: cần để Google duyệt trang
+  ADSENSE_SLOT_HOST=1234567890             # đơn vị quảng cáo cho TV (tạo sau khi được duyệt)
+  ADSENSE_SLOT_PLAY=1234567890             # đơn vị quảng cáo cho điện thoại
+  CONTACT_EMAIL=                           # (tuỳ chọn) email liên hệ ở chân trang
+  ```
+  Sửa `.env` xong chạy lại `docker compose up -d` để container nhận giá trị mới.
+- Có `ADSENSE_CLIENT` thì server tự trả `/ads.txt` và chèn thẻ AdSense vào trang giới thiệu `/` (Google kiểm tra thẻ này lúc duyệt).
+- Trang giới thiệu `/` và chính sách bảo mật `/privacy` dựng trên server ([src/pages.js](src/pages.js)); danh sách game lấy từ khai báo của từng game nên thêm game là trang tự cập nhật.
+- Bảng hỏi đồng ý cookie cho châu Âu/Anh: bật trong AdSense, mục "Quyền riêng tư và thông báo", không cần code.
 
 ---
 

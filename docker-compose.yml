@@ -10,6 +10,12 @@ services:
     environment:
       # Khoá ký mã Pro, đặt trong file .env cạnh file này (không đưa lên git). Trống = tắt Pro.
       - LICENSE_SECRET=${LICENSE_SECRET:-}
+      # Quảng cáo Google AdSense (cũng trong .env). Trống = không hiện quảng cáo.
+      - ADSENSE_CLIENT=${ADSENSE_CLIENT:-}
+      - ADSENSE_SLOT_HOST=${ADSENSE_SLOT_HOST:-}
+      - ADSENSE_SLOT_PLAY=${ADSENSE_SLOT_PLAY:-}
+      # Email liên hệ hiện ở chân trang giới thiệu/chính sách bảo mật (tuỳ chọn).
+      - CONTACT_EMAIL=${CONTACT_EMAIL:-}
     mem_limit: 256m
     logging:
       driver: json-file

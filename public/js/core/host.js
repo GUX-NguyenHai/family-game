@@ -4,6 +4,7 @@
 //   { onRoom(info), onSetup(data), onState(s), onEvent(e), destroy() } (hàm nào không cần thì bỏ).
 import { $, esc, store, session, loadCss, watchVersion, MEDALS } from './util.js';
 import { unlockAudio, beep, fanfare } from './audio.js';
+import { adSlot } from './ads.js';
 
 const SESSION_KEY = 'fg:host';
 const manifest = await fetch('/assets/animals.json').then(r => r.json());
@@ -19,6 +20,7 @@ let lastState = null;
 let current = null; // game đang gắn: { id, inst, removeCss }
 let loadingId = null;
 let lastSetup = null; // { game, data }: dữ liệu bắt đầu ván, giữ lại để gắn cho game vừa tải xong
+const ad = adSlot($('#adHost'), 'host'); // quảng cáo chỉ ở phòng chờ
 
 const getSession = () => session.get(SESSION_KEY, null) || {};
 const setSession = patch => session.set(SESSION_KEY, { ...getSession(), ...patch });
@@ -163,6 +165,8 @@ function onRoom(info) {
 
   $('#lobby').hidden = info.state !== 'lobby';
   $('#results').hidden = info.state !== 'finished';
+  if (info.state === 'lobby') ad.show();
+  else ad.hide();
   if (info.state === 'finished' && lastState !== 'finished') {
     renderResults(info.results || []);
     fanfare();
