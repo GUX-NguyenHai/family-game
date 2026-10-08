@@ -21,57 +21,77 @@
   <div id="countdown" hidden></div>
   <div id="toasts"></div>
 
+  <!-- Phòng chờ: thanh trên cùng + [chọn game] [khoảng trống thấy cảnh 3D, khung Bắt đầu ở dưới] [QR + người chơi] -->
   <section id="lobby" class="panel" hidden>
-    <aside class="game-sidebar" aria-label="Chọn game">
-      <h2>🎮 Chọn game</h2>
-      <div class="game-list" role="radiogroup"></div>
-    </aside>
-    <div class="join">
+    <header class="lobby-top">
       <h1>🎮 Party Game</h1>
-      <p class="sub">Quét mã để vào chơi</p>
-      <img id="qr" alt="Mã QR vào phòng">
-      <div class="code">Mã phòng: <b id="roomCode">----</b></div>
-      <div id="joinUrl" class="url"></div>
-      <p id="urlWarn" class="warn" hidden></p>
+      <span id="tierBadge" class="badge">🆓 Miễn phí · tối đa 4 người</span>
+      <button id="btnSettings" class="icon" title="Cài đặt" aria-expanded="false" aria-controls="settings">⚙️</button>
+      <!-- Cài đặt ít dùng: mã Pro, đồ hoạ, toàn màn hình, link vào phòng, version -->
+      <div id="settings" class="settings" hidden>
+        <div class="tier">
+          <div class="tier-row">
+            <b>Gói</b>
+            <button id="btnShowLicense" class="link">Nhập mã Pro</button>
+            <button id="btnRemoveLicense" class="link" hidden>Gỡ mã</button>
+          </div>
+          <form id="licenseForm" class="license-form" hidden>
+            <input id="licenseInput" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XX" autocomplete="off" spellcheck="false">
+            <button type="submit" class="primary">Kích hoạt</button>
+          </form>
+          <p id="licenseMsg" class="license-msg" hidden></p>
+        </div>
+        <div class="buttons small">
+          <button id="btnQuality"></button>
+          <button id="btnFullscreen">⛶ Toàn màn hình</button>
+        </div>
+        <p class="hint">Không quét được mã QR thì mở link: <span id="joinUrl" class="url"></span></p>
+        <p id="appVersion" class="hint"></p>
+      </div>
+    </header>
+
+    <aside class="game-sidebar" aria-label="Chọn game">
+      <div class="game-list" role="radiogroup"></div>
       <!-- Quảng cáo (chỉ ở phòng chờ, xem /js/core/ads.js) -->
       <div id="adHost" class="ad-box" hidden></div>
-    </div>
-    <div class="players">
-      <div class="game-head">
-        <h2 class="game-title"></h2>
-        <p class="game-desc"></p>
-      </div>
-      <h2>Người chơi <span id="playerCount">0</span></h2>
-      <div class="tier">
-        <div class="tier-row">
-          <span id="tierBadge" class="badge">🆓 Miễn phí · tối đa 4 người</span>
-          <button id="btnShowLicense" class="link">Nhập mã Pro</button>
-          <button id="btnRemoveLicense" class="link" hidden>Gỡ mã</button>
+    </aside>
+
+    <div class="lobby-center">
+      <!-- Trái: tên game + nhãn + mô tả + lựa chọn; phải: nút Bắt đầu vuông -->
+      <div class="start-card">
+        <div class="start-main">
+          <div class="game-head">
+            <h2 class="game-title"></h2>
+            <p class="game-tags"></p>
+            <p class="game-desc"></p>
+          </div>
+          <div class="game-options compact"></div>
+          <!-- Chỉ hiện khi game đang chơi theo đội -->
+          <div id="teamBar" class="team-bar" hidden>
+            <span id="teamSummary"></span>
+            <button id="btnShuffleTeams">🎲 Chia đội ngẫu nhiên</button>
+          </div>
         </div>
-        <form id="licenseForm" class="license-form" hidden>
-          <input id="licenseInput" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XX" autocomplete="off" spellcheck="false">
-          <button type="submit" class="primary">Kích hoạt</button>
-        </form>
-        <p id="licenseMsg" class="license-msg" hidden></p>
+        <button id="btnStart" class="primary start" disabled>▶ Bắt đầu</button>
       </div>
-      <ul id="playerList"></ul>
-      <p id="emptyHint" class="hint">Chưa có ai. Mời cả nhà quét mã nào!</p>
-      <!-- Chỉ hiện khi game đang chơi theo đội -->
-      <div id="teamBar" class="team-bar" hidden>
-        <span id="teamSummary"></span>
-        <button id="btnShuffleTeams">🎲 Chia đội ngẫu nhiên</button>
+    </div>
+
+    <div class="lobby-side">
+      <div class="join">
+        <img id="qr" alt="Mã QR vào phòng">
+        <div class="code">Mã phòng <b id="roomCode">----</b></div>
+        <p class="sub">Quét mã bằng điện thoại để vào chơi</p>
+        <p id="urlWarn" class="warn" hidden></p>
       </div>
-      <div class="game-options"></div>
-      <div class="buttons">
-        <button id="btnStart" class="primary" disabled>▶ Bắt đầu</button>
-        <button id="btnAddBot">+ Thêm bot</button>
-        <button id="btnClearBots">Xoá bot</button>
+      <div class="players">
+        <h2>Người chơi <span id="playerCount">0</span></h2>
+        <ul id="playerList"></ul>
+        <p id="emptyHint" class="hint">Chưa có ai. Mời cả nhà quét mã nào!</p>
+        <div class="buttons small">
+          <button id="btnAddBot">+ Thêm bot</button>
+          <button id="btnClearBots">Xoá bot</button>
+        </div>
       </div>
-      <div class="buttons small">
-        <button id="btnQuality"></button>
-        <button id="btnFullscreen">⛶ Toàn màn hình</button>
-      </div>
-      <p id="appVersion" class="hint"></p>
     </div>
   </section>
 

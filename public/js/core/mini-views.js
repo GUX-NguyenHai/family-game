@@ -14,7 +14,8 @@
 //   miniViews.update(players, edge, now)   players = [{ id, z, active }], edge = z mép dưới cảnh chính
 //                                          → Map id → { rect, leaving } những ai đang có khung
 //   miniViews.updateMarkers(now, where)    where(id) → { pos: Vector3, top, color, size? } | null: chỗ đặt dấu
-//                                          (top = độ cao đỉnh đầu, size = phóng vòng sáng, mặc định 1)
+//                                          (pos = toạ độ thế giới dưới chân, top = độ cao đỉnh đầu tính từ chân,
+//                                           size = phóng vòng sáng, mặc định 1)
 //   miniViews.draw(views, { begin, end })  mỗi khung hình, sau khi vẽ cảnh chính
 //     views = [{ id, rect, leaving, color, text, aim(camera), before(), after() }]
 import * as THREE from 'three';
@@ -147,7 +148,7 @@ export class MiniViews {
       const t = now / 1000;
       const left = (until - now) / MARK_MS; // 1 → 0
       m.group.visible = true;
-      m.group.position.set(at.pos.x, 0, at.pos.z);
+      m.group.position.set(at.pos.x, at.pos.y || 0, at.pos.z); // y: mặt đất không phẳng (VD dốc tuyết)
       m.ring.scale.setScalar((at.size || 1) * (1 + 0.15 * Math.sin(t * 8)));
       m.ring.material.opacity = 0.85 * Math.min(1, left * 3);
       m.arrow.position.y = at.top + 0.9 + 0.25 * Math.abs(Math.sin(t * 6)); // trên nhãn tên

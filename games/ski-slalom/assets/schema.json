@@ -1,0 +1,14 @@
+{
+  "_ghi_chu": "Trạng thái gửi cho TV dạng nhị phân (xem src/state-codec.js). Mỗi hàng là 1 người, theo thứ tự setup().racers. x: lệch ngang (m, bước 1cm); z: quãng đường xuống dốc (m, bước 2cm); h: hướng trượt (rad, bước 0.01); sp: tốc độ (m/s, bước 0.2); f: cờ (1 = đang ngã, 2 = đã về đích); pen: giây phạt; r: hạng (null = chưa về).",
+  "rows": "p",
+  "head": [["state", "enum", ["countdown", "racing", "finished"]]],
+  "row": [
+    ["x", "i16", 100],
+    ["z", "u16", 50],
+    ["h", "i8", 100],
+    ["sp", "u8", 5],
+    ["f", "u8"],
+    ["pen", "u8"],
+    ["r", "u8?"]
+  ]
+}

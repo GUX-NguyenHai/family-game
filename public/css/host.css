@@ -60,36 +60,179 @@ button.primary:hover:not(:disabled) { background: #ffc34d; }
   padding: 24px 28px;
 }
 
-/* Phòng chờ: [thanh chọn game] [QR] [người chơi + tuỳ chọn] */
-#lobby .join {
-  width: min(400px, 32vw);
-  text-align: center;
+/* Phòng chờ: thanh trên cùng + 3 cột [chọn game] [khoảng trống thấy cảnh 3D, khung Bắt đầu ở dưới] [QR + người chơi] */
+#lobby {
+  inset: 16px;
+  display: grid;
+  grid-template-columns: minmax(230px, 300px) minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 16px;
+}
+#lobby > * { padding: 16px 18px; min-height: 0; }
+#lobby h2 { margin: 0 0 12px; }
+
+/* Thanh trên cùng: tên, gói, nút cài đặt */
+#lobby > .lobby-top {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 10; /* các khung đều có backdrop-filter (mỗi khung một lớp riêng): đưa thanh trên lên trước để khung cài đặt không bị cột QR che */
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+}
+.lobby-top h1 { margin: 0 auto 0 0; font-size: 1.5rem; }
+button.icon { padding: 6px 12px; font-size: 1.3rem; line-height: 1; }
+button.icon[aria-expanded="true"] { background: rgba(255, 176, 32, 0.25); }
+.settings {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  width: min(440px, 90vw);
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #1b2236;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.settings .buttons { margin-top: 4px; }
+.settings .hint { margin: 12px 0 0; font-size: 0.9rem; }
+
+/* Cột trái: chọn game dạng lưới thẻ nhỏ, chia theo nhóm */
+#lobby > .game-sidebar { display: flex; flex-direction: column; overflow-y: auto; }
+.game-group h3 {
+  margin: 14px 2px 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.game-group:first-child h3 { margin-top: 0; }
+.game-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.game-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow: auto;
+  gap: 4px;
+  padding: 10px 4px 8px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.78rem;
+  line-height: 1.2;
+  text-align: center;
 }
-#lobby h1 { margin: 0; font-size: 2.2rem; }
-.sub { margin: 4px 0 14px; color: var(--muted); }
+.game-card .emoji { font-size: 2rem; line-height: 1; }
+.game-card.sel { border-color: var(--accent); background: rgba(255, 176, 32, 0.2); }
+
+/* Giữa: để trống cho thấy cảnh 3D phía sau; khung tên game + tuỳ chọn + nút Bắt đầu nằm dưới cùng */
+#lobby > .lobby-center {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0;
+  background: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+/* Khung Bắt đầu: trái = tên game, nhãn, mô tả, lựa chọn; phải = nút Bắt đầu vuông */
+.start-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 16px 18px 16px 22px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+.start-main { min-width: 0; }
+/* Tên game + nhãn cùng một hàng, mô tả tối đa 2 dòng */
+.game-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+#lobby .game-head .game-title { margin: 0; font-size: 1.6rem; }
+.game-head .game-desc {
+  flex-basis: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.game-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.game-tags i {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+}
+.game-desc { margin: 0; color: var(--muted); font-size: 0.95rem; }
+/* Lựa chọn trong khung Bắt đầu: tên thẳng cột + dải nút liền nhau, nút đang chọn tô vàng */
+.game-options.compact .option {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.game-options.compact .label { margin: 0; }
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-self: start;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.game-options.compact .seg button {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 0.95rem;
+}
+.game-options.compact .seg button:hover:not(.sel) { background: rgba(255, 255, 255, 0.12); }
+.game-options.compact .seg button.sel { background: var(--accent); color: var(--accent-text); }
+.option-notes { margin: 10px 0 0; color: var(--muted); font-size: 0.85rem; }
+.start-main .team-bar { margin-top: 10px; }
+
+/* Nút Bắt đầu vuông bên phải */
+button.start {
+  width: 190px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border-radius: 18px;
+  font-size: 1.35rem;
+  text-align: center;
+}
+button.start .go { font-size: 2.6rem; line-height: 1; }
+
+/* Phải: mã QR to + mã phòng chữ lớn (nhìn rõ từ xa), dưới là người chơi */
+#lobby > .lobby-side { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+.join { text-align: center; }
 #qr {
-  width: min(300px, 26vw);
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
   aspect-ratio: 1;
   background: #fff;
   border-radius: 14px;
   padding: 10px;
 }
-.code { margin-top: 14px; font-size: 1.3rem; }
-.code b { font-size: 2rem; letter-spacing: 0.2em; color: var(--accent); }
-.url { margin-top: 6px; color: var(--muted); font-size: 0.9rem; word-break: break-all; }
+.code { margin-top: 10px; font-size: 1rem; color: var(--muted); }
+.code b { display: block; font-size: 2.8rem; line-height: 1.1; letter-spacing: 0.2em; color: var(--accent); }
+.sub { margin: 6px 0 0; color: var(--muted); font-size: 0.9rem; }
+.url { color: var(--text); word-break: break-all; }
 .warn { margin: 10px 0 0; color: #ffd166; font-size: 0.85rem; }
-
-#lobby .players {
-  width: min(480px, 38vw);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto; /* màn hình thấp thì cuộn cả cột, không để danh sách bị co mất */
-}
-#lobby h2 { margin: 0 0 12px; }
 #playerCount {
   display: inline-block;
   min-width: 2em;
@@ -98,52 +241,6 @@ button.primary:hover:not(:disabled) { background: #ffc34d; }
   background: rgba(255, 255, 255, 0.15);
   text-align: center;
 }
-/* Thanh chọn game bên trái, chia theo nhóm */
-#lobby .game-sidebar {
-  width: min(270px, 20vw);
-  min-width: 200px;
-  padding: 18px 14px;
-  overflow-y: auto;
-}
-#lobby .game-sidebar h2 { font-size: 1.3rem; margin: 0 4px 10px; }
-.game-group h3 {
-  margin: 14px 4px 8px;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-.game-group:first-child h3 { margin-top: 4px; }
-.game-card {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  text-align: left;
-  border: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.08);
-}
-.game-card .emoji { font-size: 2rem; line-height: 1; }
-.game-card .info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.game-card b { font-size: 1.05rem; }
-.game-card .tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.game-card .tags i {
-  font-style: normal;
-  font-weight: 600;
-  font-size: 0.72rem;
-  padding: 1px 6px;
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--muted);
-}
-.game-card.sel { border-color: var(--accent); background: rgba(255, 176, 32, 0.2); }
-
-/* Tên + mô tả game đang chọn, đầu cột người chơi */
-.game-head { margin-bottom: 14px; }
-#lobby .game-head .game-title { margin: 0 0 4px; font-size: 1.6rem; }
-.game-desc { margin: 0; color: var(--muted); font-size: 0.9rem; }
 
 /* Tuỳ chọn của game (VD độ khó) */
 .game-options .option { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
@@ -212,7 +309,8 @@ button.link:hover:not(:disabled) { background: transparent; color: #ffc34d; }
   min-width: 0;
 }
 #playerList li.off { opacity: 0.45; }
-#playerList .emoji { font-size: 1.6rem; }
+#playerList .emoji { font-size: 1.4rem; }
+#playerList li { padding: 6px 8px; }
 #playerList .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 #playerList .kick { padding: 2px 8px; background: transparent; color: var(--muted); }
 #playerList .team { padding: 2px 6px; background: rgba(255, 255, 255, 0.1); font-size: 1.1rem; }
@@ -300,8 +398,8 @@ button.link:hover:not(:disabled) { background: transparent; color: #ffc34d; }
   to { opacity: 0.9; }
 }
 
-/* Quảng cáo ở phòng chờ (dưới mã QR) */
-.ad-box { width: 100%; margin-top: 14px; text-align: center; }
+/* Quảng cáo ở phòng chờ (cuối cột chọn game) */
+.ad-box { width: 100%; margin-top: 16px; text-align: center; }
 .ad-box small { display: block; margin-bottom: 4px; color: var(--muted); font-size: 0.75rem; }
 
 /* Kết quả */
@@ -336,19 +434,20 @@ button.link:hover:not(:disabled) { background: transparent; color: #ffc34d; }
   font-weight: 700;
 }
 
-/* Màn hình hẹp: xếp dọc; thanh chọn game thành một hàng thẻ cuộn ngang ở trên cùng. */
-@media (max-width: 1000px) {
-  .panel { flex-direction: column; inset: 12px; overflow: auto; }
-  .panel > * { flex: none; }
-  #lobby .join, #lobby .players, #lobby .game-sidebar { width: auto; min-width: 0; }
-  #lobby .game-sidebar { padding: 12px; overflow: visible; }
-  #lobby .game-sidebar h2 { display: none; }
-  .game-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-  .game-group { display: flex; gap: 8px; }
-  .game-group h3 { display: none; }
-  .game-card { width: auto; min-width: 200px; margin: 0; }
-  #qr { width: min(260px, 60vw); }
+/* Màn hình vừa: 2 cột (chọn game | QR + người chơi), khung Bắt đầu nằm dưới cùng chiếm cả 2 cột. */
+@media (max-width: 1100px) {
+  #lobby { grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+  #lobby > .lobby-center { grid-column: 1 / -1; grid-row: 3; }
 }
-@media (max-width: 800px) {
+/* Màn hình hẹp: xếp dọc, cuộn cả trang. */
+@media (max-width: 760px) {
+  .panel { flex-direction: column; inset: 12px; overflow: auto; }
+  #lobby { display: flex; }
+  #lobby > * { flex: none; }
+  #lobby > .game-sidebar, #lobby > .lobby-side { overflow: visible; }
+  .game-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .start-card { grid-template-columns: 1fr; }
+  button.start { width: 100%; min-height: 0; }
+  #qr { max-width: min(260px, 60vw); }
   #playerList { grid-template-columns: 1fr; }
 }

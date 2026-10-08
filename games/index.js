@@ -7,4 +7,5 @@ module.exports = [
   require('./coconut-climb/service'),
   require('./jump-rope/service'),
   require('./sack-race/service'),
+  require('./ski-slalom/service'),
 ];

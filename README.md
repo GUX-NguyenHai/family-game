@@ -15,6 +15,7 @@ Nền tảng game cho cả nhà, chơi theo kiểu **TV + điện thoại làm t
 | 🪢 Kéo co | 2 đội bằng người, lắc máy để kéo dây, đội thua rơi xuống sông | [games/tug-of-war](games/tug-of-war/README.md) |
 | 🌴 Leo cây hái dừa | Chọn khỉ, lắc để leo, ngừng lắc là tụt, qua các đoạn thân trơn | [games/coconut-climb](games/coconut-climb/README.md) |
 | 🤸 Nhảy dây | Cả nhà nhảy chung một sợi dây, hất máy để nhảy đúng nhịp, vướng là bị loại. Mỗi màn khó hơn, ai trụ cuối cùng thắng | [games/jump-rope](games/jump-rope/README.md) |
+| ⛷️ Trượt tuyết vượt cổng | Chỉ nghiêng máy để lái xuống dốc qua các cổng cờ. Trượt cổng +3 giây, đâm cây là ngã, ít thời gian nhất thắng | [games/ski-slalom](games/ski-slalom/README.md) |
 | 🛍️ Nhảy bao bố | Mỗi lần hất máy là một bước nhảy. Máy rung lúc đáp: hất tiếp ngay thì bước dài dần, hất vội lúc còn bay là ngã | [games/sack-race](games/sack-race/README.md) |
 
 ---
@@ -152,7 +153,7 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 | **Server là trọng tài** | Thắng thua, điểm, va chạm tính trong `service/`. Điện thoại chỉ gửi thao tác, không tự quyết kết quả |
 | **Tách mô phỏng khỏi lớp nối** | `simulation.js` là hàm thuần (nhận trạng thái, trả trạng thái/sự kiện). `index.js` nối nó với nền tảng |
 | **Tham số để trong `config.js`** | Tốc độ, thời gian, độ khó… không viết cứng rải rác trong code |
-| **CSS có tiền tố riêng** | Mỗi game đặt tiền tố class riêng (`.race-…`, `.boat-…`, `.tug-…`, `.cc-…`, `.rope-…`, `.sack-…`) để không đè lên game khác |
+| **CSS có tiền tố riêng** | Mỗi game đặt tiền tố class riêng (`.race-…`, `.boat-…`, `.tug-…`, `.cc-…`, `.rope-…`, `.sack-…`, `.ski-…`) để không đè lên game khác |
 | **Model tải về ghi nguồn** | Mỗi thư mục model có `CREDITS.md` (tên gốc, tác giả, link). Nhiều model là CC-BY, phải ghi tên tác giả |
 | **Có bot** | Game nên có bot để thử một mình và để bù người |
 | **Chạy được trên cả Android và iPhone** | iPhone chỉ cho đọc cảm biến sau khi người chơi bấm nút. Phần chung đã lo, game chỉ cần dùng `ctx.sensors` |
@@ -175,7 +176,7 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 | Gói Free/Pro, giới hạn số người | Khai báo `maxPlayers`, phần chung lấy số nhỏ hơn giữa gói và game |
 | Cảm biến điện thoại | `ctx.sensors.level` (lắc), `ctx.sensors.steer` (nghiêng), `onGesture('jump')` (hất hoặc giật máy) |
 | Đồ nghề 3D | Import từ `/js/core/scene-kit.js` |
-| Khung nhỏ cho người bị tụt lại (game đua) | `MiniViews` trong `/js/core/mini-views.js`, cách dùng ghi ở đầu file. Đua thú, Đua thuyền, Nhảy bao bố đang dùng |
+| Khung nhỏ cho người bị tụt lại (game đua) | `MiniViews` trong `/js/core/mini-views.js`, cách dùng ghi ở đầu file. Đua thú, Đua thuyền, Nhảy bao bố, Trượt tuyết đang dùng |
 | Âm thanh, thông báo nổi trên TV | `ctx.beep()`, `ctx.fanfare()`, `ctx.toast()` |
 | Bắt lỗi | Lỗi trong code game được bắt và ghi log, không làm sập server |
 

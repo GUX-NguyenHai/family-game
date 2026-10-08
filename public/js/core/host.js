@@ -191,33 +191,67 @@ function renderGamePicker() {
   const groups = [...categories, { id: 'other', name: 'Khác', emoji: '🎮' }]
     .map(c => ({ ...c, games: catalog.filter(g => (known.has(g.category) ? g.category : 'other') === c.id) }))
     .filter(c => c.games.length);
+  // Thẻ nhỏ: biểu tượng + tên (3 thẻ một hàng); nhãn chi tiết hiện ở khung giữa cho game đang chọn.
   document.querySelector('.game-list').innerHTML = groups
     .map(
       c => `<section class="game-group">
         <h3>${esc(c.emoji)} ${esc(c.name)}</h3>
-        ${c.games
-          .map(
-            g => `<button class="game-card${g.id === room.game ? ' sel' : ''}" data-game="${esc(g.id)}" role="radio" aria-checked="${g.id === room.game}">
-              <span class="emoji">${esc(g.emoji)}</span>
-              <span class="info">
-                <b>${esc(g.name)}</b>
-                <span class="tags">${gameTags(g).map(t => `<i>${esc(t)}</i>`).join('')}</span>
-              </span>
-            </button>`,
-          )
-          .join('')}
+        <div class="game-tiles">
+          ${c.games
+            .map(
+              g => `<button class="game-card${g.id === room.game ? ' sel' : ''}" data-game="${esc(g.id)}" role="radio"
+                aria-checked="${g.id === room.game}" title="${esc(g.description)}">
+                <span class="emoji">${esc(g.emoji)}</span>
+                <span>${esc(g.name)}</span>
+              </button>`,
+            )
+            .join('')}
+        </div>
       </section>`,
     )
     .join('');
   const game = gameInfo();
   document.querySelector('.game-title').textContent = game ? `${game.emoji} ${game.name}` : '';
+  document.querySelector('.game-tags').innerHTML = game ? gameTags(game).map(t => `<i>${esc(t)}</i>`).join('') : '';
   document.querySelector('.game-desc').textContent = game?.description || '';
 }
+
+// ---------- Cài đặt (⚙️): mã Pro, đồ hoạ, toàn màn hình, link vào phòng, version ----------
+function setSettingsOpen(open) {
+  $('#settings').hidden = !open;
+  $('#btnSettings').setAttribute('aria-expanded', String(open));
+}
+$('#btnSettings').onclick = e => {
+  e.stopPropagation();
+  setSettingsOpen($('#settings').hidden);
+};
+// Bấm ra ngoài thì đóng.
+document.addEventListener('click', e => {
+  if (!$('#settings').hidden && !e.target.closest('#settings, #btnSettings')) setSettingsOpen(false);
+});
 
 function renderOptions() {
   const game = gameInfo();
   for (const box of document.querySelectorAll('.game-options')) {
     const prefix = box.dataset.prefix || '';
+    if (box.classList.contains('compact')) {
+      // Phòng chờ: mỗi lựa chọn là một dải nút liền nhau, tên lựa chọn thẳng cột; mô tả gom thành 1 dòng chữ nhỏ.
+      const notes = [];
+      box.innerHTML = (game?.options || [])
+        .map(o => {
+          const value = room.options?.[o.key];
+          const sel = o.choices.find(c => c.value === value);
+          if (sel?.desc) notes.push(sel.desc);
+          return `<div class="option" role="radiogroup" aria-label="${esc(o.label)}">
+            <span class="label">${esc(o.label)}</span>
+            <div class="seg">${o.choices
+              .map(c => `<button data-key="${esc(o.key)}" data-value="${esc(c.value)}" class="${c.value === value ? 'sel' : ''}">${esc(c.label)}</button>`)
+              .join('')}</div>
+          </div>`;
+        })
+        .join('') + (notes.length ? `<p class="option-notes">ⓘ ${notes.map(esc).join(' · ')}</p>` : '');
+      continue;
+    }
     box.innerHTML = (game?.options || [])
       .map(o => {
         const value = room.options?.[o.key];
@@ -270,6 +304,7 @@ function showLicenseMsg(text, ok) {
   el.textContent = text;
   el.classList.toggle('ok', !!ok);
   el.hidden = !text;
+  if (text && $('#settings').hidden) toast(text); // khung cài đặt đang đóng: vẫn báo cho chủ phòng thấy
 }
 
 $('#btnShowLicense').onclick = () => {
@@ -327,7 +362,7 @@ function renderLobby() {
     .join('');
   renderTeams(list);
   $('#btnStart').disabled = !list.some(p => p.connected);
-  $('#btnStart').textContent = `▶ Bắt đầu ${game ? game.name : ''}`;
+  $('#btnStart').innerHTML = '<span class="go">▶</span><b>BẮT ĐẦU</b>';
   const bots = !!game?.bots;
   $('#btnAddBot').hidden = !bots;
   $('#btnClearBots').hidden = !bots;
