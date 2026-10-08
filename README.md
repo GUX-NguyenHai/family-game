@@ -197,11 +197,7 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 - Mã được **ký bằng `LICENSE_SECRET`**, chứa sẵn hạn dùng và số người, nên không cần database. Việc bán và thanh toán nằm ngoài game.
 - Server tối đa `MAX_ROOMS` = 50 phòng cùng lúc.
 
-**Biến môi trường:** cả local (`npm run dev`) và Docker đều đọc file `.env`. Trên server, giá trị nằm trong **`.env.prod`** (đi theo git), mỗi lần build chép sang `.env`:
-```bash
-git pull && cp .env.prod .env && docker compose up -d --build --force-recreate
-```
-Đặt khoá ký mã Pro: `echo "LICENSE_SECRET=$(openssl rand -hex 32)" >> .env.prod` rồi commit, build lại trên server.
+**Biến môi trường:** chạy local (`npm run dev`) đọc file `.env`; Docker trên server đọc thẳng **`.env.prod`** (đi theo git, khai báo `env_file` trong `docker-compose.yml`), nên `git pull` rồi build như thường là đủ. Đặt khoá ký mã Pro: `echo "LICENSE_SECRET=$(openssl rand -hex 32)" >> .env.prod` rồi commit, build lại trên server.
 Chưa có khoá thì server tắt Pro. Đổi khoá thì mọi mã cũ mất hiệu lực.
 
 **Tạo mã:**
@@ -222,7 +218,7 @@ npm run make-code -- --days 30                                          # trên 
   CONTACT_EMAIL=                           # (tuỳ chọn) email liên hệ ở chân trang
   ADMIN_PASSWORD=                          # mật khẩu trang /admin (upload game), trống = tắt
   ```
-  Sửa `.env.prod` xong commit, trên server `git pull && cp .env.prod .env` rồi `docker compose up -d --force-recreate` để container nhận giá trị mới.
+  Sửa `.env.prod` xong commit, trên server `git pull` rồi build như thường để container nhận giá trị mới.
 - Có `ADSENSE_CLIENT` thì server tự trả `/ads.txt` và chèn thẻ AdSense vào trang giới thiệu `/` (Google kiểm tra thẻ này lúc duyệt).
 - Trang giới thiệu `/` và chính sách bảo mật `/privacy` dựng trên server ([src/pages.js](src/pages.js)); danh sách game lấy từ khai báo của từng game nên thêm game là trang tự cập nhật.
 - Bảng hỏi đồng ý cookie cho châu Âu/Anh: bật trong AdSense, mục "Quyền riêng tư và thông báo", không cần code.

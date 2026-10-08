@@ -7,7 +7,7 @@ services:
     ports:
       # Chỉ mở cho nginx trên cùng máy. Muốn truy cập thẳng từ ngoài thì đổi thành "3000:3000".
       - "127.0.0.1:3000:3000"
-    # Biến môi trường lấy từ file .env cạnh file này. Trên server: cp .env.prod .env trước khi build (xem README).
+    # Biến môi trường: lấy từ file .env cạnh file này nếu có, không có thì dùng giá trị sau dấu ":-".
     environment:
       # Khoá ký mã Pro. Trống = tắt Pro.
       - LICENSE_SECRET=${LICENSE_SECRET:-}
@@ -18,7 +18,7 @@ services:
       # Email liên hệ hiện ở chân trang giới thiệu/chính sách bảo mật (tuỳ chọn).
       - CONTACT_EMAIL=${CONTACT_EMAIL:-}
       # Mật khẩu trang /admin (upload game .zip). Trống = tắt trang quản trị.
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-GUX@2023}
     volumes:
       # Game upload qua /admin. Volume riêng nên build lại, git pull, xoá image đều không mất.
       # (Chỉ mất nếu chạy "docker compose down -v" hoặc "docker volume rm".)
