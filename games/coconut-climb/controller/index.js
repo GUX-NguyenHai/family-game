@@ -13,27 +13,28 @@ function defaultFigure(id) {
 
 export function create(ctx) {
   const { lobbyRoot, playRoot, sensors, send, vibrate, esc } = ctx;
+  const tx = (key, params) => esc(ctx.t(key, params)); // chữ đã dịch, an toàn để chèn vào HTML
 
   lobbyRoot.innerHTML = `
     <div class="box">
-      <h3>🐒 Chọn khỉ leo cây</h3>
+      <h3>${tx('pickFigure')}</h3>
       <div class="cc-figures" data-r="figurePicker"></div>
     </div>
     <div class="box">
-      <h3>🌴 Thử leo</h3>
+      <h3>${tx('tryClimb')}</h3>
       <div class="meter">
-        <span>Lắc ↕</span>
+        <span>${tx('shake')}</span>
         <div class="bar"><i data-r="shakeBar"></i></div>
       </div>
       <label class="row">
-        <span>Độ nhạy lắc</span>
+        <span>${tx('sensitivity')}</span>
         <select data-r="selSens">
-          <option value="14">Thấp</option>
-          <option value="10">Vừa</option>
-          <option value="7">Cao</option>
+          <option value="14">${tx('low')}</option>
+          <option value="10">${tx('mid')}</option>
+          <option value="7">${tx('high')}</option>
         </select>
       </label>
-      <p class="hint">Cầm máy dọc, lắc lên xuống để leo: lắc càng nhanh leo càng nhanh, <b>ngừng lắc là tụt xuống</b>. Giữa thân cây có <b>đoạn trơn</b> màu rêu xanh: phải lắc thật mạnh mới leo qua, lắc yếu là trượt nhanh. Ai lên ngọn hái dừa trước thì thắng!</p>
+      <p class="hint">${tx('hint1')}<b>${tx('hint2')}</b>${tx('hint3')}<b>${tx('hint4')}</b>${tx('hint5')}</p>
     </div>`;
 
   playRoot.innerHTML = `
@@ -51,9 +52,9 @@ export function create(ctx) {
         </div>
         <div class="cc-right">
           <div data-r="status" class="cc-status"></div>
-          <div class="cc-power"><span>Lắc</span><div class="bar"><i data-r="powerBar"></i><b data-r="needMark" hidden></b></div></div>
+          <div class="cc-power"><span>${tx('power')}</span><div class="bar"><i data-r="powerBar"></i><b data-r="needMark" hidden></b></div></div>
           <p data-r="noShake" class="cc-noshake" hidden></p>
-          <div class="cc-shake" data-r="shake"><span>🧗</span><b>LẮC ĐỂ LEO!</b></div>
+          <div class="cc-shake" data-r="shake"><span>🧗</span><b>${tx('shakeToClimb')}</b></div>
         </div>
       </div>
     </div>`;
@@ -74,7 +75,7 @@ export function create(ctx) {
   function renderFigures() {
     const sel = currentFigure();
     el.figurePicker.innerHTML = catalog.figures
-      .map(f => `<button type="button" data-id="${esc(f.id)}" class="${f.id === sel ? 'sel' : ''}"><span class="e">${f.emoji}</span>${esc(f.name)}</button>`)
+      .map(f => `<button type="button" data-id="${esc(f.id)}" class="${f.id === sel ? 'sel' : ''}"><span class="e">${f.emoji}</span>${esc(ctx.pick(f.name))}</button>`)
       .join('');
   }
 
@@ -92,9 +93,7 @@ export function create(ctx) {
       return;
     }
     const canEnable = sensors.secure && !sensors.enabled && ctx.sensorError()?.message !== 'unsupported';
-    el.noShake.textContent = canEnable
-      ? 'Chưa bật cảm biến nên lắc chưa có tác dụng. Bấm "Bật cảm biến" ở dưới.'
-      : 'Máy không có cảm biến lắc nên không leo được.';
+    el.noShake.textContent = canEnable ? ctx.t('noSensorEnable') : ctx.t('noSensor');
     el.noShake.hidden = false;
   }
 
@@ -150,10 +149,10 @@ export function create(ctx) {
       el.needMark.hidden = !(f & FLAG.SLIP);
 
       let status = '';
-      if (f & FLAG.TOP) status = `Hái được dừa! Hạng ${m.rank} 🥥🎉`;
-      else if (f & FLAG.SLIP) status = m.pw > m.need ? 'Đoạn trơn! Cố lên, lắc tiếp! 💪' : 'Đoạn trơn! Lắc MẠNH lên, đang trượt! 😱';
-      else if (f & FLAG.SLIDING) status = 'Đang tụt! Lắc tiếp! ⬇️';
-      else if (m.phase === 'climb') status = 'Leo lên! 🌴';
+      if (f & FLAG.TOP) status = ctx.t('statusTop', { n: m.rank });
+      else if (f & FLAG.SLIP) status = ctx.t(m.pw > m.need ? 'statusSlipOk' : 'statusSlipWeak');
+      else if (f & FLAG.SLIDING) status = ctx.t('statusSliding');
+      else if (m.phase === 'climb') status = ctx.t('statusClimb');
       el.status.textContent = status;
     },
 

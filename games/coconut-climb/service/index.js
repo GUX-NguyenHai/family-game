@@ -100,10 +100,13 @@ function createMatch({ players, options, now, startAt, api }) {
 
 module.exports = {
   id: 'coconut-climb', // trùng tên thư mục games/coconut-climb
-  name: 'Leo cây hái dừa',
+  name: { vi: 'Leo cây hái dừa', en: 'Coconut Climb' },
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🌴',
-  description: 'Chọn một chú khỉ, lắc máy để leo cây dừa, ngừng lắc là tụt xuống. Qua đoạn thân trơn phải lắc thật mạnh. Ai lên ngọn hái dừa trước thì thắng!',
+  description: {
+    vi: 'Chọn một chú khỉ, lắc máy để leo cây dừa, ngừng lắc là tụt xuống. Qua đoạn thân trơn phải lắc thật mạnh. Ai lên ngọn hái dừa trước thì thắng!',
+    en: 'Pick a monkey and shake your phone to climb the palm tree; stop and you slide down. Shake extra hard on slippery parts. First to grab a coconut wins!',
+  },
   maxPlayers: 12,
   bots: true,
   sensors: true,
@@ -111,12 +114,12 @@ module.exports = {
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
-  goText: 'LEO!',
+  goText: { vi: 'LEO!', en: 'CLIMB!' },
   coastMs: C.COAST_MS,
   options: [
     {
       key: 'difficulty',
-      label: 'Độ khó',
+      label: { vi: 'Độ khó', en: 'Difficulty' },
       default: C.DEFAULT_DIFFICULTY,
       choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
     },

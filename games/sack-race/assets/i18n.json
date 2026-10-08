@@ -1,0 +1,73 @@
+{
+  "_ghi_chu": "Chữ trên TV và điện thoại của game Nhảy bao bố, 2 thứ tiếng. Dùng ctx.t('khoá', { name, rank, n }); {name}, {rank}… là chỗ điền. Mỗi khoá phải có ở cả vi và en. Câu hướng dẫn ở phòng chờ (lobby.hint*) được cắt thành nhiều mảnh để chèn chữ đậm, không để HTML trong bản dịch.",
+  "vi": {
+    "toast.fall": "{name} ngã rồi! 🤕",
+    "toast.finish": "{name} về đích hạng {rank}! 🏁",
+    "toast.modelYaw": "Xoay model: modelYaw = {yaw} (ghi số này vào animals.json)",
+    "scene.finishBanner": "🏁 ĐÍCH 🏁",
+
+    "lobby.title": "🛍️ Thử nhảy",
+    "lobby.jump": "Nhảy ⤴",
+    "lobby.jumpHit": "NHẢY!",
+    "lobby.jumpSens": "Độ nhạy nhảy",
+    "lobby.low": "Thấp",
+    "lobby.mid": "Vừa",
+    "lobby.high": "Cao",
+    "lobby.hintIntro": "Không có nút bấm. Cầm máy dọc,",
+    "lobby.hintFlickBold": "hất nhanh đầu máy về phía mình",
+    "lobby.hintOr": "hoặc",
+    "lobby.hintJerkBold": "giật mạnh cả máy lên",
+    "lobby.hintEachHop": ": mỗi lần là 1 bước nhảy. Máy",
+    "lobby.hintBuzzBold": "rung",
+    "lobby.hintRhythm": "lúc con vật đáp đất: hất tiếp ngay thì bước dài dần 🔥. Hất vội lúc còn đang bay là",
+    "lobby.hintFallBold": "ngã",
+    "lobby.tilt": "Hất đầu máy: {deg}°/{need}°",
+    "lobby.noTilt": "Không đo được góc nghiêng",
+    "lobby.jerk": "Giật lên: {n}/{need}",
+
+    "pad.flickToHop": "HẤT MÁY ĐỂ NHẢY",
+    "pad.buzzHint": "Máy rung là đáp đất: hất tiếp ngay!",
+    "pad.finished": "VỀ ĐÍCH HẠNG {rank}!",
+    "pad.fell": "NGÃ RỒI!",
+    "pad.getUp": "Chờ đứng dậy rồi nhảy lại…",
+    "combo": "Nhịp đẹp ×{n} 🔥",
+
+    "noSensor.enable": "Chưa bật cảm biến nên chưa nhảy được. Bấm \"Bật cảm biến\" ở dưới.",
+    "noSensor.none": "Máy này không có cảm biến chuyển động nên không chơi được Nhảy bao bố."
+  },
+  "en": {
+    "toast.fall": "{name} fell! 🤕",
+    "toast.finish": "{name} finished in place {rank}! 🏁",
+    "toast.modelYaw": "Model rotated: modelYaw = {yaw} (put this number in animals.json)",
+    "scene.finishBanner": "🏁 FINISH 🏁",
+
+    "lobby.title": "🛍️ Try hopping",
+    "lobby.jump": "Hop ⤴",
+    "lobby.jumpHit": "HOP!",
+    "lobby.jumpSens": "Hop sensitivity",
+    "lobby.low": "Low",
+    "lobby.mid": "Medium",
+    "lobby.high": "High",
+    "lobby.hintIntro": "No buttons. Hold the phone upright and",
+    "lobby.hintFlickBold": "quickly flick the top toward you",
+    "lobby.hintOr": "or",
+    "lobby.hintJerkBold": "jerk the whole phone up hard",
+    "lobby.hintEachHop": ": each one is a hop. The phone",
+    "lobby.hintBuzzBold": "buzzes",
+    "lobby.hintRhythm": "when your animal lands: flick again right away and your hops get longer 🔥. Flick while still in the air and you",
+    "lobby.hintFallBold": "fall",
+    "lobby.tilt": "Flick: {deg}°/{need}°",
+    "lobby.noTilt": "Can't measure tilt",
+    "lobby.jerk": "Jerk up: {n}/{need}",
+
+    "pad.flickToHop": "FLICK TO HOP",
+    "pad.buzzHint": "A buzz means you landed: flick again now!",
+    "pad.finished": "FINISHED IN PLACE {rank}!",
+    "pad.fell": "YOU FELL!",
+    "pad.getUp": "Wait to get up, then hop again…",
+    "combo": "Nice rhythm ×{n} 🔥",
+
+    "noSensor.enable": "Sensors are off, so you can't hop yet. Press \"Enable sensors\" below.",
+    "noSensor.none": "This phone has no motion sensors, so it can't play Sack Race."
+  }
+}

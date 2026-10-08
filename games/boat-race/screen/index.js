@@ -11,19 +11,21 @@ const stateCodec = compile(await fetch('/games/boat-race/assets/schema.json').th
 const halfLenFor = seats => 1.3 + 0.35 * seats;
 
 // Các thuyền để xếp ở phòng chờ, cùng id với thuyền lúc đua để chuyển cảnh mượt.
-function lobbyBoats(info) {
+// Tên đội lấy theo ngôn ngữ của màn hình (t.names là { vi, en }).
+function lobbyBoats(info, ctx) {
   const boats = [];
   if (info.teamMode) {
     for (const t of info.teams) {
       const crew = info.players.filter(p => p.team === t.id);
       if (!crew.length) continue;
-      boats.push({ id: `t${t.id}`, name: `Đội ${t.name}`, color: t.color, boat: crew[0].prefs?.boat, crew: crew.map(p => p.id), halfLen: halfLenFor(crew.length) });
+      const name = ctx.t('teamBoat', { name: ctx.pick(t.names || t.name) });
+      boats.push({ id: `t${t.id}`, name, color: t.color, boat: crew[0].prefs?.boat, crew: crew.map(p => p.id), halfLen: halfLenFor(crew.length) });
     }
     const loose = info.players.filter(p => p.team == null);
     if (loose.length) {
       boats.push({
         id: 'no-team',
-        name: 'Chưa chọn đội',
+        name: ctx.t('noTeam'),
         color: '#9aa5bd',
         boat: loose[0].prefs?.boat,
         crew: loose.map(p => p.id),
@@ -47,7 +49,9 @@ export function create(ctx) {
       <div class="boat-progress"><div class="finish">🏁</div></div>
     </div>`;
   const q = sel => root.querySelector(sel);
-  const scene = new BoatScene(q('.boat-scene'), ctx.manifest, catalog, ctx.quality, id => ctx.player(id), q('.boat-hud'));
+  const scene = new BoatScene(q('.boat-scene'), ctx.manifest, catalog, ctx.quality, id => ctx.player(id), q('.boat-hud'), {
+    finishBanner: ctx.t('finishBanner'),
+  });
   let trackLen = 400;
   let boatInfo = new Map(); // id thuyền → { name, color } của ván đang chơi
   let boatIds = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
@@ -110,11 +114,13 @@ export function create(ctx) {
       q('.boat-hud').hidden = info.state === 'lobby';
       if (info.state !== 'lobby') return;
       trackLen = info.preview?.trackLen || trackLen;
-      scene.setLobby(lobbyBoats(info), trackLen, info.preview?.course || 'basic');
+      scene.setLobby(lobbyBoats(info, ctx),trackLen, info.preview?.course || 'basic');
     },
 
     onSetup(info) {
       if (!info) return;
+      // Tên thuyền đội là { vi, en }: đổi ra đúng ngôn ngữ trước khi vẽ.
+      info = { ...info, boats: info.boats.map(b => ({ ...b, name: ctx.pick ? ctx.pick(b.name) : b.name })) };
       trackLen = info.trackLen;
       boatInfo = new Map(info.boats.map(b => [b.id, b]));
       boatIds = info.boats.map(b => b.id);
@@ -142,17 +148,17 @@ export function create(ctx) {
       scene.fx(ev);
       const name = boatName(ev.bid);
       if (ev.type === 'log') {
-        toast(`${name} đâm khúc gỗ! 🪵`);
+        toast(ctx.t('hitLog', { name }));
         beep(160, 0.2, 'sawtooth', 0.05);
       } else if (ev.type === 'island') {
         const now = performance.now();
         if (now - (islandToastAt.get(ev.bid) || 0) > 3000) {
           islandToastAt.set(ev.bid, now);
-          toast(`${name} vướng đảo hải đăng! 🗼`);
+          toast(ctx.t('hitIsland', { name }));
         }
         beep(120, 0.15, 'sawtooth', 0.04);
       } else if (ev.type === 'finish') {
-        toast(`${name} về đích hạng ${ev.rank}! 🏁`);
+        toast(ctx.t('finished', { name, n: ev.rank }));
         if (ev.rank === 1) fanfare();
         else beep(660, 0.2, 'triangle');
       }

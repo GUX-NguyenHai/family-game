@@ -24,3 +24,4 @@ Hai đội 🔴 Đỏ và 🔵 Xanh đứng hai bên bờ sông, cầm chung m�
 | `service/index.js` | Khai báo game, gửi trạng thái cho TV và điện thoại |
 | `screen/scene.js` | Cảnh 3D: sông giữa màn hình, hai đội hai bờ. Con vật ngả người, đi lùi khi kéo, lội nước khi bị kéo vào sông |
 | `controller/index.js` | Tay cầm: vị trí dây, lực của mình, đội mình và đội kia |
+| `assets/i18n.json` | Chữ trên TV và điện thoại của game (2 thứ tiếng) |

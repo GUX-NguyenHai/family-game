@@ -7,7 +7,7 @@ import { compile, decode } from '/js/core/state-codec.js';
 const stateCodec = compile(await fetch('/games/__ID__/assets/schema.json').then(r => r.json()));
 
 export function create(ctx) {
-  const { root, esc, toast, beep, fanfare } = ctx;
+  const { root, esc, toast, beep, fanfare, t } = ctx; // t: chữ theo ngôn ngữ (assets/i18n.json)
   root.innerHTML = `
     <div class="__PREFIX__-stage">
       <div class="__PREFIX__-timer" hidden></div>
@@ -57,7 +57,7 @@ export function create(ctx) {
 
     onEvent(e) {
       if (e.type === 'full') {
-        toast(`${ctx.player(e.pid)?.name || '?'} đổ đầy thanh! 🏆`);
+        toast(t('full', { name: ctx.player(e.pid)?.name || '?' }));
         if (e.rank === 1) fanfare();
         else beep(660, 0.2, 'triangle');
       }

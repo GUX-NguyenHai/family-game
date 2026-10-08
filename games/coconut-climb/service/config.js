@@ -28,8 +28,8 @@ module.exports = {
   DEFAULT_DIFFICULTY: 'easy',
   DIFFICULTIES: {
     easy: {
-      label: '🟢 Dễ',
-      desc: 'Cây 14m, 2 đoạn trơn ngắn, tụt chậm, bot yếu.',
+      label: { vi: '🟢 Dễ', en: '🟢 Easy' },
+      desc: { vi: 'Cây 14m, 2 đoạn trơn ngắn, tụt chậm, bot yếu.', en: '14m tree, 2 short slippery parts, slow sliding, weak bots.' },
       HEIGHT: 14,
       DRIVE_GAIN: 0.9,
       SLIDE: 0.35,
@@ -39,15 +39,18 @@ module.exports = {
       BOT: { skillMin: 0.3, skillMax: 0.5 },
     },
     normal: {
-      label: '🟡 Trung bình',
-      desc: 'Cây 18m, 3 đoạn trơn, bot khá.',
+      label: { vi: '🟡 Trung bình', en: '🟡 Normal' },
+      desc: { vi: 'Cây 18m, 3 đoạn trơn, bot khá.', en: '18m tree, 3 slippery parts, decent bots.' },
       HEIGHT: 18,
       DRIVE_GAIN: 0.7,
       BOT: { skillMin: 0.45, skillMax: 0.85 },
     },
     hard: {
-      label: '🔴 Khó',
-      desc: 'Cây 22m, 4 đoạn trơn dài và rất trơn, phải lắc mạnh, tụt nhanh, bot giỏi.',
+      label: { vi: '🔴 Khó', en: '🔴 Hard' },
+      desc: {
+        vi: 'Cây 22m, 4 đoạn trơn dài và rất trơn, phải lắc mạnh, tụt nhanh, bot giỏi.',
+        en: '22m tree, 4 long, very slippery parts, shake hard, fast sliding, good bots.',
+      },
       HEIGHT: 22,
       DRIVE_GAIN: 0.55,
       SLIDE: 0.7,

@@ -22,13 +22,16 @@ module.exports = {
     { id: 'folk', name: 'Dân gian', emoji: '🎉' },
   ],
 
-  // Đội (cho game chơi theo đội). Tối đa 4 đội.
+  // Đội (cho game chơi theo đội). Tối đa 4 đội. name = tiếng Việt (giữ cho code cũ), names = cả 2 thứ tiếng.
   TEAMS: [
-    { id: 0, name: 'Đỏ', emoji: '🔴', color: '#e6194b' },
-    { id: 1, name: 'Xanh', emoji: '🔵', color: '#4363d8' },
-    { id: 2, name: 'Lục', emoji: '🟢', color: '#3cb44b' },
-    { id: 3, name: 'Vàng', emoji: '🟡', color: '#ffe119' },
+    { id: 0, name: 'Đỏ', names: { vi: 'Đỏ', en: 'Red' }, emoji: '🔴', color: '#e6194b' },
+    { id: 1, name: 'Xanh', names: { vi: 'Xanh', en: 'Blue' }, emoji: '🔵', color: '#4363d8' },
+    { id: 2, name: 'Lục', names: { vi: 'Lục', en: 'Green' }, emoji: '🟢', color: '#3cb44b' },
+    { id: 3, name: 'Vàng', names: { vi: 'Vàng', en: 'Yellow' }, emoji: '🟡', color: '#ffe119' },
   ],
+
+  // Ngôn ngữ giao diện. Chữ do game khai báo (tên, mô tả, lựa chọn, kết quả) có thể là chuỗi hoặc { vi, en }.
+  LANGS: ['vi', 'en'],
 
   // Màu riêng của từng người, dùng chung cho mọi game.
   COLORS: [

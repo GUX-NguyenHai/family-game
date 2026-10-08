@@ -8,7 +8,7 @@ import { compile, decode } from '/js/core/state-codec.js';
 const stateCodec = compile(await fetch('/games/jump-rope/assets/schema.json').then(r => r.json()));
 
 export function create(ctx) {
-  const { root, toast, beep } = ctx;
+  const { root, toast, beep, t, pick } = ctx;
   root.innerHTML = `
     <canvas class="rope-scene"></canvas>
     <div class="rope-hud" hidden>
@@ -23,7 +23,7 @@ export function create(ctx) {
   const scene = new RopeScene(q('.rope-scene'), ctx.manifest, ctx.quality);
   scene.onBottom = () => beep(1250, 0.035, 'square', 0.05); // "tách"
   let order = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
-  let titles = {};
+  let titles = {}; // tên các màn, mỗi tên là { vi, en }
   let levelMs = 30000;
   let hudAt = 0;
 
@@ -31,7 +31,7 @@ export function create(ctx) {
     if (e.target.closest?.('input, textarea')) return;
     if (e.key === 'y' || e.key === 'Y') {
       const yaw = scene.rotateModels(Math.PI / 2);
-      toast(`Xoay model thêm ${Math.round((yaw * 180) / Math.PI)}° (chỉ để thử, chưa lưu)`);
+      toast(t('rotateModel', { deg: Math.round((yaw * 180) / Math.PI) }));
     }
   }
   window.addEventListener('keydown', onKey);
@@ -42,17 +42,17 @@ export function create(ctx) {
       el.hidden = true;
       return;
     }
-    el.querySelector('b').textContent = `MÀN ${level}`;
-    el.querySelector('span').textContent = titles[level] || '';
+    el.querySelector('b').textContent = t('levelBanner', { n: level });
+    el.querySelector('span').textContent = pick(titles[level]);
     el.hidden = false;
   }
 
   function renderHud(s) {
-    q('.rope-level b').textContent = `Màn ${s.level}`;
-    q('.rope-level span').textContent = titles[s.level] || '';
+    q('.rope-level b').textContent = t('level', { n: s.level });
+    q('.rope-level span').textContent = pick(titles[s.level]);
     q('.rope-time i').style.width = `${s.phase === 'playing' ? (s.timeLeft / levelMs) * 100 : s.phase === 'break' ? 100 : 0}%`;
     const jumps = Math.max(0, ...s.p.filter(p => !(p.f & 1)).map(p => p.n));
-    q('.rope-info').textContent = `Còn ${s.alive}/${s.p.length} người · ${jumps} lần nhảy`;
+    q('.rope-info').textContent = t('tvInfo', { alive: s.alive, total: s.p.length, n: jumps });
     banner(s.phase === 'break' ? s.level : null);
   }
 
@@ -93,7 +93,7 @@ export function create(ctx) {
         scene.jump(e.pid);
       } else if (e.type === 'out') {
         scene.trip(e.pid);
-        toast(`${ctx.player(e.pid)?.name || '?'} vướng dây! 💥`);
+        toast(t('tripped', { name: ctx.player(e.pid)?.name || '?' }));
         beep(150, 0.25, 'sawtooth', 0.06);
       } else if (e.type === 'level') {
         banner(e.level);

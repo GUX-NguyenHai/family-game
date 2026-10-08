@@ -5,52 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#141a2a">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Party Game – Tay cầm</title>
+  <title data-i18n="play.title">Party Game</title>
   <link rel="stylesheet" href="/css/play.css">
 </head>
 <body>
+  <!-- Chữ giao diện: data-i18n* điền theo ngôn ngữ (/i18n/vi.json, en.json, xem /js/core/i18n.js) -->
   <section id="scr-join" class="screen">
+    <button class="lang-btn ghost" data-lang-btn></button>
     <h1>🎮 Party Game</h1>
     <label class="field">
-      <span>Mã phòng</span>
+      <span data-i18n="join.code"></span>
       <input id="code" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABCD">
     </label>
     <label class="field">
-      <span>Tên của bạn</span>
-      <input id="name" maxlength="14" autocomplete="off" placeholder="VD: Bố, Mẹ, Bi…">
+      <span data-i18n="join.name"></span>
+      <input id="name" maxlength="14" autocomplete="off" data-i18n-placeholder="join.namePlaceholder">
     </label>
-    <p class="label">Chọn con vật</p>
+    <p class="label" data-i18n="join.animal"></p>
     <div id="animalGrid" class="grid"></div>
-    <button id="btnJoin" class="primary big">Vào phòng</button>
+    <button id="btnJoin" class="primary big" data-i18n="join.btn"></button>
     <p id="joinMsg" class="msg"></p>
   </section>
 
   <section id="scr-lobby" class="screen" hidden>
+    <button class="lang-btn ghost" data-lang-btn></button>
     <div class="me-card" id="meCard">
       <span id="meEmoji" class="big-emoji">🐴</span>
       <b id="meName"></b>
     </div>
     <p id="gameTitle" class="game-title"></p>
-    <p id="lobbyMsg" class="center">Chờ chủ phòng bắt đầu…</p>
+    <p id="lobbyMsg" class="center"></p>
 
     <!-- Chỉ hiện khi game đang chơi theo đội -->
     <div id="teamBox" class="box" hidden>
-      <h3>👥 Chọn đội</h3>
+      <h3 data-i18n="lobby.team"></h3>
       <div id="teamPicker" class="team-picker"></div>
       <p id="teamHint" class="hint"></p>
     </div>
 
     <!-- Chỉ hiện khi game cần cảm biến -->
     <div id="sensorBox" class="box" hidden>
-      <h3>🎮 Cảm biến</h3>
+      <h3 data-i18n="lobby.sensors"></h3>
       <p id="sensorStatus" class="msg"></p>
-      <button id="btnSensor" class="primary" hidden>Bật cảm biến</button>
+      <button id="btnSensor" class="primary" data-i18n="lobby.enableSensors" hidden></button>
     </div>
 
     <!-- Phần riêng của game ở phòng chờ (VD thử lắc, chỉnh độ nhạy) -->
     <div id="gameLobby"></div>
 
-    <button id="btnChange" class="ghost">Đổi tên / con vật</button>
+    <button id="btnChange" class="ghost" data-i18n="lobby.change"></button>
     <!-- Quảng cáo (chỉ ở phòng chờ, cuối trang để không che nút nào, xem /js/core/ads.js) -->
     <div id="adPlay" class="ad-box" hidden></div>
     <p id="appVersion" class="hint center"></p>
@@ -59,17 +62,17 @@
   <section id="scr-game" class="screen" hidden>
     <!-- Tay cầm của game -->
     <div id="game"></div>
-    <button id="btnSensor2" class="primary small" hidden>Bật cảm biến</button>
+    <button id="btnSensor2" class="primary small" data-i18n="lobby.enableSensors" hidden></button>
   </section>
 
   <section id="scr-done" class="screen center" hidden>
     <div id="doneBig" class="done-big"></div>
     <p id="doneText"></p>
-    <p class="hint">Chờ chủ phòng cho chơi lại…</p>
+    <p class="hint" data-i18n="done.wait"></p>
   </section>
 
   <div id="cd" class="cd" hidden></div>
-  <div id="conn" class="conn" hidden>Mất kết nối, đang nối lại…</div>
+  <div id="conn" class="conn" data-i18n="conn.lost" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="/js/core/play.js"></script>

@@ -42,10 +42,11 @@ Dây chạm đất lúc `T`. Người chơi qua nếu có một lần nhảy mà
 ## File
 | File | Nội dung |
 |---|---|
-| `service/config.js` | ★ Tham số: thời gian màn (`LEVEL_MS`, `BREAK_MS`, `MAX_LEVEL`), cửa sổ chấm nhảy (`SAFE_BEFORE_MS`, `SAFE_AFTER_MS`, `JUMP_COOLDOWN_MS`), cách quay dây từng màn (`LEVELS`), độ khó (`DIFFICULTIES`) |
+| `service/config.js` | ★ Tham số: thời gian màn (`LEVEL_MS`, `BREAK_MS`, `MAX_LEVEL`), cửa sổ chấm nhảy (`SAFE_BEFORE_MS`, `SAFE_AFTER_MS`, `JUMP_COOLDOWN_MS`), cách quay dây và tên từng màn (`LEVELS`, `FASTER_TITLE`), độ khó (`DIFFICULTIES`) |
 | `service/simulation.js` | Mô phỏng: quay dây, đổi nhịp/dừng hẫng, chấm từng lần dây chạm đất, màn chơi, bot, xếp hạng |
 | `service/index.js` | Khai báo game, nối input (`jump`) với mô phỏng, gửi trạng thái nhị phân cho TV |
 | `assets/schema.json` | Định dạng trạng thái nhị phân gửi cho TV |
+| `assets/i18n.json` | Chữ trên TV và điện thoại của game (2 thứ tiếng vi/en). Tên các màn nằm ở `LEVELS[].title` trong `service/config.js` |
 | `screen/scene.js` | Cảnh 3D: sân, 2 cột + 2 con vật quay dây, hàng người nhảy, người vướng dây ngã rồi ra đứng xem phía sau |
 | `screen/index.js` | Bảng màn chơi giữa phía trên, chữ lớn lúc nghỉ giữa màn, tiếng "tách" |
 | `controller/index.js` | Tay cầm không nút: khung lớn nháy khi nhảy, thử cử chỉ nhảy ở phòng chờ |

@@ -1,0 +1,73 @@
+{
+  "_ghi_chu": "Chữ trên TV và điện thoại của game Đua thú, 2 thứ tiếng. Dùng ctx.t('khoá', { name, rank }); {name}… là chỗ điền. Mỗi khoá phải có ở cả vi và en.",
+  "vi": {
+    "toast.fence": "{name} vấp rào! 💥",
+    "toast.finish": "{name} về đích hạng {rank}! 🏁",
+    "toast.modelYaw": "Xoay model: modelYaw = {yaw} (ghi số này vào animals.json)",
+    "scene.finishBanner": "🏁 ĐÍCH 🏁",
+
+    "try.title": "🏁 Thử điều khiển",
+    "try.shake": "Lắc ↕",
+    "try.jump": "Nhảy ⤴",
+    "try.jumpHit": "NHẢY!",
+    "try.shakeSens": "Độ nhạy lắc",
+    "try.jumpSens": "Độ nhạy nhảy",
+    "try.low": "Thấp",
+    "try.mid": "Vừa",
+    "try.high": "Cao",
+    "try.hintIntro": "Không có nút bấm, chỉ cử động điện thoại. Cầm máy dọc.",
+    "try.hintRunBold": "Lắc lên xuống",
+    "try.hintRun": "để chạy: không lắc là đứng yên, lắc càng nhanh càng chạy nhanh.",
+    "try.hintJumpBold": "Nhảy",
+    "try.hintJump": "qua rào và bùn: hất nhanh đầu máy về phía mình (như giật cương) hoặc giật mạnh cả máy lên trên. Thanh \"Nhảy ⤴\" đầy là đủ mạnh.",
+    "try.tilt": "Hất đầu máy: {deg}°/{need}°",
+    "try.noTilt": "Không đo được góc nghiêng",
+    "try.jerk": "Giật lên: {n}/{need}",
+
+    "pad.shakeToRun": "LẮC ĐỂ CHẠY",
+    "pad.jumpHint": "Hất hoặc giật máy lên để nhảy",
+
+    "noSensor.enable": "Chưa bật cảm biến nên chưa chạy được. Bấm \"Bật cảm biến\" ở dưới.",
+    "noSensor.none": "Máy này không có cảm biến chuyển động nên không chơi được Đua thú.",
+
+    "status.finished": "Về đích hạng {rank}! 🏁",
+    "status.stun": "Vấp rào! 💫",
+    "status.jump": "Nhảy! ⤴",
+    "status.mud": "Lội bùn… 🟫"
+  },
+  "en": {
+    "toast.fence": "{name} hit a fence! 💥",
+    "toast.finish": "{name} finished in place {rank}! 🏁",
+    "toast.modelYaw": "Model rotated: modelYaw = {yaw} (put this number in animals.json)",
+    "scene.finishBanner": "🏁 FINISH 🏁",
+
+    "try.title": "🏁 Try the controls",
+    "try.shake": "Shake ↕",
+    "try.jump": "Jump ⤴",
+    "try.jumpHit": "JUMP!",
+    "try.shakeSens": "Shake sensitivity",
+    "try.jumpSens": "Jump sensitivity",
+    "try.low": "Low",
+    "try.mid": "Medium",
+    "try.high": "High",
+    "try.hintIntro": "No buttons, just move your phone. Hold it upright.",
+    "try.hintRunBold": "Shake up and down",
+    "try.hintRun": "to run: no shaking means standing still, the faster you shake the faster you run.",
+    "try.hintJumpBold": "Jump",
+    "try.hintJump": "over fences and mud: quickly flick the top of the phone toward you (like pulling the reins) or jerk the whole phone up hard. When the \"Jump ⤴\" bar fills up, that's strong enough.",
+    "try.tilt": "Flick: {deg}°/{need}°",
+    "try.noTilt": "Can't measure tilt",
+    "try.jerk": "Jerk up: {n}/{need}",
+
+    "pad.shakeToRun": "SHAKE TO RUN",
+    "pad.jumpHint": "Flick or jerk the phone up to jump",
+
+    "noSensor.enable": "Sensors are off, so you can't run yet. Press \"Enable sensors\" below.",
+    "noSensor.none": "This phone has no motion sensors, so it can't play Animal Race.",
+
+    "status.finished": "Finished in place {rank}! 🏁",
+    "status.stun": "Hit a fence! 💫",
+    "status.jump": "Jump! ⤴",
+    "status.mud": "Wading through mud… 🟫"
+  }
+}

@@ -250,8 +250,10 @@ class Hopper {
 
 export class SackScene {
   // overlay: phần tử HTML phủ lên canvas để vẽ viền + tên cho các khung nhỏ.
-  constructor(canvas, manifest, quality = 'high', overlay = null) {
+  // texts: chữ hiện trong cảnh 3D theo ngôn ngữ của TV (screen/index.js dịch sẵn rồi truyền vào).
+  constructor(canvas, manifest, quality = 'high', overlay = null, texts = {}) {
     this.manifest = manifest;
+    this.texts = { finishBanner: '🏁 ĐÍCH 🏁', ...texts };
     this.high = quality === 'high';
     this.minis = []; // [{ id, r, p, rect, leaving, out }] khung nhỏ của khung hình hiện tại
     this.scenery = []; // cây, đồi, rào biên, biển báo: ẩn khi vẽ khung nhỏ
@@ -404,7 +406,7 @@ export class SackScene {
       pole.castShadow = true;
       g.add(pole);
     }
-    const banner = textSprite('🏁 ĐÍCH 🏁', { bg: '#d63a3a', height: 1.4 });
+    const banner = textSprite(this.texts.finishBanner, { bg: '#d63a3a', height: 1.4 });
     banner.position.set(0, 5.4, -trackLen);
     g.add(banner);
 

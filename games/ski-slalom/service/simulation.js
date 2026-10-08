@@ -221,7 +221,10 @@ function standings(racers) {
 function results(race, racers) {
   const total = race.gates.length;
   return standings(racers).map((p, i) => {
-    const pen = p.penaltyMs ? ` (+${p.penaltyMs / 1000}s phạt)` : '';
+    const sec = p.penaltyMs / 1000;
+    const pen = { vi: sec ? ` (+${sec}s phạt)` : '', en: sec ? ` (+${sec}s penalty)` : '' };
+    const pct = Math.round((p.z / race.courseLen) * 100);
+    const time = p.totalMs != null ? `${(p.totalMs / 1000).toFixed(2)}s` : null;
     return {
       id: p.id,
       name: p.name,
@@ -229,10 +232,9 @@ function results(race, racers) {
       color: p.color,
       bot: !!p.bot,
       place: i + 1,
-      detail:
-        p.totalMs != null
-          ? `${(p.totalMs / 1000).toFixed(2)}s${pen} · qua ${p.passed}/${total} cổng`
-          : `chưa về đích (${Math.round((p.z / race.courseLen) * 100)}%)${pen}`,
+      detail: time
+        ? { vi: `${time}${pen.vi} · qua ${p.passed}/${total} cổng`, en: `${time}${pen.en} · ${p.passed}/${total} gates` }
+        : { vi: `chưa về đích (${pct}%)${pen.vi}`, en: `did not finish (${pct}%)${pen.en}` },
     };
   });
 }

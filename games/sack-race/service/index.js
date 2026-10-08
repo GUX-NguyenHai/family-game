@@ -93,10 +93,13 @@ function createMatch({ players, options, now, startAt, api }) {
 
 module.exports = {
   id: 'sack-race', // trùng tên thư mục games/sack-race
-  name: 'Nhảy bao bố',
+  name: { vi: 'Nhảy bao bố', en: 'Sack Race' },
   category: 'folk', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🛍️',
-  description: 'Mỗi lần hất hoặc giật máy lên là nhảy một bước. Hất ngay khi vừa đáp (điện thoại rung) thì bước dài dần; hất vội lúc còn đang bay là ngã! Không có nút bấm.',
+  description: {
+    vi: 'Mỗi lần hất hoặc giật máy lên là nhảy một bước. Hất ngay khi vừa đáp (điện thoại rung) thì bước dài dần; hất vội lúc còn đang bay là ngã! Không có nút bấm.',
+    en: 'Every flick or jerk of your phone is one hop. Flick right as you land (the phone buzzes) and your hops get longer; flick while still in the air and you fall! No buttons.',
+  },
   maxPlayers: 12,
   bots: true,
   sensors: true,
@@ -104,12 +107,12 @@ module.exports = {
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
-  goText: 'NHẢY!',
+  goText: { vi: 'NHẢY!', en: 'HOP!' },
   coastMs: C.COAST_MS,
   options: [
     {
       key: 'difficulty',
-      label: 'Độ khó',
+      label: { vi: 'Độ khó', en: 'Difficulty' },
       default: C.DEFAULT_DIFFICULTY,
       choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
     },

@@ -30,7 +30,7 @@ function levelSpec(C, level) {
   const base = C.LEVELS[Math.min(level, C.LEVELS.length) - 1];
   const faster = Math.max(0, level - C.LEVELS.length) * C.FASTER_PER_LEVEL;
   return {
-    title: level > C.LEVELS.length ? 'Nhanh hơn nữa' : base.title,
+    title: level > C.LEVELS.length ? C.FASTER_TITLE : base.title, // { vi, en }
     periods: base.periods.map(p => Math.max(C.MIN_PERIOD, p - faster)),
     changeEvery: base.changeEvery || null,
     holdChance: base.holdChance || 0,
@@ -38,7 +38,7 @@ function levelSpec(C, level) {
   };
 }
 
-// Tên các màn từ màn bắt đầu tới màn cuối (TV hiện lúc nghỉ giữa màn).
+// Tên các màn từ màn bắt đầu tới màn cuối (TV hiện lúc nghỉ giữa màn), mỗi tên là { vi, en }.
 function levelTitles(C) {
   const out = {};
   for (let l = 1; l <= C.MAX_LEVEL; l++) out[l] = levelSpec(C, l).title;
@@ -245,8 +245,8 @@ function results(g) {
     bot: p.bot,
     place: 1 + sorted.filter(q => score(q) > score(p)).length,
     detail: p.out
-      ? `Vướng dây ở màn ${p.outLevel} · ${p.count} lần nhảy`
-      : `Trụ đến cùng (màn ${g.level}) · ${p.count} lần nhảy`,
+      ? { vi: `Vướng dây ở màn ${p.outLevel} · ${p.count} lần nhảy`, en: `Caught at level ${p.outLevel} · ${p.count} jumps` }
+      : { vi: `Trụ đến cùng (màn ${g.level}) · ${p.count} lần nhảy`, en: `Survived to the end (level ${g.level}) · ${p.count} jumps` },
   }));
 }
 

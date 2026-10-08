@@ -32,6 +32,7 @@ cp -R .claude/skills/new-game/template games/<id>
 Rồi thay trong mọi file của `games/<id>/`:
 - `__ID__` → id game (VD `shake-fill`)
 - `__NAME__` → tên tiếng Việt
+- `__NAME_EN__` → tên tiếng Anh
 - `__EMOJI__` → emoji
 - `__PREFIX__` → tiền tố CSS (VD `sf`)
 
@@ -43,7 +44,10 @@ Template là một game chạy được ngay ("lắc để đổ đầy thanh, a
 - `index.js`: khai báo game + `createMatch` nối simulation với nền tảng. Chặn `input()` khi chưa bắt đầu/đã xong. Gọi `api.finish(results)` **đúng 1 lần**.
 - `assets/schema.json`: trường gửi cho TV (gọn: làm tròn, chỉ thứ cần vẽ). `setup()` trả về thứ tự id các hàng.
 
+**Hai thứ tiếng:** mọi chữ người chơi thấy ở server (`name`, `description`, `goText`, `options`, `detail` kết quả) viết `{ vi: '…', en: '…' }`. Xem `games/README.md` mục "Hai thứ tiếng".
+
 ## Bước 4: Viết TV (`screen/`) và điện thoại (`controller/`)
+- **Chữ hiện trên màn hình** đặt trong `assets/i18n.json` (`{ "vi": {...}, "en": {...} }`), dùng `ctx.t('khoá', { n })`. Không viết chữ cứng trong code.
 - TV: vẽ được cả lúc **phòng chờ** (`onRoom` với `state === 'lobby'`, làm nền phía sau bảng phòng chờ) và khi **tải lại giữa ván** (`onSetup`). Bố cục phòng chờ của phần chung để trống phần giữa màn hình cho cảnh game.
 - Cảnh 3D: dùng `/js/core/scene-kit.js`; game đua có người tụt lại thì dùng `/js/core/mini-views.js`. `destroy()` phải `setAnimationLoop(null)`, gỡ listener, `renderer.dispose()`.
 - Điện thoại: chữ to, ít thứ, rung (`ctx.vibrate`) khi có sự kiện quan trọng. Gửi thao tác liên tục ~10 lần/giây bằng `setInterval`, chỉ khi `ctx.screen() === 'game'`. `destroy()` dọn interval.

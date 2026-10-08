@@ -79,10 +79,13 @@ function createMatch({ players, options, teams, now, startAt, api }) {
 
 module.exports = {
   id: 'tug-of-war', // trùng tên thư mục games/tug-of-war
-  name: 'Kéo co',
+  name: { vi: 'Kéo co', en: 'Tug of War' },
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🪢',
-  description: 'Hai đội thi lắc máy để kéo dây qua sông. Đội nào kéo được dấu giữa dây về phía mình thì đội kia rơi xuống sông!',
+  description: {
+    vi: 'Hai đội thi lắc máy để kéo dây qua sông. Đội nào kéo được dấu giữa dây về phía mình thì đội kia rơi xuống sông!',
+    en: 'Two teams shake their phones to pull the rope across the river. Pull the middle mark to your side and the other team falls in!',
+  },
   maxPlayers: 12,
   bots: true,
   sensors: true,
@@ -91,12 +94,12 @@ module.exports = {
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
-  goText: 'KÉO!',
+  goText: { vi: 'KÉO!', en: 'PULL!' },
   coastMs: C.COAST_MS,
   options: [
     {
       key: 'difficulty',
-      label: 'Độ khó',
+      label: { vi: 'Độ khó', en: 'Difficulty' },
       default: C.DEFAULT_DIFFICULTY,
       choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
     },

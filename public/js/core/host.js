@@ -5,6 +5,10 @@
 import { $, esc, store, session, loadCss, watchVersion, MEDALS } from './util.js';
 import { unlockAudio, beep, fanfare } from './audio.js';
 import { adSlot } from './ads.js';
+import { lang, t, pick, loadGameT, applyDom, bindLangButton, formatDate } from './i18n.js';
+
+applyDom();
+bindLangButton($('#btnLang'));
 
 const SESSION_KEY = 'fg:host';
 const manifest = await fetch('/assets/animals.json').then(r => r.json());
@@ -31,14 +35,14 @@ socket.on('connect', () => {
   if (saved.code) socket.emit('host:resume', saved, res => (res?.ok ? onJoined(res) : create()));
   else create();
 });
-socket.on('disconnect', () => toast('Mất kết nối server, đang nối lại…'));
+socket.on('disconnect', () => toast(t('host.disconnected')));
 watchVersion(socket);
 
 function create() {
   socket.emit('host:create', { license: getSession().license || '', game: getSession().game }, res => {
     if (res?.error === 'busy') {
       $('#loading').hidden = false;
-      $('#loading').textContent = 'Server đang có quá nhiều phòng, thử lại sau ít phút…';
+      $('#loading').textContent = t('host.busy');
       setTimeout(create, 10000);
       return;
     }
@@ -56,7 +60,7 @@ function onJoined(res) {
   onRoom(res.room);
   if (res.licenseError) {
     setSession({ license: '' });
-    showLicenseMsg(LICENSE_ERRORS[res.licenseError] || 'Không gắn lại được mã Pro.', false);
+    showLicenseMsg(LICENSE_ERRORS[res.licenseError] ? t(LICENSE_ERRORS[res.licenseError]) : t('license.restoreFail'), false);
   }
 }
 
@@ -69,11 +73,9 @@ async function setJoinUrl(code) {
       const { ips } = await fetch('/api/lan').then(r => r.json());
       if (ips[0]) origin = `${location.protocol}//${ips[0]}${location.port ? ':' + location.port : ''}`;
     } catch {}
-    warns.push('Đang mở bằng localhost nên mã QR dùng IP mạng LAN.');
+    warns.push(t('host.warnLocal'));
   }
-  if (location.protocol !== 'https:') {
-    warns.push('Chưa có HTTPS: iPhone sẽ không dùng được cảm biến (chỉ dùng nút bấm).');
-  }
+  if (location.protocol !== 'https:') warns.push(t('host.warnHttps'));
   const url = `${origin}/play?room=${code}`;
   $('#qr').src = '/qr.svg?text=' + encodeURIComponent(url);
   $('#joinUrl').textContent = url;
@@ -83,7 +85,8 @@ async function setJoinUrl(code) {
 }
 
 // ---------- Gắn game ----------
-function gameCtx() {
+// gameT: chữ của game (games/<id>/assets/i18n.json), thiếu thì lấy chữ phần chung.
+function gameCtx(gameT) {
   return {
     root: $('#game'),
     manifest,
@@ -93,6 +96,9 @@ function gameCtx() {
     beep,
     fanfare,
     esc,
+    lang, // 'vi' | 'en'
+    t: gameT,
+    pick, // chữ dạng { vi, en } → đúng ngôn ngữ
     player: id => players.get(id),
   };
 }
@@ -101,12 +107,13 @@ async function useGame(id) {
   if (current?.id === id || loadingId === id) return;
   loadingId = id;
   let mod;
+  let gameT;
   try {
-    mod = await import(`/games/${id}/screen/index.js`);
+    [mod, gameT] = await Promise.all([import(`/games/${id}/screen/index.js`), loadGameT(id)]);
   } catch (err) {
     if (loadingId === id) loadingId = null;
     $('#loading').hidden = false;
-    $('#loading').textContent = `Lỗi tải game "${id}": ${err.message} (thử Ctrl+Shift+R)`;
+    $('#loading').textContent = t('host.loadError', { id, msg: err.message });
     return;
   }
   if (loadingId !== id) return; // trong lúc tải đã đổi sang game khác
@@ -121,7 +128,7 @@ async function useGame(id) {
   $('#game').innerHTML = '';
   $('#game').dataset.game = id;
   const removeCss = loadCss(`/games/${id}/screen/style.css`);
-  const inst = (await mod.create(gameCtx())) || {};
+  const inst = (await mod.create(gameCtx(gameT))) || {};
   current = { id, inst, removeCss };
   if (room?.game === id) inst.onRoom?.(room);
   if (lastSetup?.game === id) inst.onSetup?.(lastSetup.data);
@@ -179,30 +186,37 @@ function onRoom(info) {
 
 // ---------- Chọn game (thanh bên trái, chia theo nhóm) + tuỳ chọn của game ----------
 function gameTags(g) {
-  const tags = [g.minPlayers > 1 ? `👤 ${g.minPlayers}–${g.maxPlayers}` : `👤 1–${g.maxPlayers}`];
-  if (g.sensors) tags.push('📱 Lắc');
-  if (g.teams) tags.push('👥 Có đội');
+  const tags = [`👤 ${g.minPlayers > 1 ? g.minPlayers : 1}–${g.maxPlayers}`];
+  if (g.sensors) tags.push(t('tag.motion'));
+  if (g.teams) tags.push(t('tag.teams'));
   return tags;
 }
 
+// Tên nhóm: có trong từ điển (cat.<id>) thì dịch, không thì lấy tên nhóm server gửi.
+function categoryName(c) {
+  const key = `cat.${c.id}`;
+  const text = t(key);
+  return text === key ? pick(c.name) : text;
+}
+
 function renderGamePicker() {
-  // Nhóm theo thứ tự trong cấu hình; game khai báo nhóm lạ thì vào nhóm "Khác" ở cuối.
+  // Nhóm theo thứ tự trong cấu hình; game khai báo nhóm lạ thì vào nhóm "Khác" ở cuối. Tên nhóm dịch theo id (cat.<id>).
   const known = new Set(categories.map(c => c.id));
-  const groups = [...categories, { id: 'other', name: 'Khác', emoji: '🎮' }]
+  const groups = [...categories, { id: 'other', emoji: '🎮' }]
     .map(c => ({ ...c, games: catalog.filter(g => (known.has(g.category) ? g.category : 'other') === c.id) }))
     .filter(c => c.games.length);
   // Thẻ nhỏ: biểu tượng + tên (3 thẻ một hàng); nhãn chi tiết hiện ở khung giữa cho game đang chọn.
   document.querySelector('.game-list').innerHTML = groups
     .map(
       c => `<section class="game-group">
-        <h3>${esc(c.emoji)} ${esc(c.name)}</h3>
+        <h3>${esc(c.emoji)} ${esc(categoryName(c))}</h3>
         <div class="game-tiles">
           ${c.games
             .map(
               g => `<button class="game-card${g.id === room.game ? ' sel' : ''}" data-game="${esc(g.id)}" role="radio"
-                aria-checked="${g.id === room.game}" title="${esc(g.description)}">
+                aria-checked="${g.id === room.game}" title="${esc(pick(g.description))}">
                 <span class="emoji">${esc(g.emoji)}</span>
-                <span>${esc(g.name)}</span>
+                <span>${esc(pick(g.name))}</span>
               </button>`,
             )
             .join('')}
@@ -211,9 +225,9 @@ function renderGamePicker() {
     )
     .join('');
   const game = gameInfo();
-  document.querySelector('.game-title').textContent = game ? `${game.emoji} ${game.name}` : '';
-  document.querySelector('.game-tags').innerHTML = game ? gameTags(game).map(t => `<i>${esc(t)}</i>`).join('') : '';
-  document.querySelector('.game-desc').textContent = game?.description || '';
+  document.querySelector('.game-title').textContent = game ? `${game.emoji} ${pick(game.name)}` : '';
+  document.querySelector('.game-tags').innerHTML = game ? gameTags(game).map(tag => `<i>${esc(tag)}</i>`).join('') : '';
+  document.querySelector('.game-desc').textContent = pick(game?.description);
 }
 
 // ---------- Cài đặt (⚙️): mã Pro, đồ hoạ, toàn màn hình, link vào phòng, version ----------
@@ -233,7 +247,9 @@ document.addEventListener('click', e => {
 function renderOptions() {
   const game = gameInfo();
   for (const box of document.querySelectorAll('.game-options')) {
-    const prefix = box.dataset.prefix || '';
+    const prefix = box.dataset.prefixKey ? t(box.dataset.prefixKey) : '';
+    const button = (o, c, value) =>
+      `<button data-key="${esc(o.key)}" data-value="${esc(c.value)}" class="${c.value === value ? 'sel' : ''}">${esc(pick(c.label))}</button>`;
     if (box.classList.contains('compact')) {
       // Phòng chờ: mỗi lựa chọn là một dải nút liền nhau, tên lựa chọn thẳng cột; mô tả gom thành 1 dòng chữ nhỏ.
       const notes = [];
@@ -241,12 +257,10 @@ function renderOptions() {
         .map(o => {
           const value = room.options?.[o.key];
           const sel = o.choices.find(c => c.value === value);
-          if (sel?.desc) notes.push(sel.desc);
-          return `<div class="option" role="radiogroup" aria-label="${esc(o.label)}">
-            <span class="label">${esc(o.label)}</span>
-            <div class="seg">${o.choices
-              .map(c => `<button data-key="${esc(o.key)}" data-value="${esc(c.value)}" class="${c.value === value ? 'sel' : ''}">${esc(c.label)}</button>`)
-              .join('')}</div>
+          if (sel?.desc) notes.push(pick(sel.desc));
+          return `<div class="option" role="radiogroup" aria-label="${esc(pick(o.label))}">
+            <span class="label">${esc(pick(o.label))}</span>
+            <div class="seg">${o.choices.map(c => button(o, c, value)).join('')}</div>
           </div>`;
         })
         .join('') + (notes.length ? `<p class="option-notes">ⓘ ${notes.map(esc).join(' · ')}</p>` : '');
@@ -256,13 +270,11 @@ function renderOptions() {
       .map(o => {
         const value = room.options?.[o.key];
         const sel = o.choices.find(c => c.value === value);
-        return `<div class="option" role="radiogroup" aria-label="${esc(o.label)}">
-          <span class="label">${esc(prefix + o.label)}:</span>
-          ${o.choices
-            .map(c => `<button data-key="${esc(o.key)}" data-value="${esc(c.value)}" class="${c.value === value ? 'sel' : ''}">${esc(c.label)}</button>`)
-            .join('')}
+        return `<div class="option" role="radiogroup" aria-label="${esc(pick(o.label))}">
+          <span class="label">${esc(prefix + pick(o.label))}:</span>
+          ${o.choices.map(c => button(o, c, value)).join('')}
         </div>
-        <p class="option-desc">${esc(sel?.desc || '')}</p>`;
+        <p class="option-desc">${esc(pick(sel?.desc))}</p>`;
       })
       .join('');
   }
@@ -276,26 +288,23 @@ document.addEventListener('click', e => {
 });
 
 // ---------- Gói miễn phí / Pro ----------
+// Mã lỗi từ server → khoá chữ trong từ điển.
 const LICENSE_ERRORS = {
-  invalid: 'Mã không đúng. Kiểm tra lại từng ký tự.',
-  expired: 'Mã đã hết hạn.',
-  'in-use': 'Mã đang được dùng ở một phòng khác đang mở.',
-  disabled: 'Server chưa bật tính năng Pro.',
-  'no-room': 'Chưa kết nối được phòng, thử lại.',
+  invalid: 'license.invalid',
+  expired: 'license.expired',
+  'in-use': 'license.inUse',
+  disabled: 'license.disabled',
+  'no-room': 'license.noRoom',
 };
-
-function formatDate(ms) {
-  return new Date(ms).toLocaleDateString('vi-VN');
-}
 
 function renderTier() {
   const pro = room.tier === 'pro';
   const badge = $('#tierBadge');
   badge.classList.toggle('pro', pro);
   badge.textContent = pro
-    ? `⭐ Pro · tối đa ${room.maxPlayers} người${room.proUntil ? ` · hết hạn ${formatDate(room.proUntil)}` : ''}`
-    : `🆓 Miễn phí · tối đa ${room.maxPlayers} người`;
-  $('#btnShowLicense').textContent = pro ? 'Đổi mã' : 'Nhập mã Pro';
+    ? t('tier.pro', { n: room.maxPlayers }) + (room.proUntil ? t('tier.until', { date: formatDate(room.proUntil) }) : '')
+    : t('tier.free', { n: room.maxPlayers });
+  $('#btnShowLicense').textContent = t(pro ? 'host.changePro' : 'host.enterPro');
   $('#btnRemoveLicense').hidden = !pro;
 }
 
@@ -322,18 +331,19 @@ $('#licenseForm').onsubmit = e => {
       setSession({ license: res.code });
       $('#licenseInput').value = '';
       $('#licenseForm').hidden = true;
-      showLicenseMsg(`Đã kích hoạt Pro: tối đa ${res.maxPlayers} người${res.expiresAt ? `, hết hạn ${formatDate(res.expiresAt)}` : ''}.`, true);
+      const until = res.expiresAt ? t('license.untilShort', { date: formatDate(res.expiresAt) }) : '';
+      showLicenseMsg(t('license.activated', { n: res.maxPlayers, until }), true);
     } else {
-      showLicenseMsg(LICENSE_ERRORS[res?.error] || 'Không kích hoạt được mã.', false);
+      showLicenseMsg(t(LICENSE_ERRORS[res?.error] || 'license.fail'), false);
     }
   });
 };
 
 $('#btnRemoveLicense').onclick = () => {
-  if (!confirm('Gỡ mã Pro khỏi phòng này? Phòng sẽ về bản miễn phí.')) return;
+  if (!confirm(t('license.confirmRemove'))) return;
   socket.emit('host:license', { code: '' }, () => {
     setSession({ license: '' });
-    showLicenseMsg('Đã gỡ mã, phòng về bản miễn phí.', true);
+    showLicenseMsg(t('license.removed'), true);
   });
 };
 
@@ -348,21 +358,21 @@ function renderLobby() {
   $('#playerList').innerHTML = list
     .map(p => {
       const a = animalById.get(p.animal);
-      const t = teams && p.team != null ? teams[p.team] : null;
+      const team = teams && p.team != null ? teams[p.team] : null;
       const teamBtn = teams
-        ? `<button class="team" data-id="${esc(p.id)}" title="Bấm để đổi đội">${t ? t.emoji : '⚪'}</button>`
+        ? `<button class="team" data-id="${esc(p.id)}" title="${esc(t('host.changeTeam'))}">${team ? team.emoji : '⚪'}</button>`
         : '';
-      return `<li class="${p.connected ? '' : 'off'}" style="--c:${t ? t.color : p.color}">
+      return `<li class="${p.connected ? '' : 'off'}" style="--c:${team ? team.color : p.color}">
         ${teamBtn}
         <span class="emoji">${a?.emoji || '🐾'}</span>
         <span class="name">${esc(p.name)}${p.bot ? ' 🤖' : ''}</span>
-        <button class="kick" data-id="${esc(p.id)}" title="Mời ra">✕</button>
+        <button class="kick" data-id="${esc(p.id)}" title="${esc(t('host.kick'))}">✕</button>
       </li>`;
     })
     .join('');
   renderTeams(list);
   $('#btnStart').disabled = !list.some(p => p.connected);
-  $('#btnStart').innerHTML = '<span class="go">▶</span><b>BẮT ĐẦU</b>';
+  $('#btnStart').innerHTML = `<span class="go">▶</span><b>${esc(t('host.start'))}</b>`;
   const bots = !!game?.bots;
   $('#btnAddBot').hidden = !bots;
   $('#btnClearBots').hidden = !bots;
@@ -375,12 +385,12 @@ function renderTeams(list) {
   $('#teamBar').hidden = !room.teamMode;
   if (!room.teamMode) return;
   const { min, max, equal } = room.teamRule;
-  const counts = room.teams.map(t => ({ t, n: list.filter(p => p.team === t.id).length })).filter(x => x.n > 0);
+  const counts = room.teams.map(team => ({ team, n: list.filter(p => p.team === team.id).length })).filter(x => x.n > 0);
   const none = list.filter(p => p.team == null).length;
-  const parts = counts.map(({ t, n }) => `${t.emoji} ${n}`);
-  if (none) parts.push(`⚪ chưa chọn ${none}`);
-  const rule = `Mỗi đội ${min}–${max} người${equal ? ', các đội phải bằng người' : ''}.`;
-  $('#teamSummary').textContent = `${rule} ${parts.join(' · ') || 'Chưa ai chọn đội.'}`;
+  const parts = counts.map(({ team, n }) => `${team.emoji} ${n}`);
+  if (none) parts.push(t('team.noTeam', { n: none }));
+  const rule = t('team.rule', { min, max }) + (equal ? t('team.ruleEqual') : '') + '.';
+  $('#teamSummary').textContent = `${rule} ${parts.join(' · ') || t('team.nobody')}`;
 }
 
 $('#btnShuffleTeams').onclick = () => socket.emit('host:shuffleTeams');
@@ -424,11 +434,11 @@ function showGo(text) {
   const el = $('#countdown');
   el.hidden = false;
   el.classList.add('go');
-  const t = text || 'BẮT ĐẦU!';
-  el.textContent = t;
+  const go = pick(text) || t('host.go');
+  el.textContent = go;
   beep(880, 0.35);
   setTimeout(() => {
-    if (el.textContent === t) el.hidden = true;
+    if (el.textContent === go) el.hidden = true;
   }, 900);
 }
 
@@ -440,8 +450,8 @@ function renderResults(results) {
       return `<li style="--c:${r.color}">
         <span class="medal">${MEDALS[r.place - 1] || r.place}</span>
         <span class="emoji">${a?.emoji || '🐾'}</span>
-        <span class="name">${esc(r.name)}</span>
-        <span class="time">${esc(r.detail || '')}</span>
+        <span class="name">${esc(pick(r.name))}</span>
+        <span class="time">${esc(pick(r.detail))}</span>
       </li>`;
     })
     .join('');
@@ -460,16 +470,12 @@ function toast(text) {
 
 // ---------- Nút bấm ----------
 const START_ERRORS = {
-  'too-many': r => `Game này chỉ cho tối đa ${r.maxPlayers} người. Bớt người/bot hoặc nhập mã Pro.`,
-  'too-few': r => `Game này cần ít nhất ${r.minPlayers} người.`,
-  empty: () => 'Chưa có ai trong phòng.',
+  'too-many': r => t('start.tooMany', { n: r.maxPlayers }),
+  'too-few': r => t('start.tooFew', { n: r.minPlayers }),
+  empty: () => t('start.empty'),
   teams: r =>
-    r.reason === 'need-two'
-      ? 'Cần ít nhất 2 đội. Chia lại đội hoặc thêm bot.'
-      : r.reason === 'equal'
-        ? 'Các đội phải bằng người. Đổi đội, bấm "Chia đội ngẫu nhiên" hoặc thêm bot.'
-        : `Mỗi đội cần ${r.min}–${r.max} người. Đổi đội, bấm "Chia đội ngẫu nhiên" hoặc thêm bot.`,
-  'game-error': () => 'Game bị lỗi khi bắt đầu, xem log server.',
+    r.reason === 'need-two' ? t('start.needTwo') : r.reason === 'equal' ? t('start.equal') : t('start.size', { min: r.min, max: r.max }),
+  'game-error': () => t('start.gameError'),
 };
 
 function startGame() {
@@ -498,7 +504,7 @@ $('#playerList').onclick = e => {
   }
 };
 
-$('#btnQuality').textContent = quality === 'high' ? '🎨 Đồ hoạ: Cao' : '🎨 Đồ hoạ: Thấp';
+$('#btnQuality').textContent = t(quality === 'high' ? 'host.qualityHigh' : 'host.qualityLow');
 $('#btnQuality').onclick = () => {
   store.set('fg:quality', quality === 'high' ? 'low' : 'high');
   location.reload();

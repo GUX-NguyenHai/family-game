@@ -14,20 +14,20 @@ module.exports = {
   DEFAULT_DIFFICULTY: 'easy',
   DIFFICULTIES: {
     easy: {
-      label: '🟢 Dễ',
-      desc: 'Lắc hết sức ~8 giây là đầy thanh, bot chậm.',
+      label: { vi: '🟢 Dễ', en: '🟢 Easy' },
+      desc: { vi: 'Lắc hết sức ~8 giây là đầy thanh, bot chậm.', en: 'Full shaking fills the bar in ~8s, slow bots.' },
       FILL_RATE: 0.12, // phần thanh đổ được mỗi giây khi lắc hết cỡ
       BOT: { skillMin: 0.3, skillMax: 0.55 },
     },
     normal: {
-      label: '🟡 Trung bình',
-      desc: '~12 giây, bot khá.',
+      label: { vi: '🟡 Trung bình', en: '🟡 Normal' },
+      desc: { vi: '~12 giây, bot khá.', en: '~12s, decent bots.' },
       FILL_RATE: 0.085,
       BOT: { skillMin: 0.45, skillMax: 0.8 },
     },
     hard: {
-      label: '🔴 Khó',
-      desc: '~16 giây, bot khoẻ.',
+      label: { vi: '🔴 Khó', en: '🔴 Hard' },
+      desc: { vi: '~16 giây, bot khoẻ.', en: '~16s, strong bots.' },
       FILL_RATE: 0.065,
       BOT: { skillMin: 0.7, skillMax: 1 },
     },

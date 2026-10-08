@@ -2,32 +2,32 @@
 // Nhìn dây trên TV (nghe tiếng "tách" lúc dây chạm đất) để nhảy đúng nhịp. Vướng dây 1 lần là bị loại.
 // Phòng chờ có phần thử cử chỉ nhảy + chỉnh độ nhạy.
 export function create(ctx) {
-  const { lobbyRoot, playRoot, sensors, send, vibrate } = ctx;
+  const { lobbyRoot, playRoot, sensors, send, vibrate, t, pick, esc } = ctx;
 
   lobbyRoot.innerHTML = `
     <div class="box rope-lobby">
-      <h3>🤸 Thử nhảy</h3>
+      <h3>${esc(t('tryJump'))}</h3>
       <div class="meter">
-        <span>Nhảy ⤴</span>
+        <span>${esc(t('jumpMeter'))}</span>
         <div class="bar"><i data-r="jumpBar" class="rope-jump-bar"></i></div>
-        <b data-r="jumpHit" class="rope-jump-hit" hidden>NHẢY!</b>
+        <b data-r="jumpHit" class="rope-jump-hit" hidden>${esc(t('jumpHit'))}</b>
       </div>
       <label class="row">
-        <span>Độ nhạy nhảy</span>
+        <span>${esc(t('jumpSensitivity'))}</span>
         <select data-r="selJump">
-          <option value="22">Thấp</option>
-          <option value="15">Vừa</option>
-          <option value="10">Cao</option>
+          <option value="22">${esc(t('low'))}</option>
+          <option value="15">${esc(t('mid'))}</option>
+          <option value="10">${esc(t('high'))}</option>
         </select>
       </label>
       <p data-r="jumpDbg" class="hint"></p>
-      <p class="hint">Không có nút bấm. Cầm máy dọc, <b>hất nhanh đầu máy về phía mình</b> hoặc <b>giật mạnh cả máy lên</b> để nhảy. Thanh "Nhảy ⤴" đầy là đủ mạnh. Lúc chơi nhìn dây trên TV, nghe tiếng "tách" khi dây chạm đất để bắt nhịp. Vướng dây 1 lần là bị loại!</p>
+      <p class="hint">${esc(t('hintStart'))}<b>${esc(t('hintFlick'))}</b>${esc(t('hintOr'))}<b>${esc(t('hintJerk'))}</b>${esc(t('hintEnd'))}</p>
     </div>`;
 
   playRoot.innerHTML = `
     <div class="rope">
       <div class="rope-top">
-        <b data-r="level">Màn 1</b>
+        <b data-r="level">${esc(t('level', { n: 1 }))}</b>
         <span data-r="title"></span>
       </div>
       <div class="bar rope-time"><i data-r="timeBar"></i></div>
@@ -35,8 +35,8 @@ export function create(ctx) {
       <p data-r="noSensor" class="rope-nosensor" hidden></p>
       <div class="rope-pad" data-r="pad">
         <span data-r="padIcon">🤸</span>
-        <b data-r="padText">HẤT MÁY ĐỂ NHẢY</b>
-        <small data-r="padSub">Nhảy đúng lúc dây chạm đất</small>
+        <b data-r="padText">${esc(t('padJump'))}</b>
+        <small data-r="padSub">${esc(t('padJumpSub'))}</small>
       </div>
     </div>`;
 
@@ -52,9 +52,7 @@ export function create(ctx) {
       return;
     }
     const canEnable = sensors.secure && !sensors.enabled && ctx.sensorError()?.message !== 'unsupported';
-    el.noSensor.textContent = canEnable
-      ? 'Chưa bật cảm biến nên chưa nhảy được. Bấm "Bật cảm biến" ở dưới.'
-      : 'Máy này không có cảm biến chuyển động nên không chơi được Nhảy dây.';
+    el.noSensor.textContent = canEnable ? t('noSensorEnable') : t('noSensor');
     el.noSensor.hidden = false;
   }
 
@@ -69,7 +67,7 @@ export function create(ctx) {
     out = false;
     el.timeBar.style.width = '100%';
     el.info.textContent = '';
-    setPad('🤸', 'HẤT MÁY ĐỂ NHẢY', 'Nhảy đúng lúc dây chạm đất');
+    setPad('🤸', t('padJump'), t('padJumpSub'));
   }
 
   // Nhảy: gửi lên server + nháy khung lớn để người chơi biết đã nhận.
@@ -99,21 +97,22 @@ export function create(ctx) {
 
     onMe(m) {
       updateNoSensor();
-      el.level.textContent = `Màn ${m.level}`;
-      el.title.textContent = m.title || '';
+      const title = pick(m.title); // tên màn từ server là { vi, en }
+      el.level.textContent = t('level', { n: m.level });
+      el.title.textContent = title;
       el.timeBar.style.width = `${m.phase === 'playing' ? m.tf * 100 : m.phase === 'break' ? 100 : 0}%`;
-      el.info.textContent = `Còn ${m.alive}/${m.total} người · Bạn nhảy qua ${m.n} lần`;
+      el.info.textContent = t('phoneInfo', { alive: m.alive, total: m.total, n: m.n });
       if (m.out) {
         if (!out) {
           out = true;
-          setPad('💥', 'BỊ VƯỚNG DÂY!', `Bạn trụ đến màn ${m.outLevel}. Xem mọi người nhảy tiếp nhé.`, 'out');
+          setPad('💥', t('caught'), t('caughtSub', { n: m.outLevel }), 'out');
         }
       } else if (m.phase === 'break') {
-        setPad('⏸️', `SẮP SANG MÀN ${m.level}`, m.title || '');
+        setPad('⏸️', t('nextLevel', { n: m.level }), title);
       } else if (m.phase === 'finished') {
-        setPad('🏆', 'BẠN TRỤ ĐẾN CÙNG!', `${m.n} lần nhảy`, 'win');
-      } else if (el.padText.textContent !== 'HẤT MÁY ĐỂ NHẢY') {
-        setPad('🤸', 'HẤT MÁY ĐỂ NHẢY', 'Nhảy đúng lúc dây chạm đất');
+        setPad('🏆', t('survived'), t('jumps', { n: m.n }), 'win');
+      } else if (el.padText.textContent !== t('padJump')) {
+        setPad('🤸', t('padJump'), t('padJumpSub'));
       }
     },
 
@@ -135,16 +134,17 @@ export function create(ctx) {
       }
     },
 
-    frame(t) {
+    // now: thời điểm khung hình (không đặt tên t để khỏi che hàm dịch t).
+    frame(now) {
       if (ctx.screen() !== 'lobby') return;
       // Thanh "Nhảy ⤴": đầy = đủ mạnh để nhảy (hất đầu máy hoặc giật máy lên, cách nào mạnh hơn thì tính).
       const jd = sensors.jumpDeg || 15;
       const jerkNeed = sensors.jerkNeed();
       el.jumpBar.style.width = `${Math.min(1, Math.max(sensors.pitchSwing / jd, sensors.jerkPeak / jerkNeed)) * 100}%`;
-      if (t - uiAt > 150) {
-        uiAt = t;
-        const swing = sensors.gotOrientation ? `Hất đầu máy: ${Math.round(sensors.pitchSwing)}°/${jd}°` : 'Không đo được góc nghiêng';
-        el.jumpDbg.textContent = `${swing} · Giật lên: ${Math.round(sensors.jerkPeak)}/${Math.round(jerkNeed)}`;
+      if (now - uiAt > 150) {
+        uiAt = now;
+        const swing = sensors.gotOrientation ? t('flickDbg', { now: Math.round(sensors.pitchSwing), need: jd }) : t('noTilt');
+        el.jumpDbg.textContent = `${swing} · ${t('jerkDbg', { now: Math.round(sensors.jerkPeak), need: Math.round(jerkNeed) })}`;
       }
     },
 

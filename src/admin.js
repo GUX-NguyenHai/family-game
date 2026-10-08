@@ -26,7 +26,7 @@ function guard(req, res, next) {
 function list() {
   return games.all().map(g => ({
     id: g.id,
-    name: g.name,
+    name: games.text(g.name),
     emoji: g.emoji || '🎮',
     source: g.source,
     installedAt: g.installedAt || null,
@@ -88,16 +88,17 @@ function install(buf, force) {
     const existing = games.get(id);
     if (existing?.source === 'builtin') {
       cleanup();
-      return { ok: false, error: `Trùng id với game có sẵn "${id}" (${existing.name}). Đổi id khác rồi upload lại.` };
+      return { ok: false, error: `Trùng id với game có sẵn "${id}" (${games.text(existing.name)}). Đổi id khác rồi upload lại.` };
     }
 
+    const name = games.text(mod.name);
     const confirm = [];
     if (existing) {
       const when = existing.installedAt ? new Date(existing.installedAt).toLocaleString('vi-VN') : 'trước đó';
-      confirm.push(`Game "${id}" (${existing.name}) đã có, upload lúc ${when}. Ghi đè bằng bản mới?`);
+      confirm.push(`Game "${id}" (${games.text(existing.name)}) đã có, upload lúc ${when}. Ghi đè bằng bản mới?`);
     }
-    const sameName = games.all().find(g => g.id !== id && g.name === mod.name);
-    if (sameName) confirm.push(`Đã có game tên "${mod.name}" (id ${sameName.id}), người chơi sẽ khó phân biệt. Vẫn cài?`);
+    const sameName = games.all().find(g => g.id !== id && games.text(g.name) === name);
+    if (sameName) confirm.push(`Đã có game tên "${name}" (id ${sameName.id}), người chơi sẽ khó phân biệt. Vẫn cài?`);
     if (confirm.length && !force) {
       cleanup();
       return { ok: false, confirm };
@@ -109,7 +110,7 @@ function install(buf, force) {
     fs.renameSync(tmp, dest);
     games.reload();
     if (!games.get(id)) return { ok: false, error: 'Đã chép game nhưng nạp không được, xem log server.' };
-    return { ok: true, id, name: mod.name };
+    return { ok: true, id, name };
   } catch (err) {
     cleanup();
     return { ok: false, error: err.message };

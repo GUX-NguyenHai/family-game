@@ -37,6 +37,10 @@ h3 { margin: 0 0 8px; }
 
 .screen { max-width: 480px; margin: 0 auto; padding-bottom: 24px; }
 
+/* Nút đổi ngôn ngữ ở góc trên phải màn nhập tên và phòng chờ */
+.screen { position: relative; }
+.lang-btn { position: absolute; top: 10px; right: 0; width: auto; padding: 6px 12px; font-size: 0.9rem; }
+
 /* Quảng cáo ở cuối phòng chờ (xem /js/core/ads.js) */
 .ad-box { margin: 16px 0 8px; text-align: center; }
 .ad-box small { display: block; margin-bottom: 4px; color: var(--muted); font-size: 0.75rem; }

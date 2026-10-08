@@ -148,15 +148,20 @@ function results(g) {
   const winner = g.winner ?? 0;
   return [winner, 1 - winner].map((i, place) => {
     const s = g.sides[i];
+    const names = s.team.names || { vi: s.team.name, en: s.team.name };
+    const members = s.members.map(p => p.name).join(', ');
     return {
       id: `t${s.team.id}`,
-      name: `${s.team.emoji} Đội ${s.team.name}`,
+      name: { vi: `${s.team.emoji} Đội ${names.vi}`, en: `${s.team.emoji} ${names.en} team` },
       animal: s.members[0]?.animal,
       color: s.team.color,
       bot: false,
       place: place + 1,
       members: s.members.map(p => p.id),
-      detail: `${place === 0 ? 'Thắng' : 'Thua'}${g.byTime ? ' (hết giờ)' : ''} · ${s.members.map(p => p.name).join(', ')}`,
+      detail: {
+        vi: `${place === 0 ? 'Thắng' : 'Thua'}${g.byTime ? ' (hết giờ)' : ''} · ${members}`,
+        en: `${place === 0 ? 'Won' : 'Lost'}${g.byTime ? ' (time up)' : ''} · ${members}`,
+      },
     };
   });
 }

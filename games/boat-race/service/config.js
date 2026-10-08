@@ -36,8 +36,11 @@ module.exports = {
   DEFAULT_DIFFICULTY: 'easy',
   DIFFICULTIES: {
     easy: {
-      label: '🟢 Dễ',
-      desc: 'Sông 380m, lắc nhẹ đã đi nhanh, ít vật cản (kiểu Pro), bot chậm.',
+      label: { vi: '🟢 Dễ', en: '🟢 Easy' },
+      desc: {
+        vi: 'Sông 380m, lắc nhẹ đã đi nhanh, ít vật cản (kiểu Pro), bot chậm.',
+        en: '380m river, light shaking is enough, few obstacles (Pro), slow bots.',
+      },
       TRACK_LEN: 380,
       DRIVE_GAIN: 1.3,
       // log/island: tỉ lệ loại vật cản; gapMin/gapMax: khoảng cách giữa 2 cụm vật cản; pairChance: 2 khúc gỗ cạnh nhau
@@ -45,16 +48,16 @@ module.exports = {
       BOT: { skillMin: 0.3, skillMax: 0.5 },
     },
     normal: {
-      label: '🟡 Trung bình',
-      desc: 'Sông 440m, vật cản vừa phải (kiểu Pro), bot khá.',
+      label: { vi: '🟡 Trung bình', en: '🟡 Normal' },
+      desc: { vi: 'Sông 440m, vật cản vừa phải (kiểu Pro), bot khá.', en: '440m river, some obstacles (Pro), decent bots.' },
       TRACK_LEN: 440,
       DRIVE_GAIN: 1,
       OBSTACLES: { island: 0.35, gapMin: 24, gapMax: 36, pairChance: 0.3 },
       BOT: { skillMin: 0.45, skillMax: 0.85 },
     },
     hard: {
-      label: '🔴 Khó',
-      desc: 'Sông 500m, phải lắc mạnh, nhiều vật cản (kiểu Pro), bot giỏi.',
+      label: { vi: '🔴 Khó', en: '🔴 Hard' },
+      desc: { vi: 'Sông 500m, phải lắc mạnh, nhiều vật cản (kiểu Pro), bot giỏi.', en: '500m river, shake hard, many obstacles (Pro), good bots.' },
       TRACK_LEN: 500,
       DRIVE_GAIN: 0.8,
       OBSTACLES: { island: 0.4, gapMin: 18, gapMax: 28, pairChance: 0.55 },

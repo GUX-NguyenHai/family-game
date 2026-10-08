@@ -1,5 +1,6 @@
 // Kéo co – màn hình chung: cảnh 3D hai đội hai bên bờ sông, tên hai đội, đồng hồ, lực hai đội, thông báo đội thắng.
 // Mỗi lần bắt đầu là 1 ván. Ở phòng chờ cảnh 3D làm nền: hai đội đứng sẵn hai bên bờ theo đội đã chọn.
+// Chữ hiện ra lấy từ assets/i18n.json qua ctx.t (2 thứ tiếng).
 import { TugScene } from './scene.js';
 import { compile, decode } from '/js/core/state-codec.js';
 
@@ -28,12 +29,27 @@ export function create(ctx) {
   let order = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
 
   function teamOf(i) {
-    return teams[i] || { emoji: i ? '🔵' : '🔴', name: i ? 'Xanh' : 'Đỏ', color: i ? '#4363d8' : '#e6194b' };
+    return teams[i] || {
+      emoji: i ? '🔵' : '🔴',
+      name: i ? 'Xanh' : 'Đỏ',
+      names: i ? { vi: 'Xanh', en: 'Blue' } : { vi: 'Đỏ', en: 'Red' },
+      color: i ? '#4363d8' : '#e6194b',
+    };
+  }
+
+  // Tên đội theo ngôn ngữ của TV (vd 'Đỏ' / 'Red').
+  function teamName(team) {
+    return ctx.pick(team.names || team.name);
+  }
+
+  // Lời báo đội thắng, vd "🔴 Đội Đỏ thắng!" / "🔴 Red team wins!".
+  function winText(team) {
+    return ctx.t('win', { emoji: team.emoji, name: teamName(team) });
   }
 
   function renderNames() {
-    q('.tug-board .name.red').textContent = `${teamOf(0).emoji} Đội ${teamOf(0).name}`;
-    q('.tug-board .name.blue').textContent = `Đội ${teamOf(1).name} ${teamOf(1).emoji}`;
+    q('.tug-board .name.red').textContent = `${teamOf(0).emoji} ${ctx.t('team', { name: teamName(teamOf(0)) })}`;
+    q('.tug-board .name.blue').textContent = `${ctx.t('team', { name: teamName(teamOf(1)) })} ${teamOf(1).emoji}`;
     root.style.setProperty('--red', teamOf(0).color);
     root.style.setProperty('--blue', teamOf(1).color);
   }
@@ -82,8 +98,7 @@ export function create(ctx) {
       q('.tug-forces .red i').style.width = `${s.forces[0] * 100}%`;
       q('.tug-forces .blue i').style.width = `${s.forces[1] * 100}%`;
       if ((s.phase === 'end' || s.phase === 'done') && s.winner != null) {
-        const w = teamOf(s.winner);
-        banner(`${w.emoji} Đội ${w.name} thắng!${s.byTime ? ' (hết giờ)' : ''}`);
+        banner(`${winText(teamOf(s.winner))}${s.byTime ? ` ${ctx.t('byTime')}` : ''}`);
       } else {
         banner('');
       }
@@ -91,8 +106,7 @@ export function create(ctx) {
 
     onEvent(e) {
       if (e.type === 'win') {
-        const w = teamOf(e.team);
-        toast(`${w.emoji} Đội ${w.name} thắng! 🏆`);
+        toast(`${winText(teamOf(e.team))} 🏆`);
         beep(180, 0.3, 'sawtooth', 0.05); // tiếng rơi xuống nước; nhạc chiến thắng do bảng kết quả chung phát
         setTimeout(() => beep(660, 0.25, 'triangle'), 250);
       }

@@ -288,8 +288,10 @@ function makeObstacle(o) {
 
 export class RaceScene {
   // overlay: phần tử HTML phủ lên canvas để vẽ viền + tên cho các khung nhỏ.
-  constructor(canvas, manifest, quality = 'high', overlay = null) {
+  // texts: chữ đã dịch từ screen/index.js (scene không tự tra ngôn ngữ), vd { finishBanner: '🏁 ĐÍCH 🏁' }.
+  constructor(canvas, manifest, quality = 'high', overlay = null, texts = {}) {
     this.manifest = manifest;
+    this.texts = texts;
     this.high = quality === 'high';
     this.modelYaw = manifest.modelYaw;
     this.minis = []; // [{ id, r, p, rect }] các khung nhỏ của khung hình hiện tại
@@ -443,7 +445,7 @@ export class RaceScene {
       pole.castShadow = true;
       g.add(pole);
     }
-    const banner = textSprite('🏁 ĐÍCH 🏁', { bg: '#d63a3a', height: 1.4 });
+    const banner = textSprite(this.texts.finishBanner || '🏁', { bg: '#d63a3a', height: 1.4 });
     banner.position.set(0, 5.4, -trackLen);
     g.add(banner);
 

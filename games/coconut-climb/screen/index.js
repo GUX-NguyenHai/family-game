@@ -27,7 +27,7 @@ export function create(ctx) {
       <div class="cc-timer"></div>
     </div>`;
   const q = sel => root.querySelector(sel);
-  const scene = new ClimbScene(q('.cc-scene'), catalog, ctx.quality);
+  const scene = new ClimbScene(q('.cc-scene'), catalog, ctx.quality, (key, params) => ctx.t(key, params));
   let order = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
   let hudAt = 0;
 
@@ -35,7 +35,7 @@ export function create(ctx) {
     if (e.target.closest?.('input, textarea')) return;
     if (e.key === 'y' || e.key === 'Y') {
       const yaw = scene.rotateFigures(Math.PI / 2);
-      toast(`Xoay khỉ: yaw = ${yaw.toFixed(4)} (ghi số này vào figures.json nếu đúng hướng)`);
+      toast(ctx.t('rotateFigure', { yaw: yaw.toFixed(4) }));
     }
   }
   window.addEventListener('keydown', onKey);
@@ -96,7 +96,7 @@ export function create(ctx) {
     onEvent(e) {
       if (e.type === 'top') {
         scene.topReached(e.pid);
-        toast(`${ctx.player(e.pid)?.name || '?'} hái được dừa! Hạng ${e.rank} 🥥`);
+        toast(ctx.t('gotCoconut', { name: ctx.player(e.pid)?.name || '?', n: e.rank }));
         beep(e.rank === 1 ? 990 : 660, 0.25, 'triangle');
       }
     },

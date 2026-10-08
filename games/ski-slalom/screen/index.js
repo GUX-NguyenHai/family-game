@@ -16,7 +16,9 @@ export function create(ctx) {
       <div class="ski-progress"><div class="finish">🏁</div></div>
     </div>`;
   const q = sel => root.querySelector(sel);
-  const scene = new SkiScene(q('.ski-scene'), ctx.manifest, ctx.quality, q('.ski-hud'));
+  const scene = new SkiScene(q('.ski-scene'), ctx.manifest, ctx.quality, q('.ski-hud'), {
+    finishBanner: ctx.t('finishBanner'),
+  });
   let courseLen = 400;
   let racerIds = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
   let hudAt = 0;
@@ -35,7 +37,7 @@ export function create(ctx) {
     if (e.target.closest?.('input, textarea')) return;
     if (e.key === 'y' || e.key === 'Y') {
       const yaw = scene.rotateModels(Math.PI / 2);
-      toast(`Xoay model: modelYaw = ${yaw.toFixed(4)} (ghi số này vào animals.json)`);
+      toast(ctx.t('rotateModel', { yaw: yaw.toFixed(4) }));
     }
   }
   window.addEventListener('keydown', onKey);
@@ -111,12 +113,12 @@ export function create(ctx) {
       const pl = ctx.player(ev.pid);
       if (ev.type === 'miss') {
         beep(220, 0.15, 'square', 0.04);
-        if (!pl?.bot) toast(`${pl?.name || '?'} trượt cổng! +3s`);
+        if (!pl?.bot) toast(ctx.t('missLog', { name: pl?.name || '?' }));
       } else if (ev.type === 'crash') {
         beep(140, 0.22, 'sawtooth', 0.05);
-        if (!pl?.bot) toast(`${pl?.name || '?'} đâm ${ev.obstacle === 'rock' ? 'đá' : 'cây'}! 💥`);
+        if (!pl?.bot) toast(ctx.t(ev.obstacle === 'rock' ? 'crashRockLog' : 'crashTreeLog', { name: pl?.name || '?' }));
       } else if (ev.type === 'finish') {
-        toast(`${pl?.name || '?'} về đích! 🏁`);
+        toast(ctx.t('finishLog', { name: pl?.name || '?' }));
         if (ev.rank === 1) fanfare();
         else beep(660, 0.2, 'triangle');
       }

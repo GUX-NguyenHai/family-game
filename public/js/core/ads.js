@@ -3,6 +3,8 @@
 // - Mã quảng cáo của Google chỉ tải lần đầu vào phòng chờ, nên lúc chơi trang vẫn nhẹ.
 // - Quy định AdSense: không tự làm mới quảng cáo. Ô quảng cáo chỉ tạo mới khi người dùng vừa vào lại
 //   phòng chờ (bắt đầu chơi thì gỡ ô, chơi xong về phòng chờ thì tạo ô mới).
+import { t } from './i18n.js';
+
 const SCRIPT = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
 let configPromise = null;
 let scriptAdded = false;
@@ -38,7 +40,7 @@ export function adSlot(box, kind) {
       if (my !== token || !c?.client || !c.slots?.[kind]) return; // đã rời phòng chờ hoặc chưa có mã
       addScript(c.client);
       // client và slot đã được server kiểm tra đúng dạng (chỉ chữ số và "ca-pub-").
-      box.innerHTML = `<small>Quảng cáo</small>
+      box.innerHTML = `<small>${t('ad.label')}</small>
         <ins class="adsbygoogle" style="display:block" data-ad-client="${c.client}" data-ad-slot="${c.slots[kind]}"
           data-ad-format="auto" data-full-width-responsive="true"></ins>`;
       box.hidden = false;

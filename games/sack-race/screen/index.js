@@ -7,7 +7,7 @@ import { compile, decode } from '/js/core/state-codec.js';
 const stateCodec = compile(await fetch('/games/sack-race/assets/schema.json').then(r => r.json()));
 
 export function create(ctx) {
-  const { root, esc, toast, beep, fanfare } = ctx;
+  const { root, esc, toast, beep, fanfare, t } = ctx;
   root.innerHTML = `
     <canvas class="sack-scene"></canvas>
     <div class="sack-hud" hidden>
@@ -15,7 +15,9 @@ export function create(ctx) {
       <div class="sack-progress"><div class="finish">🏁</div></div>
     </div>`;
   const q = sel => root.querySelector(sel);
-  const scene = new SackScene(q('.sack-scene'), ctx.manifest, ctx.quality, q('.sack-hud'));
+  const scene = new SackScene(q('.sack-scene'), ctx.manifest, ctx.quality, q('.sack-hud'), {
+    finishBanner: t('scene.finishBanner'),
+  });
   let trackLen = 40;
   let racerIds = []; // thứ tự các hàng trong trạng thái nhị phân (từ setup)
   let hudAt = 0;
@@ -34,7 +36,7 @@ export function create(ctx) {
     if (e.target.closest?.('input, textarea')) return;
     if (e.key === 'y' || e.key === 'Y') {
       const yaw = scene.rotateModels(Math.PI / 2);
-      toast(`Xoay model: modelYaw = ${yaw.toFixed(4)} (ghi số này vào animals.json)`);
+      toast(t('toast.modelYaw', { yaw: yaw.toFixed(4) }));
     }
   }
   window.addEventListener('keydown', onKey);
@@ -108,9 +110,9 @@ export function create(ctx) {
       const pl = ctx.player(ev.pid);
       if (ev.type === 'fall') {
         beep(160, 0.18, 'sawtooth', 0.04);
-        if (!pl?.bot) toast(`${pl?.name || '?'} ngã rồi! 🤕`);
+        if (!pl?.bot) toast(t('toast.fall', { name: pl?.name || '?' }));
       } else if (ev.type === 'finish') {
-        toast(`${pl?.name || '?'} về đích hạng ${ev.rank}! 🏁`);
+        toast(t('toast.finish', { name: pl?.name || '?', rank: ev.rank }));
         if (ev.rank === 1) fanfare();
         else beep(660, 0.2, 'triangle');
       }

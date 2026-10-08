@@ -130,7 +130,8 @@ function createRace({ players, course, level, teams, now, startAt = null }) {
   if (teams) {
     for (const t of teams) {
       const crew = rowers.filter(r => r.team === t.id);
-      if (crew.length) boats.push(makeBoat(C, `t${t.id}`, crew, `Đội ${t.name}`, t.color, t));
+      const names = t.names || { vi: t.name, en: t.name };
+      if (crew.length) boats.push(makeBoat(C, `t${t.id}`, crew, { vi: `Đội ${names.vi}`, en: `${names.en} team` }, t.color, t));
     }
   } else {
     for (const r of rowers) boats.push(makeBoat(C, `b-${r.id}`, [r], r.name, r.color, null));
@@ -327,8 +328,17 @@ function standings(boats) {
   });
 }
 
+// Thời gian về đích, hoặc { vi, en } "chưa về đích (x%)".
 function timeText(b, trackLen) {
-  return b.finishMs != null ? `${(b.finishMs / 1000).toFixed(2)}s` : `chưa về đích (${Math.round(Math.min(1, b.z / trackLen) * 100)}%)`;
+  if (b.finishMs != null) return `${(b.finishMs / 1000).toFixed(2)}s`;
+  const pct = Math.round(Math.min(1, b.z / trackLen) * 100);
+  return { vi: `chưa về đích (${pct}%)`, en: `did not finish (${pct}%)` };
+}
+
+// Ghép chữ thường với chữ { vi, en }: trả về { vi, en }.
+function joinText(sep, ...parts) {
+  const of = (p, lang) => (p && typeof p === 'object' ? p[lang] : p);
+  return { vi: parts.map(p => of(p, 'vi')).join(sep), en: parts.map(p => of(p, 'en')).join(sep) };
 }
 
 // Kết quả: thi đơn mỗi người một dòng; theo đội mỗi đội một dòng (members = id các thành viên).
@@ -340,13 +350,13 @@ function results(race) {
     }
     return {
       id: b.id,
-      name: `${b.teamEmoji} ${b.name}`,
+      name: joinText(' ', b.teamEmoji, b.name),
       animal: b.crew[0].animal,
       color: b.color,
       bot: false,
       place: i + 1,
       members: b.crew.map(r => r.id),
-      detail: `${b.crew.map(r => r.name).join(', ')} · ${timeText(b, race.trackLen)}`,
+      detail: joinText(' · ', b.crew.map(r => r.name).join(', '), timeText(b, race.trackLen)),
     };
   });
 }

@@ -101,7 +101,11 @@ function results(g) {
     color: p.color,
     bot: p.bot,
     place: i + 1,
-    detail: p.doneAt != null ? `Đầy sau ${((p.doneAt - g.startAt) / 1000).toFixed(1)}s` : `${Math.round(p.fill * 100)}%`,
+    // Chữ người chơi thấy: { vi, en }. Chỉ có số thì để chuỗi thường.
+    detail:
+      p.doneAt != null
+        ? { vi: `Đầy sau ${((p.doneAt - g.startAt) / 1000).toFixed(1)}s`, en: `Full in ${((p.doneAt - g.startAt) / 1000).toFixed(1)}s` }
+        : `${Math.round(p.fill * 100)}%`,
   }));
 }
 

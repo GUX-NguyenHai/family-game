@@ -335,8 +335,10 @@ class Climber {
 // ---------- Cảnh chính ----------
 
 export class ClimbScene {
-  constructor(canvas, catalog, quality = 'high') {
+  // t: hàm dịch chữ của game (ctx.t từ screen/index.js), dùng cho biển "ĐÍCH".
+  constructor(canvas, catalog, quality = 'high', t = key => key) {
     this.catalog = catalog; // danh sách khỉ (assets/figures.json)
+    this.t = t;
     this.extraYaw = 0;
     this.high = quality === 'high';
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.high, powerPreference: 'high-performance' });
@@ -440,7 +442,7 @@ export class ClimbScene {
       sign.position.set(x, BASE_Y + h, 0);
       this.marks.add(sign);
     }
-    const top = textSprite('🥥 ĐÍCH', { bg: '#d63a3a', height: 0.8 });
+    const top = textSprite(this.t('finishSign'), { bg: '#d63a3a', height: 0.8 });
     top.position.set(x, BASE_Y + this.height, 0);
     this.marks.add(top);
   }

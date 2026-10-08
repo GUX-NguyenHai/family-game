@@ -66,10 +66,14 @@ function createMatch({ players, options, now, startAt, api }) {
 
 module.exports = {
   id: '__ID__', // trùng tên thư mục games/__ID__
-  name: '__NAME__',
+  // Chữ người chơi thấy: { vi, en } (xem games/README.md mục "Hai thứ tiếng").
+  name: { vi: '__NAME__', en: '__NAME_EN__' },
   category: 'motion', // motion | reflex | mind | secret | folk (GAME_CATEGORIES trong src/config.js)
   emoji: '__EMOJI__',
-  description: 'Lắc điện thoại lên xuống để đổ đầy thanh của mình. Ai đầy trước thì thắng! Không có nút bấm.',
+  description: {
+    vi: 'Lắc điện thoại lên xuống để đổ đầy thanh của mình. Ai đầy trước thì thắng! Không có nút bấm.',
+    en: 'Shake your phone up and down to fill your bar. First to fill it wins! No buttons.',
+  },
   maxPlayers: 12,
   minPlayers: 1,
   bots: true,
@@ -78,12 +82,12 @@ module.exports = {
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
-  goText: 'LẮC!',
+  goText: { vi: 'LẮC!', en: 'SHAKE!' },
   coastMs: C.COAST_MS,
   options: [
     {
       key: 'difficulty',
-      label: 'Độ khó',
+      label: { vi: 'Độ khó', en: 'Difficulty' },
       default: C.DEFAULT_DIFFICULTY,
       choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
     },

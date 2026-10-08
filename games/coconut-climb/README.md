@@ -21,7 +21,7 @@ Mỗi người chọn một chú khỉ và một cây dừa. Lắc máy để le
 `SLIP_ZONES` ghi các đoạn `[bắt đầu, kết thúc]`, tính theo phần chiều cao cây (0 = gốc, 1 = ngọn).
 
 ## Khỉ (`assets/figures.json`)
-Mỗi con có: `id`, `name`, `emoji`, `file` (model trong `assets/models/figure/`), `yaw` (xoay thêm nếu model quay sai hướng), `size` (chiều cao khi leo, mét).
+Mỗi con có: `id`, `name` (2 thứ tiếng `{ vi, en }`), `emoji`, `file` (model trong `assets/models/figure/`), `yaw` (xoay thêm nếu model quay sai hướng), `size` (chiều cao khi leo, mét).
 - Model **đứng thẳng** thì giữ dáng, quay mặt vào thân cây. Model **bò 4 chân** thì được dựng đứng lên.
 - Có hoạt ảnh leo/chạy/đi thì dùng, không có thì khỉ tự nhún theo nhịp lắc.
 - Khỉ quay sai hướng: bấm `Y` trên TV để xoay thử 90°, đúng rồi thì ghi số hiện ra vào `yaw`.
@@ -35,3 +35,4 @@ Mỗi con có: `id`, `name`, `emoji`, `file` (model trong `assets/models/figure/
 | `service/index.js` | Khai báo game, chọn khỉ cho từng người |
 | `screen/scene.js` | Cảnh bãi biển 3D: thân cây tự dựng (có khúc rêu), tán lá, chùm dừa (`coconut.glb`), cây dừa trang trí (`palm-tree.glb`), khỉ ôm thân cây |
 | `controller/index.js` | Tay cầm: chọn khỉ, thanh "cây" dọc có các khúc rêu, cảnh báo khi đang trượt |
+| `assets/i18n.json` | Chữ trên TV và điện thoại của game (2 thứ tiếng vi/en) |

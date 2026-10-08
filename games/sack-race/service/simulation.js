@@ -169,8 +169,11 @@ function results(racers, trackLen) {
     place: i + 1,
     detail:
       p.finishMs != null
-        ? `${(p.finishMs / 1000).toFixed(2)}s · ngã ${p.falls} lần`
-        : `chưa về đích (${Math.floor(p.z)}/${trackLen}m) · ngã ${p.falls} lần`,
+        ? { vi: `${(p.finishMs / 1000).toFixed(2)}s · ngã ${p.falls} lần`, en: `${(p.finishMs / 1000).toFixed(2)}s · ${p.falls} falls` }
+        : {
+            vi: `chưa về đích (${Math.floor(p.z)}/${trackLen}m) · ngã ${p.falls} lần`,
+            en: `did not finish (${Math.floor(p.z)}/${trackLen}m) · ${p.falls} falls`,
+          },
   }));
 }
 

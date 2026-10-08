@@ -23,22 +23,22 @@ module.exports = {
   DEFAULT_DIFFICULTY: 'easy',
   DIFFICULTIES: {
     easy: {
-      label: '🟢 Dễ',
-      desc: 'Vạch thắng gần (3m), lắc nhẹ đã kéo khoẻ, bot yếu.',
+      label: { vi: '🟢 Dễ', en: '🟢 Easy' },
+      desc: { vi: 'Vạch thắng gần (3m), lắc nhẹ đã kéo khoẻ, bot yếu.', en: 'Close win line (3m), light shaking pulls hard, weak bots.' },
       DRIVE_GAIN: 1.3,
       WIN_DISTANCE: 3,
       BOT: { skillMin: 0.3, skillMax: 0.5 },
     },
     normal: {
-      label: '🟡 Trung bình',
-      desc: 'Vạch thắng 4m, bot khá.',
+      label: { vi: '🟡 Trung bình', en: '🟡 Normal' },
+      desc: { vi: 'Vạch thắng 4m, bot khá.', en: 'Win line at 4m, decent bots.' },
       DRIVE_GAIN: 1,
       WIN_DISTANCE: 4,
       BOT: { skillMin: 0.45, skillMax: 0.85 },
     },
     hard: {
-      label: '🔴 Khó',
-      desc: 'Vạch thắng xa (5m), phải lắc mạnh, bot rất khoẻ.',
+      label: { vi: '🔴 Khó', en: '🔴 Hard' },
+      desc: { vi: 'Vạch thắng xa (5m), phải lắc mạnh, bot rất khoẻ.', en: 'Far win line (5m), shake hard, very strong bots.' },
       DRIVE_GAIN: 0.8,
       WIN_DISTANCE: 5,
       BOT: { skillMin: 0.75, skillMax: 1 },

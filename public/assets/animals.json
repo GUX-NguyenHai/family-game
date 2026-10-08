@@ -14,17 +14,17 @@
     "celebrate": ["Attack_Headbutt", "Attack"]
   },
   "animals": [
-    { "id": "horse", "name": "Ngựa nâu", "emoji": "🐴", "file": "Horse.glb" },
-    { "id": "white-horse", "name": "Ngựa trắng", "emoji": "🦄", "file": "White Horse.glb" },
-    { "id": "donkey", "name": "Lừa", "emoji": "🫏", "file": "Donkey.glb" },
-    { "id": "cow", "name": "Bò sữa", "emoji": "🐄", "file": "Cow.glb" },
-    { "id": "bull", "name": "Bò tót", "emoji": "🐂", "file": "Bull.glb" },
-    { "id": "alpaca", "name": "Lạc đà Alpaca", "emoji": "🦙", "file": "Alpaca.glb" },
-    { "id": "deer", "name": "Nai", "emoji": "🦌", "file": "Deer.glb" },
-    { "id": "stag", "name": "Hươu sừng", "emoji": "🦌", "file": "Stag.glb" },
-    { "id": "fox", "name": "Cáo", "emoji": "🦊", "file": "Fox.glb" },
-    { "id": "wolf", "name": "Sói", "emoji": "🐺", "file": "Wolf.glb" },
-    { "id": "husky", "name": "Chó Husky", "emoji": "🐕", "file": "Husky.glb" },
-    { "id": "shiba", "name": "Chó Shiba", "emoji": "🐶", "file": "Shiba Inu.glb" }
+    { "id": "horse", "name": { "vi": "Ngựa nâu", "en": "Horse" }, "emoji": "🐴", "file": "Horse.glb" },
+    { "id": "white-horse", "name": { "vi": "Ngựa trắng", "en": "White horse" }, "emoji": "🦄", "file": "White Horse.glb" },
+    { "id": "donkey", "name": { "vi": "Lừa", "en": "Donkey" }, "emoji": "🫏", "file": "Donkey.glb" },
+    { "id": "cow", "name": { "vi": "Bò sữa", "en": "Cow" }, "emoji": "🐄", "file": "Cow.glb" },
+    { "id": "bull", "name": { "vi": "Bò tót", "en": "Bull" }, "emoji": "🐂", "file": "Bull.glb" },
+    { "id": "alpaca", "name": { "vi": "Lạc đà Alpaca", "en": "Alpaca" }, "emoji": "🦙", "file": "Alpaca.glb" },
+    { "id": "deer", "name": { "vi": "Nai", "en": "Deer" }, "emoji": "🦌", "file": "Deer.glb" },
+    { "id": "stag", "name": { "vi": "Hươu sừng", "en": "Stag" }, "emoji": "🦌", "file": "Stag.glb" },
+    { "id": "fox", "name": { "vi": "Cáo", "en": "Fox" }, "emoji": "🦊", "file": "Fox.glb" },
+    { "id": "wolf", "name": { "vi": "Sói", "en": "Wolf" }, "emoji": "🐺", "file": "Wolf.glb" },
+    { "id": "husky", "name": { "vi": "Chó Husky", "en": "Husky" }, "emoji": "🐕", "file": "Husky.glb" },
+    { "id": "shiba", "name": { "vi": "Chó Shiba", "en": "Shiba Inu" }, "emoji": "🐶", "file": "Shiba Inu.glb" }
   ]
 }

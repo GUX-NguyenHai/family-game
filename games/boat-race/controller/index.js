@@ -4,36 +4,36 @@ const FLAG = { STUN: 1, BUMP: 2, FINISHED: 4, BLOCKED: 8 };
 const catalog = await fetch('/games/boat-race/assets/boats.json').then(r => r.json());
 
 export function create(ctx) {
-  const { lobbyRoot, playRoot, sensors, send, vibrate, esc } = ctx;
+  const { lobbyRoot, playRoot, sensors, send, vibrate, esc, t } = ctx;
   let course = 'basic';
   let teamMode = false;
 
   lobbyRoot.innerHTML = `
     <div class="box">
-      <h3>🚣 Chọn thuyền</h3>
+      <h3>${esc(t('pickBoat'))}</h3>
       <div class="boat-picker" data-r="boatPicker"></div>
-      <p class="hint" data-r="boatNote" hidden>Chơi theo đội: cả đội đi thuyền của đội trưởng (người vào đội đầu tiên).</p>
+      <p class="hint" data-r="boatNote" hidden>${esc(t('teamBoatNote'))}</p>
     </div>
     <div class="box">
-      <h3>Thử chèo</h3>
+      <h3>${esc(t('tryPaddle'))}</h3>
       <div class="meter">
-        <span>Lắc ↕</span>
+        <span>${esc(t('shake'))}</span>
         <div class="bar"><i data-r="shakeBar"></i></div>
       </div>
       <div class="meter" data-r="tiltRow">
-        <span>Nghiêng</span>
+        <span>${esc(t('tilt'))}</span>
         <div class="tilt"><i data-r="tiltDot"></i></div>
       </div>
       <div class="row" data-r="calibRow">
-        <button data-r="btnCalib">Hiệu chỉnh</button>
-        <label class="check"><input type="checkbox" data-r="chkInvert"> Đảo chiều</label>
+        <button data-r="btnCalib">${esc(t('calibrate'))}</button>
+        <label class="check"><input type="checkbox" data-r="chkInvert"> ${esc(t('invert'))}</label>
       </div>
       <label class="row">
-        <span>Độ nhạy lắc</span>
+        <span>${esc(t('sensitivity'))}</span>
         <select data-r="selSens">
-          <option value="14">Thấp</option>
-          <option value="10">Vừa</option>
-          <option value="7">Cao</option>
+          <option value="14">${esc(t('low'))}</option>
+          <option value="10">${esc(t('mid'))}</option>
+          <option value="7">${esc(t('high'))}</option>
         </select>
       </label>
       <p class="hint" data-r="lobbyHint"></p>
@@ -47,15 +47,15 @@ export function create(ctx) {
       </div>
       <div data-r="status" class="boat-status"></div>
       <div class="boat-meters">
-        <div class="meter"><span>Bạn</span><div class="bar boat-power"><i data-r="myBar"></i></div></div>
-        <div class="meter" data-r="teamRow"><span>Cả đội</span><div class="bar boat-power team"><i data-r="teamBar"></i></div></div>
+        <div class="meter"><span>${esc(t('you'))}</span><div class="bar boat-power"><i data-r="myBar"></i></div></div>
+        <div class="meter" data-r="teamRow"><span>${esc(t('wholeTeam'))}</span><div class="bar boat-power team"><i data-r="teamBar"></i></div></div>
       </div>
       <p data-r="noShake" class="boat-noshake" hidden></p>
-      <div class="boat-paddle" data-r="paddle"><span data-r="paddleEmoji">🚣</span><b>LẮC ĐỂ CHÈO!</b></div>
+      <div class="boat-paddle" data-r="paddle"><span data-r="paddleEmoji">🚣</span><b>${esc(t('shakeToPaddle'))}</b></div>
       <div class="boat-steer" data-r="steerArea">
-        <button data-r="btnLeft" class="hold" aria-label="Sang trái">◀</button>
+        <button data-r="btnLeft" class="hold" aria-label="${esc(t('steerLeft'))}">◀</button>
         <div class="steer-indicator"><i data-r="steerDot"></i></div>
-        <button data-r="btnRight" class="hold" aria-label="Sang phải">▶</button>
+        <button data-r="btnRight" class="hold" aria-label="${esc(t('steerRight'))}">▶</button>
       </div>
     </div>`;
 
@@ -71,7 +71,7 @@ export function create(ctx) {
   function renderBoats() {
     const sel = currentBoat();
     el.boatPicker.innerHTML = catalog.boats
-      .map(b => `<button type="button" data-id="${esc(b.id)}" class="${b.id === sel ? 'sel' : ''}"><span class="e">${b.emoji}</span>${esc(b.name)}</button>`)
+      .map(b => `<button type="button" data-id="${esc(b.id)}" class="${b.id === sel ? 'sel' : ''}"><span class="e">${b.emoji}</span>${esc(ctx.pick(b.name))}</button>`)
       .join('');
   }
 
@@ -98,10 +98,7 @@ export function create(ctx) {
     el.steerArea.hidden = !pro;
     el.teamRow.hidden = !teamMode;
     el.boatNote.hidden = !teamMode;
-    el.lobbyHint.textContent =
-      'Cầm máy dọc, lắc lên xuống để chèo: lắc càng nhanh thuyền càng nhanh, ngừng lắc thì thuyền dừng.' +
-      (pro ? ' Kiểu Pro: nghiêng trái/phải để lái né khúc gỗ và đảo hải đăng (bấm "Hiệu chỉnh" khi đang cầm thẳng).' : '') +
-      (teamMode ? ' Theo đội: thuyền đi theo mức lắc trung bình của cả đội, cả đội phải cùng chèo!' : '');
+    el.lobbyHint.textContent = [t('hint'), pro ? t('hintPro') : '', teamMode ? t('hintTeam') : ''].filter(Boolean).join(' ');
   }
 
   // ---------- Màn chơi ----------
@@ -111,9 +108,7 @@ export function create(ctx) {
       return;
     }
     const canEnable = sensors.secure && !sensors.enabled && ctx.sensorError()?.message !== 'unsupported';
-    el.noShake.textContent = canEnable
-      ? 'Chưa bật cảm biến nên lắc chưa có tác dụng. Bấm "Bật cảm biến" ở dưới.'
-      : 'Máy không có cảm biến lắc nên không chèo được. Hãy dùng máy khác hoặc nhờ đồng đội chèo hộ.';
+    el.noShake.textContent = canEnable ? t('noSensorEnable') : t('noSensor');
     el.noShake.hidden = false;
   }
 
@@ -198,11 +193,11 @@ export function create(ctx) {
 
       const f = m.f;
       let status = '';
-      if (f & FLAG.FINISHED) status = `Về đích hạng ${m.rank}! 🏁`;
-      else if (f & FLAG.BLOCKED) status = 'Vướng đảo! Lái sang bên 🗼';
-      else if (f & FLAG.STUN) status = 'Đâm khúc gỗ! 🪵';
-      else if (f & FLAG.BUMP) status = 'Đụng thuyền! 💥';
-      else if (m.crew > 1 && m.pw < m.tw * 0.5) status = 'Chèo mạnh lên, đội đang chờ bạn! 💪';
+      if (f & FLAG.FINISHED) status = t('myFinish', { n: m.rank });
+      else if (f & FLAG.BLOCKED) status = t('myIsland');
+      else if (f & FLAG.STUN) status = t('myLog');
+      else if (f & FLAG.BUMP) status = t('myBump');
+      else if (m.crew > 1 && m.pw < m.tw * 0.5) status = t('paddleHarder');
       el.status.textContent = status;
     },
 

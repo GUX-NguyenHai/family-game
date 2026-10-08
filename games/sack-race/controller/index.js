@@ -4,26 +4,27 @@
 const FLAG = { HOP: 1, FALL: 2, FINISHED: 4 };
 
 export function create(ctx) {
-  const { lobbyRoot, playRoot, sensors, send, vibrate } = ctx;
+  const { lobbyRoot, playRoot, sensors, send, vibrate, t, esc } = ctx;
 
+  // Câu hướng dẫn cắt thành nhiều mảnh trong i18n.json để chèn chữ đậm (bản dịch không chứa HTML).
   lobbyRoot.innerHTML = `
     <div class="box sack-lobby">
-      <h3>🛍️ Thử nhảy</h3>
+      <h3>${esc(t('lobby.title'))}</h3>
       <div class="meter">
-        <span>Nhảy ⤴</span>
+        <span>${esc(t('lobby.jump'))}</span>
         <div class="bar"><i data-r="jumpBar" class="sack-jump-bar"></i></div>
-        <b data-r="jumpHit" class="sack-jump-hit" hidden>NHẢY!</b>
+        <b data-r="jumpHit" class="sack-jump-hit" hidden>${esc(t('lobby.jumpHit'))}</b>
       </div>
       <label class="row">
-        <span>Độ nhạy nhảy</span>
+        <span>${esc(t('lobby.jumpSens'))}</span>
         <select data-r="selJump">
-          <option value="22">Thấp</option>
-          <option value="15">Vừa</option>
-          <option value="10">Cao</option>
+          <option value="22">${esc(t('lobby.low'))}</option>
+          <option value="15">${esc(t('lobby.mid'))}</option>
+          <option value="10">${esc(t('lobby.high'))}</option>
         </select>
       </label>
       <p data-r="jumpDbg" class="hint"></p>
-      <p class="hint">Không có nút bấm. Cầm máy dọc, <b>hất nhanh đầu máy về phía mình</b> hoặc <b>giật mạnh cả máy lên</b>: mỗi lần là 1 bước nhảy. Máy <b>rung</b> lúc con vật đáp đất: hất tiếp ngay thì bước dài dần 🔥. Hất vội lúc còn đang bay là <b>ngã</b>!</p>
+      <p class="hint">${esc(t('lobby.hintIntro'))} <b>${esc(t('lobby.hintFlickBold'))}</b> ${esc(t('lobby.hintOr'))} <b>${esc(t('lobby.hintJerkBold'))}</b>${esc(t('lobby.hintEachHop'))} <b>${esc(t('lobby.hintBuzzBold'))}</b> ${esc(t('lobby.hintRhythm'))} <b>${esc(t('lobby.hintFallBold'))}</b>!</p>
     </div>`;
 
   playRoot.innerHTML = `
@@ -36,8 +37,8 @@ export function create(ctx) {
       <p data-r="noSensor" class="sack-nosensor" hidden></p>
       <div class="sack-pad" data-r="pad">
         <span data-r="padIcon">🛍️</span>
-        <b data-r="padText">HẤT MÁY ĐỂ NHẢY</b>
-        <small data-r="padSub">Máy rung là đáp đất: hất tiếp ngay!</small>
+        <b data-r="padText">${esc(t('pad.flickToHop'))}</b>
+        <small data-r="padSub">${esc(t('pad.buzzHint'))}</small>
       </div>
     </div>`;
 
@@ -56,9 +57,7 @@ export function create(ctx) {
       return;
     }
     const canEnable = sensors.secure && !sensors.enabled && ctx.sensorError()?.message !== 'unsupported';
-    el.noSensor.textContent = canEnable
-      ? 'Chưa bật cảm biến nên chưa nhảy được. Bấm "Bật cảm biến" ở dưới.'
-      : 'Máy này không có cảm biến chuyển động nên không chơi được Nhảy bao bố.';
+    el.noSensor.textContent = canEnable ? t('noSensor.enable') : t('noSensor.none');
     el.noSensor.hidden = false;
   }
 
@@ -70,7 +69,7 @@ export function create(ctx) {
   }
 
   function normalPad() {
-    setPad('🛍️', 'HẤT MÁY ĐỂ NHẢY', 'Máy rung là đáp đất: hất tiếp ngay!');
+    setPad('🛍️', t('pad.flickToHop'), t('pad.buzzHint'));
   }
 
   function flash(cls, ms) {
@@ -107,16 +106,16 @@ export function create(ctx) {
       updateNoSensor();
       el.pos.textContent = `${m.pos}/${m.total}`;
       el.progBar.style.width = `${m.prog * 100}%`;
-      el.combo.textContent = m.c >= 2 ? `Nhịp đẹp ×${m.c} 🔥` : '';
+      el.combo.textContent = m.c >= 2 ? t('combo', { n: m.c }) : '';
       if (m.f & FLAG.FINISHED) {
         if (!finished) {
           finished = true;
-          setPad('🏁', `VỀ ĐÍCH HẠNG ${m.rank}!`, '', 'win');
+          setPad('🏁', t('pad.finished', { rank: m.rank }), '', 'win');
         }
       } else if (m.f & FLAG.FALL) {
         if (!fallen) {
           fallen = true;
-          setPad('🤕', 'NGÃ RỒI!', 'Chờ đứng dậy rồi nhảy lại…', 'fall');
+          setPad('🤕', t('pad.fell'), t('pad.getUp'), 'fall');
         }
       } else if (fallen) {
         fallen = false;
@@ -156,16 +155,17 @@ export function create(ctx) {
       }
     },
 
-    frame(t) {
+    // now: thời điểm khung hình (không đặt tên t để khỏi che hàm dịch t).
+    frame(now) {
       if (ctx.screen() !== 'lobby') return;
       // Thanh "Nhảy ⤴": đầy = đủ mạnh để nhảy (hất đầu máy hoặc giật máy lên, cách nào mạnh hơn thì tính).
       const jd = sensors.jumpDeg || 15;
       const jerkNeed = sensors.jerkNeed();
       el.jumpBar.style.width = `${Math.min(1, Math.max(sensors.pitchSwing / jd, sensors.jerkPeak / jerkNeed)) * 100}%`;
-      if (t - uiAt > 150) {
-        uiAt = t;
-        const swing = sensors.gotOrientation ? `Hất đầu máy: ${Math.round(sensors.pitchSwing)}°/${jd}°` : 'Không đo được góc nghiêng';
-        el.jumpDbg.textContent = `${swing} · Giật lên: ${Math.round(sensors.jerkPeak)}/${Math.round(jerkNeed)}`;
+      if (now - uiAt > 150) {
+        uiAt = now;
+        const swing = sensors.gotOrientation ? t('lobby.tilt', { deg: Math.round(sensors.pitchSwing), need: jd }) : t('lobby.noTilt');
+        el.jumpDbg.textContent = `${swing} · ${t('lobby.jerk', { n: Math.round(sensors.jerkPeak), need: Math.round(jerkNeed) })}`;
       }
     },
 

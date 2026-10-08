@@ -49,7 +49,7 @@
 .cc-right { display: flex; flex-direction: column; min-width: 0; }
 .cc-status { min-height: 3.4em; font-size: 1.15rem; font-weight: 800; }
 .cc-power { display: flex; align-items: center; gap: 8px; }
-.cc-power > span { color: var(--muted); width: 36px; }
+.cc-power > span { color: var(--muted); min-width: 36px; }
 .cc-power .bar { height: 20px; }
 .cc-power .bar i { background: linear-gradient(90deg, #42d4f4, #3cb44b); transition: width 0.1s; }
 /* Vạch "phải lắc quá mức này" khi ở đoạn trơn */

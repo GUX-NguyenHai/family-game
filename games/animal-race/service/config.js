@@ -30,12 +30,15 @@ module.exports = {
 
   // Độ khó: chủ phòng chọn cho cả phòng. Mỗi mức ghi đè các tham số ở trên.
   // Tốc độ tối đa luôn 19 m/s; DRIVE_GAIN quyết định lắc nặng hay nhẹ tay.
-  // label + desc hiện trên màn hình chọn độ khó.
+  // label + desc ({ vi, en }) hiện trên màn hình chọn độ khó.
   DEFAULT_DIFFICULTY: 'easy',
   DIFFICULTIES: {
     easy: {
-      label: '🟢 Dễ',
-      desc: 'Đường 300m, lắc nhẹ đã chạy nhanh, ít rào, đâm rào khựng ngắn, bot chậm. Hợp với trẻ nhỏ.',
+      label: { vi: '🟢 Dễ', en: '🟢 Easy' },
+      desc: {
+        vi: 'Đường 300m, lắc nhẹ đã chạy nhanh, ít rào, đâm rào khựng ngắn, bot chậm. Hợp với trẻ nhỏ.',
+        en: '300m track, light shaking is enough, few fences, short stun, slow bots. Great for kids.',
+      },
       TRACK_LEN: 300,
       DRIVE_GAIN: 1.3,
       STUN_MS: 500,
@@ -44,8 +47,8 @@ module.exports = {
       BOT: { skillMin: 0.3, skillMax: 0.5 },
     },
     normal: {
-      label: '🟡 Trung bình',
-      desc: 'Đường 400m, rào và bùn vừa phải, bot khá.',
+      label: { vi: '🟡 Trung bình', en: '🟡 Normal' },
+      desc: { vi: 'Đường 400m, rào và bùn vừa phải, bot khá.', en: '400m track, a fair amount of fences and mud, decent bots.' },
       TRACK_LEN: 400,
       DRIVE_GAIN: 1,
       STUN_MS: 1000,
@@ -53,8 +56,11 @@ module.exports = {
       BOT: { skillMin: 0.45, skillMax: 0.9 },
     },
     hard: {
-      label: '🔴 Khó',
-      desc: 'Đường 500m, phải lắc mạnh, nhiều rào và bùn to, đâm rào khựng lâu, bot rất giỏi.',
+      label: { vi: '🔴 Khó', en: '🔴 Hard' },
+      desc: {
+        vi: 'Đường 500m, phải lắc mạnh, nhiều rào và bùn to, đâm rào khựng lâu, bot rất giỏi.',
+        en: '500m track, shake hard, lots of fences and big mud, long stun, very good bots.',
+      },
       TRACK_LEN: 500,
       DRIVE_GAIN: 0.8,
       STUN_MS: 1500,

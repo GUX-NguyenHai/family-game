@@ -97,10 +97,13 @@ function createMatch({ players, options, now, startAt, api }) {
 
 module.exports = {
   id: 'ski-slalom', // trùng tên thư mục games/ski-slalom
-  name: 'Trượt tuyết vượt cổng',
+  name: { vi: 'Trượt tuyết vượt cổng', en: 'Ski Slalom' },
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '⛷️',
-  description: 'Nghiêng điện thoại trái/phải để lái xuống dốc tuyết, đi qua giữa các cổng cờ. Trượt cổng bị phạt 3 giây, đâm cây là ngã. Ít thời gian nhất thì thắng. Không cần lắc.',
+  description: {
+    vi: 'Nghiêng điện thoại trái/phải để lái xuống dốc tuyết, đi qua giữa các cổng cờ. Trượt cổng bị phạt 3 giây, đâm cây là ngã. Ít thời gian nhất thì thắng. Không cần lắc.',
+    en: 'Tilt your phone left and right to steer down the snowy slope through the flag gates. A missed gate costs 3 seconds, hitting a tree makes you fall. Fastest time wins. No shaking.',
+  },
   maxPlayers: 12,
   bots: true,
   sensors: true,
@@ -108,12 +111,12 @@ module.exports = {
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
-  goText: 'TRƯỢT!',
+  goText: { vi: 'TRƯỢT!', en: 'SKI!' },
   coastMs: C.COAST_MS,
   options: [
     {
       key: 'difficulty',
-      label: 'Độ khó',
+      label: { vi: 'Độ khó', en: 'Difficulty' },
       default: C.DEFAULT_DIFFICULTY,
       choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
     },

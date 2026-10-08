@@ -1,0 +1,33 @@
+{
+  "_ghi_chu": "Chữ trên TV và điện thoại của game, 2 thứ tiếng. Dùng ctx.t('khoá', { n: 3 }); {n}… là chỗ điền. Mỗi khoá phải có ở cả vi và en.",
+  "vi": {
+    "full": "{name} đổ đầy thanh! 🏆",
+    "tryShake": "__EMOJI__ Thử lắc",
+    "shake": "Lắc ↕",
+    "sensitivity": "Độ nhạy lắc",
+    "low": "Thấp",
+    "mid": "Vừa",
+    "high": "Cao",
+    "hint": "Cầm máy dọc, lắc lên xuống thật nhanh để đổ đầy thanh. Không có nút bấm.",
+    "go": "LẮC!",
+    "status": "{pct}% · còn {s}s",
+    "done": "Đầy rồi! Hạng {n} 🏆",
+    "noSensorEnable": "Chưa bật cảm biến nên chưa lắc được. Bấm \"Bật cảm biến\" ở dưới.",
+    "noSensor": "Máy này không có cảm biến chuyển động nên không chơi được."
+  },
+  "en": {
+    "full": "{name} filled the bar! 🏆",
+    "tryShake": "__EMOJI__ Try shaking",
+    "shake": "Shake ↕",
+    "sensitivity": "Shake sensitivity",
+    "low": "Low",
+    "mid": "Medium",
+    "high": "High",
+    "hint": "Hold the phone upright and shake it up and down fast to fill the bar. No buttons.",
+    "go": "SHAKE!",
+    "status": "{pct}% · {s}s left",
+    "done": "Full! Place {n} 🏆",
+    "noSensorEnable": "Sensors are off, so shaking doesn't work yet. Press \"Enable sensors\" below.",
+    "noSensor": "This phone has no motion sensors, so it can't play."
+  }
+}

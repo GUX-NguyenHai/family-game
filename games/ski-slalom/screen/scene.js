@@ -270,8 +270,10 @@ function makeObstacle(o) {
 
 export class SkiScene {
   // overlay: phần tử HTML phủ lên canvas để vẽ viền + tên cho các khung nhỏ.
-  constructor(canvas, manifest, quality = 'high', overlay = null) {
+  // texts: chữ hiện trong cảnh theo ngôn ngữ của màn hình ({ finishBanner }), lấy từ screen/index.js.
+  constructor(canvas, manifest, quality = 'high', overlay = null, texts = {}) {
     this.manifest = manifest;
+    this.texts = texts;
     this.high = quality === 'high';
     this.minis = [];
     this.scenery = []; // rừng thông, núi, lưới chắn: ẩn khi vẽ khung nhỏ
@@ -399,7 +401,7 @@ export class SkiScene {
       pole.castShadow = true;
       g.add(pole);
     }
-    const banner = textSprite('🏁 ĐÍCH 🏁', { bg: '#d63a3a', height: 1.4 });
+    const banner = textSprite(this.texts.finishBanner || '🏁', { bg: '#d63a3a', height: 1.4 });
     banner.position.set(0, 5.4, -courseLen);
     g.add(banner);
 

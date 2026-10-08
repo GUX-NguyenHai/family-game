@@ -80,7 +80,7 @@ function createMatch({ players, options, now, startAt, api }) {
       return {
         phase: g.phase,
         level: g.level,
-        title: g.spec.title,
+        title: g.spec.title, // { vi, en }, điện thoại tự chọn theo ngôn ngữ
         n: p.count,
         out: p.out,
         outLevel: p.outLevel,
@@ -94,10 +94,13 @@ function createMatch({ players, options, now, startAt, api }) {
 
 module.exports = {
   id: 'jump-rope', // trùng tên thư mục games/jump-rope
-  name: 'Nhảy dây',
+  name: { vi: 'Nhảy dây', en: 'Jump Rope' },
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🤸',
-  description: 'Cả nhà nhảy chung một sợi dây. Hất hoặc giật máy lên để nhảy đúng lúc dây chạm đất, vướng là bị loại! Mỗi màn dây quay khó hơn, ai trụ cuối cùng thì thắng. Không có nút bấm.',
+  description: {
+    vi: 'Cả nhà nhảy chung một sợi dây. Hất hoặc giật máy lên để nhảy đúng lúc dây chạm đất, vướng là bị loại! Mỗi màn dây quay khó hơn, ai trụ cuối cùng thì thắng. Không có nút bấm.',
+    en: 'Everyone jumps the same long rope. Flick or jerk your phone up to jump as the rope hits the ground; get caught and you are out! Each level gets harder, last one standing wins. No buttons.',
+  },
   maxPlayers: 12,
   minPlayers: 1,
   bots: true,
@@ -106,12 +109,12 @@ module.exports = {
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
-  goText: 'NHẢY!',
+  goText: { vi: 'NHẢY!', en: 'JUMP!' },
   coastMs: C.COAST_MS,
   options: [
     {
       key: 'difficulty',
-      label: 'Độ khó',
+      label: { vi: 'Độ khó', en: 'Difficulty' },
       default: C.DEFAULT_DIFFICULTY,
       choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
     },

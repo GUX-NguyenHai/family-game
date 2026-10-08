@@ -23,24 +23,24 @@ module.exports = {
   DEFAULT_DIFFICULTY: 'easy',
   DIFFICULTIES: {
     easy: {
-      label: '🟢 Dễ',
-      desc: 'Đường 40m, ngã nằm 0,8 giây, hất sớm một chút vẫn được tính.',
+      label: { vi: '🟢 Dễ', en: '🟢 Easy' },
+      desc: { vi: 'Đường 40m, ngã nằm 0,8 giây, hất sớm một chút vẫn được tính.', en: '40m track, 0.8s down after a fall, slightly early flicks still count.' },
       TRACK_LEN: 40,
       FALL_MS: 800,
       EARLY_GRACE_MS: 220, // hất sớm trước lúc đáp trong bấy lâu: tự nhảy tiếp ngay khi đáp (không ngã)
       BOT: { skillMin: 0.3, skillMax: 0.6, fallChance: 0.08 },
     },
     normal: {
-      label: '🟡 Trung bình',
-      desc: 'Đường 60m, ngã nằm 1,2 giây.',
+      label: { vi: '🟡 Trung bình', en: '🟡 Normal' },
+      desc: { vi: 'Đường 60m, ngã nằm 1,2 giây.', en: '60m track, 1.2s down after a fall.' },
       TRACK_LEN: 60,
       FALL_MS: 1200,
       EARLY_GRACE_MS: 160,
       BOT: { skillMin: 0.45, skillMax: 0.85, fallChance: 0.05 },
     },
     hard: {
-      label: '🔴 Khó',
-      desc: 'Đường 80m, ngã nằm 1,6 giây, hất sớm là ngã ngay.',
+      label: { vi: '🔴 Khó', en: '🔴 Hard' },
+      desc: { vi: 'Đường 80m, ngã nằm 1,6 giây, hất sớm là ngã ngay.', en: '80m track, 1.6s down after a fall, early flicks make you fall.' },
       TRACK_LEN: 80,
       FALL_MS: 1600,
       EARLY_GRACE_MS: 100,

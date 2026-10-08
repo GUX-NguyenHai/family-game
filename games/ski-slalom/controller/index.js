@@ -4,28 +4,29 @@ const FLAG = { FALL: 1, FINISHED: 2 };
 const STEER_GAINS = { low: 0.7, mid: 1, high: 1.4 }; // độ nhạy lái: nhân với mức nghiêng
 
 export function create(ctx) {
-  const { lobbyRoot, playRoot, sensors, send, vibrate } = ctx;
+  const { lobbyRoot, playRoot, sensors, send, vibrate, esc } = ctx;
+  const tx = (key, params) => esc(ctx.t(key, params)); // chữ đã dịch, an toàn để chèn vào innerHTML
 
   lobbyRoot.innerHTML = `
     <div class="box ski-lobby">
-      <h3>⛷️ Thử lái</h3>
+      <h3>${tx('trySteer')}</h3>
       <div class="meter">
-        <span>Nghiêng</span>
+        <span>${tx('tilt')}</span>
         <div class="tilt"><i data-r="tiltDot"></i></div>
       </div>
       <div class="row">
-        <button data-r="btnCalib">Cân chỉnh</button>
-        <label class="check"><input type="checkbox" data-r="chkInvert"> Đảo chiều</label>
+        <button data-r="btnCalib">${tx('calibrate')}</button>
+        <label class="check"><input type="checkbox" data-r="chkInvert"> ${tx('invert')}</label>
       </div>
       <label class="row">
-        <span>Độ nhạy lái</span>
+        <span>${tx('sensitivity')}</span>
         <select data-r="selGain">
-          <option value="low">Thấp</option>
-          <option value="mid">Vừa</option>
-          <option value="high">Cao</option>
+          <option value="low">${tx('low')}</option>
+          <option value="mid">${tx('mid')}</option>
+          <option value="high">${tx('high')}</option>
         </select>
       </label>
-      <p class="hint">Không có nút bấm, không cần lắc. Cầm máy dọc trước mặt, <b>nghiêng sang trái/phải</b> như cầm vô lăng để lái; nghiêng nhiều thì cua gắt. Cầm máy thẳng rồi bấm <b>"Cân chỉnh"</b>. Đi qua giữa 2 lá cờ của mỗi cổng, trượt cổng bị phạt 3 giây, đâm cây là ngã.</p>
+      <p class="hint">${tx('hintStart')}<b>${tx('hintTilt')}</b>${tx('hintSteer')}<b>${tx('hintCalibrate')}</b>${tx('hintRules')}</p>
     </div>`;
 
   playRoot.innerHTML = `
@@ -35,14 +36,14 @@ export function create(ctx) {
         <div class="bar ski-prog"><i data-r="progBar"></i></div>
       </div>
       <div class="ski-info">
-        <span data-r="gates">Cổng 0/0</span>
+        <span data-r="gates">${tx('gateCount', { n: 0, total: 0 })}</span>
         <span data-r="pen" class="ski-pen"></span>
       </div>
       <div data-r="status" class="ski-status"></div>
       <p data-r="noSensor" class="ski-nosensor" hidden></p>
       <div class="ski-pad" data-r="pad">
         <span data-r="arrow" class="ski-arrow">⬆</span>
-        <b>NGHIÊNG ĐỂ LÁI</b>
+        <b>${tx('tiltToSteer')}</b>
         <div class="tilt ski-tilt"><i data-r="steerDot"></i></div>
       </div>
     </div>`;
@@ -74,8 +75,8 @@ export function create(ctx) {
     }
     const canEnable = sensors.secure && !sensors.enabled && ctx.sensorError()?.message !== 'unsupported';
     el.noSensor.textContent = canEnable
-      ? 'Chưa bật cảm biến nên chưa lái được. Bấm "Bật cảm biến" ở dưới.'
-      : 'Máy này không có cảm biến nghiêng nên không chơi được Trượt tuyết.';
+      ? ctx.t('noSensorEnable')
+      : ctx.t('noSensor');
     el.noSensor.hidden = false;
   }
 
@@ -93,7 +94,7 @@ export function create(ctx) {
   function resetPlay() {
     el.pos.textContent = '–';
     el.progBar.style.width = '0%';
-    el.gates.textContent = 'Cổng 0/0';
+    el.gates.textContent = ctx.t('gateCount', { n: 0, total: 0 });
     el.pen.textContent = '';
     el.status.textContent = '';
     el.pad.className = 'ski-pad';
@@ -126,11 +127,12 @@ export function create(ctx) {
       updateNoSensor();
       el.pos.textContent = `${m.pos}/${m.total}`;
       el.progBar.style.width = `${m.prog * 100}%`;
-      el.gates.textContent = `Cổng ${Math.min(m.gate + 1, m.gates)}/${m.gates}`;
-      el.pen.textContent = m.pen ? `Phạt +${m.pen}s` : '';
+      el.gates.textContent = ctx.t('gateCount', { n: Math.min(m.gate + 1, m.gates), total: m.gates });
+      el.pen.textContent = m.pen ? ctx.t('penalty', { n: m.pen }) : '';
       if (m.f & FLAG.FINISHED) {
         el.pad.className = 'ski-pad done';
-        el.status.textContent = `Về đích: ${(m.time / 1000).toFixed(2)}s${m.pen ? ` (gồm ${m.pen}s phạt)` : ''} 🏁`;
+        const time = (m.time / 1000).toFixed(2);
+        el.status.textContent = m.pen ? ctx.t('myFinishPen', { time, pen: m.pen }) : ctx.t('myFinish', { time });
       } else {
         el.pad.className = m.f & FLAG.FALL ? 'ski-pad fall' : 'ski-pad';
       }
@@ -139,13 +141,13 @@ export function create(ctx) {
     onEvent(e) {
       if (e.type === 'pass') {
         vibrate(15);
-        flashStatus('Qua cổng ✅', 'ok');
+        flashStatus(ctx.t('myPass'), 'ok');
       } else if (e.type === 'miss') {
         vibrate([120, 60, 120]);
-        flashStatus('Trượt cổng! +3s ❌', 'bad');
+        flashStatus(ctx.t('myMiss'), 'bad');
       } else if (e.type === 'crash') {
         vibrate([250, 80, 250]);
-        flashStatus(`Đâm ${e.obstacle === 'rock' ? 'đá' : 'cây'}! 💥`, 'bad');
+        flashStatus(ctx.t(e.obstacle === 'rock' ? 'myCrashRock' : 'myCrashTree'), 'bad');
       } else if (e.type === 'finish') {
         vibrate([100, 50, 100, 50, 300]);
       }

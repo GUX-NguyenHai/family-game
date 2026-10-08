@@ -33,8 +33,8 @@ module.exports = {
   DEFAULT_DIFFICULTY: 'easy',
   DIFFICULTIES: {
     easy: {
-      label: '🟢 Dễ',
-      desc: '12 cổng rộng, lệch ít, trượt chậm, ít cây.',
+      label: { vi: '🟢 Dễ', en: '🟢 Easy' },
+      desc: { vi: '12 cổng rộng, lệch ít, trượt chậm, ít cây.', en: '12 wide gates close to the middle, slow skiing, few trees.' },
       GATES: 12,
       GATE_GAP: 26, // khoảng cách dọc giữa 2 cổng
       GATE_HALF_WIDTH: 3, // nửa bề rộng cổng
@@ -45,8 +45,8 @@ module.exports = {
       BOT: { skillMin: 0.35, skillMax: 0.6 },
     },
     normal: {
-      label: '🟡 Trung bình',
-      desc: '18 cổng, lệch vừa, có cây và đá.',
+      label: { vi: '🟡 Trung bình', en: '🟡 Normal' },
+      desc: { vi: '18 cổng, lệch vừa, có cây và đá.', en: '18 gates, some trees and rocks.' },
       GATES: 18,
       GATE_GAP: 24,
       GATE_HALF_WIDTH: 2.4,
@@ -57,8 +57,8 @@ module.exports = {
       BOT: { skillMin: 0.5, skillMax: 0.85 },
     },
     hard: {
-      label: '🔴 Khó',
-      desc: '24 cổng hẹp, lệch nhiều, trượt nhanh, cây đá cả giữa đường.',
+      label: { vi: '🔴 Khó', en: '🔴 Hard' },
+      desc: { vi: '24 cổng hẹp, lệch nhiều, trượt nhanh, cây đá cả giữa đường.', en: '24 narrow, wide-apart gates, fast skiing, trees and rocks near the line.' },
       GATES: 24,
       GATE_GAP: 22,
       GATE_HALF_WIDTH: 1.9,

@@ -15,7 +15,8 @@ const license = require('./src/license');
 const ads = require('./src/ads');
 const pages = require('./src/pages');
 const admin = require('./src/admin');
-const { APP_VERSION } = require('./src/config');
+const C = require('./src/config');
+const { APP_VERSION } = C;
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -30,16 +31,21 @@ const io = new Server(server, { pingInterval: 10000, pingTimeout: 8000 });
 let BUILD_ID = Date.now().toString(36);
 io.on('connection', socket => socket.emit('hello', { build: BUILD_ID, version: APP_VERSION }));
 
-// Trang giới thiệu + chính sách bảo mật: HTML dựng trên server (xem src/pages.js). Dựng lại khi danh sách game đổi.
-let landingHtml = pages.landing();
-const privacyHtml = pages.privacy();
-app.get('/', (req, res) => res.type('html').setHeader('Cache-Control', 'no-cache').send(landingHtml));
-app.get('/privacy', (req, res) => res.type('html').setHeader('Cache-Control', 'no-cache').send(privacyHtml));
+// Trang giới thiệu + chính sách bảo mật: HTML 2 thứ tiếng dựng trên server (xem src/pages.js), dựng sẵn mỗi thứ tiếng
+// một bản; trang giới thiệu dựng lại khi danh sách game đổi.
+const buildPages = render => Object.fromEntries(C.LANGS.map(lang => [lang, render(lang)]));
+let landingHtml = buildPages(pages.landing);
+const privacyHtml = buildPages(pages.privacy);
+function sendPage(cache) {
+  return (req, res) => res.type('html').setHeader('Cache-Control', 'no-cache').setHeader('Vary', 'Accept-Language').send(cache()[pages.langOf(req)]);
+}
+app.get('/', sendPage(() => landingHtml));
+app.get('/privacy', sendPage(() => privacyHtml));
 
 // ---------- Quản trị: upload/xoá game (/admin, mật khẩu ADMIN_PASSWORD trong .env, xem src/admin.js) ----------
 // Sau khi đổi game: dựng lại trang giới thiệu + bảo mọi trang đang mở tải lại (phòng chơi vẫn giữ nguyên trong RAM).
 function gamesChanged() {
-  landingHtml = pages.landing();
+  landingHtml = buildPages(pages.landing);
   BUILD_ID = Date.now().toString(36);
   io.emit('hello', { build: BUILD_ID, version: APP_VERSION });
 }
@@ -48,7 +54,7 @@ app.post('/admin/api/upload', admin.guard, express.raw({ type: () => true, limit
   if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ ok: false, error: 'Chưa chọn file.' });
   const result = admin.install(req.body, req.query.force === '1');
   if (result.ok) {
-    console.log(`📦 Đã cài game ${result.id} (${result.name}) qua /admin`);
+    console.log(`📦 Đã cài game ${result.id} (${games.text(result.name)}) qua /admin`);
     gamesChanged();
   }
   res.json(result);
@@ -123,7 +129,7 @@ app.get('/api/lan', (req, res) => res.json({ ips: lanIps() }));
 rooms.attach(io);
 
 server.listen(PORT, HOST, () => {
-  console.log(`Party Game đang chạy (${games.all().map(g => g.name).join(', ')}):`);
+  console.log(`Party Game đang chạy (${games.all().map(g => games.text(g.name)).join(', ')}):`);
   console.log(`  Màn hình chung: http://localhost:${PORT}/host`);
   for (const ip of lanIps()) console.log(`  Trong mạng LAN:  http://${ip}:${PORT}/host`);
   if (!license.hasSecret()) {

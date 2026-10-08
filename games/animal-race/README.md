@@ -34,6 +34,7 @@ Tốc độ tối đa ở cả 3 mức là 19 m/s.
 | `service/simulation.js` | Mô phỏng: tạo vật cản theo làn, chạy, nhảy, về đích, bot |
 | `service/index.js` | Khai báo game, nối input (`move`, `jump`) với mô phỏng, gửi trạng thái nhị phân cho TV |
 | `assets/schema.json` | Định dạng trạng thái nhị phân gửi cho TV |
+| `assets/i18n.json` | Chữ trên TV và điện thoại của game (2 thứ tiếng vi/en), dùng qua `ctx.t` |
 | `screen/scene.js` | Cảnh 3D: đường đua, con vật, vật cản, camera bám đoàn dẫn đầu. **Người bị tụt lại có khung nhỏ riêng** ở 2 bên màn hình (chỉ vẽ làn của người đó, thấy rào/bùn sắp tới để canh nhảy). Mỗi người **một chỗ cố định cả ván** theo làn (làn bên trái → cột trái, làn bên phải → cột phải, từ trên xuống): tụt lại thì khung hiện đúng chỗ đó, đuổi kịp thì ẩn. Chống nhấp nháy: hiện sớm khi sắp chạm mép dưới, chỉ ẩn khi đã vào hẳn cảnh chính (~9m) và đã hiện ít nhất 3 giây; lúc ẩn khung phủ màu dần kèm ⬆, rồi con vật đó được đánh dấu (vòng sáng + mũi tên) 2 giây ở cảnh chính. Đồ hoạ Thấp vẽ tối đa 4 khung cùng lúc; quá đông không đủ chỗ thì người không có khung chỉ hiện nhãn tên ở mép dưới. Phần chia chỗ/vẽ khung dùng chung: `/js/core/mini-views.js` |
 | `screen/index.js` | Bảng xếp hạng, thanh tiến độ ngang ở giữa phía trên |
 | `controller/index.js` | Tay cầm không nút: thanh lắc, khung lớn nháy khi nhảy, thử cảm biến ở phòng chờ |

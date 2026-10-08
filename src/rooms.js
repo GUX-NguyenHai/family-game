@@ -235,7 +235,7 @@ function roomInfo(room) {
     gameName: game.name,
     gameEmoji: game.emoji || '🎮',
     sensors: !!game.sensors,
-    goText: game.goText || 'BẮT ĐẦU!',
+    goText: game.goText || null, // chuỗi hoặc { vi, en }; trống thì màn hình dùng chữ mặc định ("BẮT ĐẦU!" / "GO!")
     options,
     optionsText: games.optionsText(game, options),
     preview: game.preview ? game.preview(options) : null,
@@ -376,7 +376,7 @@ function finishMatch(io, room, results) {
     color: r.color,
     bot: !!r.bot,
     place: r.place ?? i + 1,
-    detail: r.detail ?? '',
+    detail: r.detail ?? '', // chuỗi hoặc { vi, en }; name cũng vậy (VD tên đội)
     members: Array.isArray(r.members) ? r.members : undefined, // kết quả theo đội: id các thành viên
   }));
   broadcastRoom(io, room);

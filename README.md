@@ -179,6 +179,7 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 | Đếm ngược 3-2-1, chữ bắt đầu, bảng kết quả, "Chơi lại" | Khai báo `countdownMs`, `goText`; gọi `api.finish(results)` |
 | Gói Free/Pro, giới hạn số người | Khai báo `maxPlayers`, phần chung lấy số nhỏ hơn giữa gói và game |
 | Cảm biến điện thoại | `ctx.sensors.level` (lắc), `ctx.sensors.steer` (nghiêng), `onGesture('jump')` (hất hoặc giật máy) |
+| Hai thứ tiếng (Việt / Anh), mỗi thiết bị tự chọn | Chữ khai báo ở server viết `{ vi, en }`; TV/điện thoại dùng `ctx.t()` với `assets/i18n.json`. Chữ phần chung: `public/i18n/` |
 | Đồ nghề 3D | Import từ `/js/core/scene-kit.js` |
 | Khung nhỏ cho người bị tụt lại (game đua) | `MiniViews` trong `/js/core/mini-views.js`, cách dùng ghi ở đầu file. Đua thú, Đua thuyền, Nhảy bao bố, Trượt tuyết đang dùng |
 | Âm thanh, thông báo nổi trên TV | `ctx.beep()`, `ctx.fanfare()`, `ctx.toast()` |

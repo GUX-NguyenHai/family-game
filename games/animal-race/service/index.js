@@ -62,10 +62,15 @@ function createMatch({ players, options, now, startAt, api }) {
       if (!race.endedAt && now >= race.startAt && simulation.isOver(race, racers, now)) {
         race.endedAt = now;
         api.finish(
-          simulation.results(racers, race.trackLen).map(r => ({
-            ...r,
-            detail: r.finished ? `${(r.timeMs / 1000).toFixed(2)}s` : `chưa về đích (${Math.round(r.progress * 100)}%)`,
-          })),
+          simulation.results(racers, race.trackLen).map(r => {
+            const pct = Math.round(r.progress * 100);
+            return {
+              ...r,
+              detail: r.finished
+                ? `${(r.timeMs / 1000).toFixed(2)}s`
+                : { vi: `chưa về đích (${pct}%)`, en: `did not finish (${pct}%)` },
+            };
+          }),
         );
       }
     },
@@ -100,10 +105,13 @@ function createMatch({ players, options, now, startAt, api }) {
 
 module.exports = {
   id: 'animal-race', // trùng tên thư mục games/animal-race
-  name: 'Đua thú',
+  name: { vi: 'Đua thú', en: 'Animal Race' },
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🏁',
-  description: 'Mỗi con chạy thẳng một làn. Lắc máy lên xuống để chạy, hất hoặc giật máy lên để nhảy qua rào và bùn. Không có nút bấm.',
+  description: {
+    vi: 'Mỗi con chạy thẳng một làn. Lắc máy lên xuống để chạy, hất hoặc giật máy lên để nhảy qua rào và bùn. Không có nút bấm.',
+    en: 'Each animal runs in its own lane. Shake your phone up and down to run, flick or jerk it up to jump over fences and mud. No buttons.',
+  },
   maxPlayers: 12,
   bots: true,
   sensors: true, // chỉ điều khiển bằng cảm biến (lắc, hất máy); máy không có cảm biến thì không chơi được
@@ -111,12 +119,12 @@ module.exports = {
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
-  goText: 'CHẠY!',
+  goText: { vi: 'CHẠY!', en: 'RUN!' },
   coastMs: C.COAST_MS,
   options: [
     {
       key: 'difficulty',
-      label: 'Độ khó',
+      label: { vi: 'Độ khó', en: 'Difficulty' },
       default: C.DEFAULT_DIFFICULTY,
       choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
     },

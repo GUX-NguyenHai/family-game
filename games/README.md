@@ -106,6 +106,23 @@ module.exports = {
 
 Giá trị tuỳ chọn luôn là **chuỗi** (`'50'`, không phải `50`). Server chỉ nhận giá trị nằm trong `choices`.
 
+### Hai thứ tiếng (Tiếng Việt / English)
+Mỗi thiết bị (TV, từng điện thoại) tự chọn ngôn ngữ bằng nút 🇬🇧/🇻🇳. **Mọi chữ hiện cho người chơi phải có cả `vi` và `en`.**
+- **Chữ khai báo ở server** (`name`, `description`, `goText`, `label`/`desc` của `options`, `name`/`detail` trong `api.finish(results)`): viết dạng `{ vi: '…', en: '…' }`. Chuỗi thường vẫn chạy (hiện y nguyên ở cả 2 thứ tiếng). Ví dụ:
+  ```js
+  name: { vi: 'Bấm nhanh', en: 'Tap Race' },
+  goText: { vi: 'BẤM!', en: 'TAP!' },
+  detail: { vi: `${n} lần`, en: `${n} taps` },
+  ```
+- **Chữ trên TV và điện thoại** (`screen/`, `controller/`): đặt trong `assets/i18n.json`, gọi `ctx.t('khoá', { n: 3 })`:
+  ```json
+  { "vi": { "tap.button": "BẤM!", "tap.count": "{n} lần" }, "en": { "tap.button": "TAP!", "tap.count": "{n} taps" } }
+  ```
+  `ctx.t` tìm trong từ điển của game trước, rồi tới từ điển phần chung (`public/i18n/vi.json`, `en.json`). Thiếu bản `en` thì hiện bản `vi`.
+- `ctx.lang` (`'vi'` | `'en'`) và `ctx.pick(value)` (lấy đúng thứ tiếng từ `{ vi, en }`) cũng có trong `ctx`.
+- Đổi ngôn ngữ thì trang tự tải lại, game không cần tự xử lý.
+- Comment trong code vẫn viết tiếng Việt.
+
 ### `createMatch({ players, options, teams, now, startAt, api })`
 Gọi mỗi lần bấm Bắt đầu hoặc Chơi lại. Trả về đối tượng "ván". Hàm nào không cần thì bỏ:
 
@@ -207,6 +224,7 @@ export function create(ctx) {
 | `toast(text)` | Thông báo nổi ngắn |
 | `beep(freq, dur, type, vol)`, `fanfare()` | Âm thanh |
 | `esc(text)` | Chống chèn HTML khi đưa tên người chơi vào `innerHTML` |
+| `t(key, params)`, `lang`, `pick(value)` | Chữ theo ngôn ngữ của TV (xem "Hai thứ tiếng" ở mục 3) |
 
 **`info` (trong `onRoom`) có:**
 - `state`, `players`, `options`, `preview`, `teamMode`, `teams`, `results`, `game`, `gameName`, `maxPlayers`…
@@ -245,6 +263,7 @@ export function create(ctx) {
 | `pref(key)`, `setPref(key, value)` | Lựa chọn riêng (mục 7) |
 | `sensorError()`, `enableSensors()` | Trạng thái và bật cảm biến (nút "Bật cảm biến" phần chung đã có) |
 | `esc(text)` | Chống chèn HTML |
+| `t(key, params)`, `lang`, `pick(value)` | Chữ theo ngôn ngữ của điện thoại này (xem "Hai thứ tiếng" ở mục 3) |
 
 **Mẹo:**
 - Thao tác liên tục (mức lắc) thì gửi đều khoảng 10 lần/giây bằng `setInterval`. Chỉ gửi khi `ctx.screen() === 'game'`.
@@ -474,7 +493,8 @@ import { loadAnimalTemplate, loadModel, cloneModel, Label, textSprite, Particles
 
 ## 9. Danh sách kiểm tra trước khi xong
 
-- [ ] Tên thư mục, file, biến bằng tiếng Anh, viết đầy đủ. Chữ hiện cho người chơi bằng tiếng Việt.
+- [ ] Tên thư mục, file, biến bằng tiếng Anh, viết đầy đủ.
+- [ ] Mọi chữ hiện cho người chơi có cả tiếng Việt và tiếng Anh (`{ vi, en }` ở server, `assets/i18n.json` + `ctx.t` ở TV/điện thoại).
 - [ ] `service/index.js` có `id` trùng tên thư mục, có `category`, `description`, `options` (nếu cần).
 - [ ] `id` không trùng game nào đang có (trùng game có sẵn thì /admin không cho cài).
 - [ ] Chặn `input()` khi chưa bắt đầu hoặc đã xong.

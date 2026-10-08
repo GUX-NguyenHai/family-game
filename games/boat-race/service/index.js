@@ -128,10 +128,13 @@ function createMatch({ players, options, teams, now, startAt, api }) {
 
 module.exports = {
   id: 'boat-race', // trùng tên thư mục games/boat-race
-  name: 'Đua thuyền',
+  name: { vi: 'Đua thuyền', en: 'Boat Race' },
   category: 'motion', // nhóm trên thanh chọn game (xem GAME_CATEGORIES trong src/config.js)
   emoji: '🚣',
-  description: 'Lắc máy lên xuống để chèo: lắc nhanh thì thuyền đi nhanh, ngừng lắc thì thuyền dừng. Chơi đơn hoặc theo đội.',
+  description: {
+    vi: 'Lắc máy lên xuống để chèo: lắc nhanh thì thuyền đi nhanh, ngừng lắc thì thuyền dừng. Chơi đơn hoặc theo đội.',
+    en: 'Shake your phone up and down to paddle: faster shaking, faster boat; stop and the boat stops. Solo or in teams.',
+  },
   maxPlayers: 12,
   bots: true,
   sensors: true,
@@ -140,34 +143,51 @@ module.exports = {
   hostEvery: C.HOST_UPDATE_EVERY,
   playerEvery: C.PLAYER_UPDATE_EVERY,
   countdownMs: C.COUNTDOWN_MS,
-  goText: 'CHÈO!',
+  goText: { vi: 'CHÈO!', en: 'PADDLE!' },
   coastMs: C.COAST_MS,
   options: [
     {
       key: 'mode',
-      label: 'Chế độ',
+      label: { vi: 'Chế độ', en: 'Mode' },
       default: 'solo',
       choices: [
-        { value: 'solo', label: '👤 Thi đơn', desc: 'Mỗi người một thuyền.' },
-        { value: 'team', label: '👥 Theo đội', desc: 'Mỗi đội 2–4 người chung một thuyền, cả đội cùng lắc để chèo.' },
+        { value: 'solo', label: { vi: '👤 Thi đơn', en: '👤 Solo' }, desc: { vi: 'Mỗi người một thuyền.', en: 'One boat per player.' } },
+        {
+          value: 'team',
+          label: { vi: '👥 Theo đội', en: '👥 Teams' },
+          desc: {
+            vi: 'Mỗi đội 2–4 người chung một thuyền, cả đội cùng lắc để chèo.',
+            en: 'Teams of 2–4 share a boat, the whole team shakes to paddle.',
+          },
+        },
       ],
     },
     {
       key: 'course',
-      label: 'Kiểu đua',
+      label: { vi: 'Kiểu đua', en: 'Course' },
       default: 'basic',
       choices: [
-        { value: 'basic', label: 'Basic', desc: 'Basic: đường thẳng, mỗi thuyền một làn, không vật cản, chỉ cần lắc để chèo.' },
+        {
+          value: 'basic',
+          label: 'Basic',
+          desc: {
+            vi: 'Basic: đường thẳng, mỗi thuyền một làn, không vật cản, chỉ cần lắc để chèo.',
+            en: 'Basic: straight lanes, no obstacles, just shake to paddle.',
+          },
+        },
         {
           value: 'pro',
           label: 'Pro',
-          desc: 'Pro: nghiêng máy để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Đây là kiểu đua, không phải gói trả phí.',
+          desc: {
+            vi: 'Pro: nghiêng máy để lái (theo đội thì cả đội cùng nghiêng), né khúc gỗ và đảo hải đăng. Đây là kiểu đua, không phải gói trả phí.',
+            en: 'Pro: tilt to steer (in teams the whole team tilts), dodge logs and lighthouse islands. This is a course type, not the paid plan.',
+          },
         },
       ],
     },
     {
       key: 'difficulty',
-      label: 'Độ khó',
+      label: { vi: 'Độ khó', en: 'Difficulty' },
       default: C.DEFAULT_DIFFICULTY,
       choices: Object.entries(C.DIFFICULTIES).map(([value, d]) => ({ value, label: d.label, desc: d.desc })),
     },

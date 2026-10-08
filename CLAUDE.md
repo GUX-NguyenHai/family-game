@@ -11,7 +11,8 @@ Làm game mới: dùng skill **`/new-game`** (`.claude/skills/new-game/`), có q
 
 ## Quy ước bắt buộc
 - **Tên file, thư mục, biến, id game: tiếng Anh, viết đầy đủ** (`simulation.js`, không `sim.js`; `boat-race`, không `dua-thuyen`).
-- **Chữ hiện cho người chơi và comment trong code: tiếng Việt.** Comment ngắn, giải thích "tại sao", theo giọng các file đang có.
+- **Chữ hiện cho người chơi: cả tiếng Việt và tiếng Anh** (mỗi thiết bị tự chọn ngôn ngữ). Ở server viết `{ vi, en }`; ở TV/điện thoại dùng `ctx.t('khoá')` với `games/<id>/assets/i18n.json`; phần chung dùng `public/i18n/vi.json` + `en.json` và `/js/core/i18n.js`. Chi tiết: `games/README.md` mục "Hai thứ tiếng".
+- **Comment trong code: tiếng Việt.** Comment ngắn, giải thích "tại sao", theo giọng các file đang có.
 - **Server là trọng tài:** điểm, va chạm, thắng thua tính trong `games/<id>/service/`. Điện thoại chỉ gửi thao tác, TV chỉ vẽ.
 - **`service/` không bao giờ được trình duyệt tải.** Server chỉ mở `screen/`, `controller/`, `assets/`.
 - **Game không import code của game khác.** Cái dùng chung đặt ở `public/js/core/` (trình duyệt) hoặc `src/` (server), và cập nhật `games/README.md`.

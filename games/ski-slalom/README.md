@@ -35,6 +35,7 @@ Khi mọi người về đích, hoặc 20 giây sau khi người đầu tiên v�
 | `service/simulation.js` | Mô phỏng: tạo dốc (cổng, cây tránh đường nối các cổng), trượt, qua/trượt cổng, ngã, về đích, bot, xếp hạng |
 | `service/index.js` | Khai báo game, nối input (`steer`) với mô phỏng, gửi trạng thái nhị phân cho TV |
 | `assets/schema.json` | Định dạng trạng thái nhị phân gửi cho TV |
+| `assets/i18n.json` | Chữ trong game trên TV và điện thoại, 2 thứ tiếng (vi/en) |
 | `screen/scene.js` | Cảnh 3D: dốc tuyết nghiêng, cổng cờ, cây, đá, người trượt trên ván, khung nhỏ |
 | `screen/index.js` | Bảng xếp hạng (giây phạt), thanh tiến độ ngang |
 | `controller/index.js` | Tay cầm không nút: mũi tên hướng lái, số cổng, giây phạt, thử nghiêng + cân chỉnh ở phòng chờ |

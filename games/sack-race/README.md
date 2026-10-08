@@ -36,6 +36,7 @@
 | `service/simulation.js` | Mô phỏng: nhảy, đúng nhịp/ngã, về đích, bot, xếp hạng |
 | `service/index.js` | Khai báo game, nối input (`jump`) với mô phỏng, gửi trạng thái nhị phân cho TV, gửi `hop` cho điện thoại để hẹn giờ rung |
 | `assets/schema.json` | Định dạng trạng thái nhị phân gửi cho TV |
+| `assets/i18n.json` | Chữ trên TV và điện thoại của game, 2 thứ tiếng (vi, en) |
 | `screen/scene.js` | Cảnh 3D: đường đua chia làn, con vật trong bao bố, nhảy/ngã, khung nhỏ |
 | `screen/index.js` | Bảng xếp hạng (🔥 nhịp, 🤕 ngã), thanh tiến độ ngang |
 | `controller/index.js` | Tay cầm không nút: rung lúc đáp, khung lớn nháy, thử cử chỉ nhảy ở phòng chờ |

@@ -1,9 +1,9 @@
 {
   "boats": [
-    { "id": "canoe", "name": "Xuồng 1", "emoji": "🛶", "file": "canoe-detailed.glb" },
-    { "id": "canoe-2", "name": "Xuồng 2", "emoji": "🛶", "file": "canoe-simple.glb" },
-    { "id": "rowboat", "name": "Thuyền chèo 1", "emoji": "🚣", "file": "rowboat-detailed.glb" },
-    { "id": "rowboat-2", "name": "Thuyền chèo 2", "emoji": "🚣", "file": "rowboat-simple.glb" }
+    { "id": "canoe", "name": { "vi": "Xuồng 1", "en": "Canoe 1" }, "emoji": "🛶", "file": "canoe-detailed.glb" },
+    { "id": "canoe-2", "name": { "vi": "Xuồng 2", "en": "Canoe 2" }, "emoji": "🛶", "file": "canoe-simple.glb" },
+    { "id": "rowboat", "name": { "vi": "Thuyền chèo 1", "en": "Rowboat 1" }, "emoji": "🚣", "file": "rowboat-detailed.glb" },
+    { "id": "rowboat-2", "name": { "vi": "Thuyền chèo 2", "en": "Rowboat 2" }, "emoji": "🚣", "file": "rowboat-simple.glb" }
   ],
   "obstacles": {
     "log": ["log.glb", "log-chopped.glb"],

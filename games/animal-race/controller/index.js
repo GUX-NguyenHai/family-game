@@ -2,41 +2,42 @@
 //   Lắc lên xuống để chạy (lắc càng nhanh chạy càng nhanh); hất đầu máy về phía mình hoặc giật mạnh máy lên để NHẢY.
 // Mỗi con chạy thẳng trong làn của mình. Máy không có cảm biến thì không chơi được (hiện thông báo).
 // Phòng chờ có phần thử cảm biến + chỉnh độ nhạy.
+// Chữ hiện ra lấy từ assets/i18n.json qua ctx.t (2 thứ tiếng).
 const FLAG = { STUN: 1, JUMP: 2, MUD: 4, FINISHED: 8 };
 
 export function create(ctx) {
-  const { lobbyRoot, playRoot, sensors, send, vibrate } = ctx;
+  const { lobbyRoot, playRoot, sensors, send, vibrate, esc, t } = ctx;
 
   lobbyRoot.innerHTML = `
     <div class="box race-lobby">
-      <h3>🏁 Thử điều khiển</h3>
+      <h3>${esc(t('try.title'))}</h3>
       <div class="meter">
-        <span>Lắc ↕</span>
+        <span>${esc(t('try.shake'))}</span>
         <div class="bar"><i data-r="shakeBar"></i></div>
       </div>
       <div class="meter">
-        <span>Nhảy ⤴</span>
+        <span>${esc(t('try.jump'))}</span>
         <div class="bar"><i data-r="jumpBar" class="jump-bar"></i></div>
-        <b data-r="jumpHit" class="jump-hit" hidden>NHẢY!</b>
+        <b data-r="jumpHit" class="jump-hit" hidden>${esc(t('try.jumpHit'))}</b>
       </div>
       <label class="row">
-        <span>Độ nhạy lắc</span>
+        <span>${esc(t('try.shakeSens'))}</span>
         <select data-r="selSens">
-          <option value="14">Thấp</option>
-          <option value="10">Vừa</option>
-          <option value="7">Cao</option>
+          <option value="14">${esc(t('try.low'))}</option>
+          <option value="10">${esc(t('try.mid'))}</option>
+          <option value="7">${esc(t('try.high'))}</option>
         </select>
       </label>
       <label class="row">
-        <span>Độ nhạy nhảy</span>
+        <span>${esc(t('try.jumpSens'))}</span>
         <select data-r="selJump">
-          <option value="22">Thấp</option>
-          <option value="15">Vừa</option>
-          <option value="10">Cao</option>
+          <option value="22">${esc(t('try.low'))}</option>
+          <option value="15">${esc(t('try.mid'))}</option>
+          <option value="10">${esc(t('try.high'))}</option>
         </select>
       </label>
       <p data-r="jumpDbg" class="hint"></p>
-      <p class="hint">Không có nút bấm, chỉ cử động điện thoại. Cầm máy dọc. <b>Lắc lên xuống</b> để chạy: không lắc là đứng yên, lắc càng nhanh càng chạy nhanh. <b>Nhảy</b> qua rào và bùn: hất nhanh đầu máy về phía mình (như giật cương) hoặc giật mạnh cả máy lên trên. Thanh "Nhảy ⤴" đầy là đủ mạnh.</p>
+      <p class="hint">${esc(t('try.hintIntro'))} <b>${esc(t('try.hintRunBold'))}</b> ${esc(t('try.hintRun'))} <b>${esc(t('try.hintJumpBold'))}</b> ${esc(t('try.hintJump'))}</p>
     </div>`;
 
   playRoot.innerHTML = `
@@ -50,8 +51,8 @@ export function create(ctx) {
       <p data-r="noShake" class="noshake" hidden></p>
       <div class="race-pad" data-r="pad">
         <span data-r="padIcon">🏃</span>
-        <b>LẮC ĐỂ CHẠY</b>
-        <small>Hất hoặc giật máy lên để nhảy</small>
+        <b>${esc(t('pad.shakeToRun'))}</b>
+        <small>${esc(t('pad.jumpHint'))}</small>
       </div>
     </div>`;
 
@@ -65,9 +66,7 @@ export function create(ctx) {
       return;
     }
     const canEnable = sensors.secure && !sensors.enabled && ctx.sensorError()?.message !== 'unsupported';
-    el.noShake.textContent = canEnable
-      ? 'Chưa bật cảm biến nên chưa chạy được. Bấm "Bật cảm biến" ở dưới.'
-      : 'Máy này không có cảm biến chuyển động nên không chơi được Đua thú.';
+    el.noShake.textContent = t(canEnable ? 'noSensor.enable' : 'noSensor.none');
     el.noShake.hidden = false;
   }
 
@@ -124,10 +123,10 @@ export function create(ctx) {
 
       const f = m.f;
       let status = '';
-      if (f & FLAG.FINISHED) status = `Về đích hạng ${m.rank}! 🏁`;
-      else if (f & FLAG.STUN) status = 'Vấp rào! 💫';
-      else if (f & FLAG.JUMP) status = 'Nhảy! ⤴';
-      else if (f & FLAG.MUD) status = 'Lội bùn… 🟫';
+      if (f & FLAG.FINISHED) status = t('status.finished', { rank: m.rank });
+      else if (f & FLAG.STUN) status = t('status.stun');
+      else if (f & FLAG.JUMP) status = t('status.jump');
+      else if (f & FLAG.MUD) status = t('status.mud');
       el.status.textContent = status;
     },
 
@@ -149,7 +148,7 @@ export function create(ctx) {
       }
     },
 
-    frame(t) {
+    frame(now) {
       if (ctx.screen() !== 'lobby') return;
       // Thanh "Lắc ↕" = tốc độ con vật sẽ chạy (đầy = tối đa ở độ khó Trung bình).
       el.shakeBar.style.width = `${Math.min(1, sensors.level) * 100}%`;
@@ -157,10 +156,10 @@ export function create(ctx) {
       const jd = sensors.jumpDeg || 15;
       const jerkNeed = sensors.jerkNeed();
       el.jumpBar.style.width = `${Math.min(1, Math.max(sensors.pitchSwing / jd, sensors.jerkPeak / jerkNeed)) * 100}%`;
-      if (t - uiAt > 150) {
-        uiAt = t;
-        const swing = sensors.gotOrientation ? `Hất đầu máy: ${Math.round(sensors.pitchSwing)}°/${jd}°` : 'Không đo được góc nghiêng';
-        el.jumpDbg.textContent = `${swing} · Giật lên: ${Math.round(sensors.jerkPeak)}/${Math.round(jerkNeed)}`;
+      if (now - uiAt > 150) {
+        uiAt = now;
+        const swing = sensors.gotOrientation ? t('try.tilt', { deg: Math.round(sensors.pitchSwing), need: jd }) : t('try.noTilt');
+        el.jumpDbg.textContent = `${swing} · ${t('try.jerk', { n: Math.round(sensors.jerkPeak), need: Math.round(jerkNeed) })}`;
       }
     },
 

@@ -424,8 +424,10 @@ function makeIsland(o, catalog) {
 
 export class BoatScene {
   // overlay: phần tử HTML phủ lên canvas để vẽ viền + tên cho các khung nhỏ.
-  constructor(canvas, manifest, catalog, quality = 'high', playerOf = () => null, overlay = null) {
+  // texts: chữ đã dịch theo ngôn ngữ màn hình, { finishBanner }.
+  constructor(canvas, manifest, catalog, quality = 'high', playerOf = () => null, overlay = null, texts = {}) {
     this.manifest = manifest;
+    this.texts = texts;
     this.catalog = catalog;
     this.playerOf = playerOf;
     this.high = quality === 'high';
@@ -546,7 +548,7 @@ export class BoatScene {
       pole.castShadow = true;
       g.add(pole);
     }
-    const banner = textSprite('🏁 ĐÍCH 🏁', { bg: '#d63a3a', height: 1.4 });
+    const banner = textSprite(this.texts.finishBanner || '🏁 ĐÍCH 🏁',{ bg: '#d63a3a', height: 1.4 });
     banner.position.set(0, 5.4, -trackLen);
     g.add(banner);
 

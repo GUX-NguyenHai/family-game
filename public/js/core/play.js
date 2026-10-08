@@ -5,6 +5,10 @@
 import { $, esc, store, loadCss, vibrate, watchVersion, MEDALS } from './util.js';
 import { createSensors } from './sensors.js';
 import { adSlot } from './ads.js';
+import { lang, t, pick, loadGameT, applyDom, bindLangButton } from './i18n.js';
+
+applyDom();
+for (const btn of document.querySelectorAll('[data-lang-btn]')) bindLangButton(btn);
 
 const params = new URLSearchParams(location.search);
 
@@ -67,7 +71,7 @@ function msg(text) {
 
 function renderAnimalGrid() {
   $('#animalGrid').innerHTML = manifest.animals
-    .map(a => `<button type="button" data-id="${a.id}" class="${a.id === animal ? 'sel' : ''}"><span class="e">${a.emoji}</span>${a.name}</button>`)
+    .map(a => `<button type="button" data-id="${a.id}" class="${a.id === animal ? 'sel' : ''}"><span class="e">${a.emoji}</span>${esc(pick(a.name))}</button>`)
     .join('');
 }
 
@@ -84,7 +88,8 @@ renderAnimalGrid();
 show('join');
 
 // ---------- Gắn tay cầm của game ----------
-function gameCtx() {
+// gameT: chữ của game (games/<id>/assets/i18n.json), thiếu thì lấy chữ phần chung.
+function gameCtx(gameT) {
   return {
     lobbyRoot: $('#gameLobby'),
     playRoot: $('#game'),
@@ -92,6 +97,9 @@ function gameCtx() {
     send: (type, data) => socket.connected && socket.emit('game:input', type, data),
     vibrate,
     esc,
+    lang, // 'vi' | 'en'
+    t: gameT,
+    pick, // chữ dạng { vi, en } → đúng ngôn ngữ
     screen: () => current,
     room: () => room,
     me: () => room?.players.find(p => p.id === playerId) || null,
@@ -111,11 +119,12 @@ async function useGame(id) {
   if (game?.id === id || loadingId === id) return;
   loadingId = id;
   let mod;
+  let gameT;
   try {
-    mod = await import(`/games/${id}/controller/index.js`);
+    [mod, gameT] = await Promise.all([import(`/games/${id}/controller/index.js`), loadGameT(id)]);
   } catch (err) {
     if (loadingId === id) loadingId = null;
-    $('#lobbyMsg').textContent = `Lỗi tải game: ${err.message}. Thử tải lại trang.`;
+    $('#lobbyMsg').textContent = t('lobby.loadError', { msg: err.message });
     return;
   }
   if (loadingId !== id) return;
@@ -130,7 +139,7 @@ async function useGame(id) {
   $('#gameLobby').innerHTML = '';
   $('#game').innerHTML = '';
   const removeCss = loadCss(`/games/${id}/controller/style.css`);
-  const inst = mod.create(gameCtx()) || {};
+  const inst = mod.create(gameCtx(gameT)) || {};
   game = { id, inst, removeCss };
   if (room?.game === id) inst.onRoom?.(room);
   inst.onShow?.(current, null);
@@ -154,15 +163,15 @@ $('#btnJoin').onclick = () => {
 
   code = $('#code').value.trim().toUpperCase();
   name = $('#name').value.trim();
-  if (!/^[A-Z]{4}$/.test(code)) return msg('Mã phòng gồm 4 chữ cái.');
-  if (!name) return msg('Nhập tên đã nhé!');
+  if (!/^[A-Z]{4}$/.test(code)) return msg(t('join.badCode'));
+  if (!name) return msg(t('join.noName'));
   store.set('fg:name', name);
   store.set('fg:animal', animal);
   history.replaceState(null, '', `?room=${code}${params.has('debug') ? '&debug=1' : ''}`);
   editing = false;
   wantJoin = true;
   retries = 0;
-  msg('Đang vào phòng…');
+  msg(t('join.joining'));
   join();
 };
 
@@ -182,7 +191,7 @@ function join() {
     if (res?.error === 'no-room' && (joined || store.get('fg:joined', null) === code) && retries < 30) {
       // Server vừa khởi động lại: chờ màn hình chung dựng lại phòng.
       retries++;
-      msg('Đang chờ phòng mở lại…');
+      msg(t('join.waitRoom'));
       retryTimer = setTimeout(join, 2000);
       return;
     }
@@ -190,15 +199,8 @@ function join() {
     wantJoin = false;
     store.set('fg:joined', null);
     show('join');
-    if (res?.error === 'full') {
-      msg(
-        res.tier === 'free'
-          ? `Phòng miễn phí chỉ tối đa ${res.maxPlayers} người và đã đủ. Nhờ chủ phòng nhập mã Pro để thêm người.`
-          : `Phòng đã đủ ${res.maxPlayers} người.`,
-      );
-    } else {
-      msg('Không tìm thấy phòng. Kiểm tra lại mã hoặc quét lại QR.');
-    }
+    if (res?.error === 'full') msg(t(res.tier === 'free' ? 'join.fullFree' : 'join.full', { n: res.maxPlayers }));
+    else msg(t('join.notFound'));
   });
 }
 
@@ -210,8 +212,8 @@ socket.on('disconnect', () => {
   if (joined) $('#conn').hidden = false;
 });
 watchVersion(socket);
-socket.on('kicked', () => leave('Bạn đã được mời ra khỏi phòng.'));
-socket.on('replaced', () => leave('Bạn vừa vào phòng từ một tab/máy khác.'));
+socket.on('kicked', () => leave(t('join.kicked')));
+socket.on('replaced', () => leave(t('join.replaced')));
 
 function leave(text) {
   joined = false;
@@ -224,7 +226,7 @@ function leave(text) {
 $('#btnChange').onclick = () => {
   editing = true;
   show('join');
-  msg('Đổi xong bấm "Vào phòng" để cập nhật.');
+  msg(t('join.changeHint'));
 };
 
 // ---------- Trạng thái phòng ----------
@@ -237,7 +239,7 @@ function onRoom(info) {
   const prevState = room?.state;
   room = info;
   const me = info.players.find(p => p.id === playerId);
-  if (!me) return leave('Bạn không còn trong phòng. Bấm "Vào phòng" để vào lại.');
+  if (!me) return leave(t('join.gone'));
 
   useGame(info.game);
   gameCall('onRoom', info);
@@ -246,16 +248,15 @@ function onRoom(info) {
   const a = animalById.get(me.animal);
   $('#meEmoji').textContent = a?.emoji || '🐾';
   $('#meName').textContent = me.name;
-  $('#gameTitle').textContent = `${info.gameEmoji} ${info.gameName}`;
+  $('#gameTitle').textContent = `${info.gameEmoji} ${pick(info.gameName)}`;
   $('#sensorBox').hidden = !info.sensors;
   updateSensorUi();
   renderTeamPicker(me);
 
   if (info.state === 'lobby' || !me.inGame) {
     if (editing && info.state === 'lobby') return;
-    $('#lobbyMsg').textContent =
-      (info.state === 'lobby' ? 'Chờ chủ phòng bắt đầu…' : 'Đang có lượt chơi, bạn chờ lượt sau nhé!') +
-      (info.optionsText ? ` · ${info.optionsText}` : '');
+    const optionsText = pick(info.optionsText);
+    $('#lobbyMsg').textContent = t(info.state === 'lobby' ? 'lobby.wait' : 'lobby.busy') + (optionsText ? ` · ${optionsText}` : '');
     show('lobby');
     return;
   }
@@ -269,7 +270,8 @@ function onRoom(info) {
   if (info.state === 'finished') {
     const r = (info.results || []).find(x => x.id === playerId || x.members?.includes(playerId));
     $('#doneBig').textContent = r ? MEDALS[r.place - 1] || `#${r.place}` : '🏁';
-    $('#doneText').textContent = r ? `Hạng ${r.place}${r.detail ? ` · ${r.detail}` : ''}` : 'Hết lượt!';
+    const detail = r ? pick(r.detail) : '';
+    $('#doneText').textContent = r ? t('done.place', { n: r.place }) + (detail ? ` · ${detail}` : '') : t('done.over');
     show('done');
   }
 }
@@ -279,18 +281,17 @@ function renderTeamPicker(me) {
   const box = $('#teamBox');
   box.hidden = !room.teamMode;
   if (!room.teamMode) return;
-  const counts = room.teams.map(t => room.players.filter(p => p.team === t.id).length);
+  const counts = room.teams.map(team => room.players.filter(p => p.team === team.id).length);
   $('#teamPicker').innerHTML = room.teams
     .map(
-      t => `<button type="button" data-team="${t.id}" class="${me.team === t.id ? 'sel' : ''}" style="--c:${t.color}">
-        <span class="e">${t.emoji}</span>${esc(t.name)} (${counts[t.id]})
+      team => `<button type="button" data-team="${team.id}" class="${me.team === team.id ? 'sel' : ''}" style="--c:${team.color}">
+        <span class="e">${team.emoji}</span>${esc(pick(team.names) || team.name)} (${counts[team.id]})
       </button>`,
     )
     .join('');
   const { min, max, equal } = room.teamRule;
   $('#teamHint').textContent =
-    (me.team == null ? 'Bạn chưa chọn đội, lúc bắt đầu sẽ được xếp tự động. ' : '') +
-    `Mỗi đội ${min}–${max} người${equal ? ', các đội phải bằng người' : ''}.`;
+    (me.team == null ? t('lobby.teamAuto') : '') + t('team.rule', { min, max }) + (equal ? t('team.ruleEqual') : '') + '.';
 }
 
 $('#teamPicker').onclick = e => {
@@ -342,16 +343,16 @@ function updateSensorUi() {
   let text;
   let needButton = false;
   if (!sensors.secure) {
-    text = 'Trang chưa có HTTPS nên không đọc được cảm biến.';
+    text = t('sensor.noHttps');
   } else if (sensors.enabled) {
-    text = sensors.gotOrientation || sensors.gotMotion ? '✅ Cảm biến đang hoạt động' : 'Đang chờ dữ liệu cảm biến… Nếu lâu không có thì máy không hỗ trợ.';
+    text = t(sensors.gotOrientation || sensors.gotMotion ? 'sensor.ok' : 'sensor.waiting');
   } else if (sensorErr?.message === 'denied') {
-    text = 'Bạn đã từ chối quyền cảm biến. Bấm nút để thử lại.';
+    text = t('sensor.denied');
     needButton = true;
   } else if (sensorErr?.message === 'unsupported') {
-    text = 'Trình duyệt không hỗ trợ cảm biến.';
+    text = t('sensor.unsupported');
   } else {
-    text = 'Cảm biến chưa bật.';
+    text = t('sensor.off');
     needButton = true;
   }
   $('#sensorStatus').textContent = text;

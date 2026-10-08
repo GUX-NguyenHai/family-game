@@ -6,8 +6,14 @@ const loader = require('../games');
 
 let byId = new Map();
 
+// Chữ do game khai báo: chuỗi hoặc { vi, en }. Lấy theo ngôn ngữ (mặc định tiếng Việt, dùng cho log/admin).
+function text(value, lang = 'vi') {
+  if (value && typeof value === 'object') return value[lang] ?? value.vi ?? value.en ?? Object.values(value)[0] ?? '';
+  return value ?? '';
+}
+
 function problemOf(g) {
-  if (!/^[a-z0-9-]+$/.test(g?.id || '')) return `thiếu id hợp lệ (chữ thường, số, dấu -): ${g?.name || '?'}`;
+  if (!/^[a-z0-9-]+$/.test(g?.id || '')) return `thiếu id hợp lệ (chữ thường, số, dấu -): ${text(g?.name) || '?'}`;
   if (typeof g.createMatch !== 'function') return `game ${g.id} thiếu createMatch()`;
   return null;
 }
@@ -32,8 +38,8 @@ function load() {
       console.warn(`⚠️  Bỏ qua game upload "${mod.id}": trùng id với game có sẵn.`);
       continue;
     }
-    const sameName = [...next.values()].find(g => g.name === mod.name);
-    if (sameName) console.warn(`⚠️  Game upload "${mod.id}" trùng tên "${mod.name}" với game ${sameName.id}.`);
+    const sameName = [...next.values()].find(g => text(g.name) === text(mod.name));
+    if (sameName) console.warn(`⚠️  Game upload "${mod.id}" trùng tên "${text(mod.name)}" với game ${sameName.id}.`);
     next.set(mod.id, Object.assign(mod, { dir, source, installedAt }));
   }
   if (!next.size) throw new Error('Chưa có game nào trong games/');
@@ -99,15 +105,20 @@ function isChoice(game, key, value) {
   return !!opt && opt.choices.some(c => c.value === value);
 }
 
-// VD: "Độ khó: 🟢 Dễ" để điện thoại hiện ở phòng chờ.
+// VD: { vi: "Độ khó: 🟢 Dễ", en: "Difficulty: 🟢 Easy" } để điện thoại hiện ở phòng chờ (điện thoại tự chọn thứ tiếng).
 function optionsText(game, options) {
-  return (game.options || [])
-    .map(o => {
-      const c = o.choices.find(x => x.value === options[o.key]);
-      return c ? `${o.label}: ${c.label}` : null;
-    })
-    .filter(Boolean)
-    .join(' · ');
+  return Object.fromEntries(
+    C.LANGS.map(lang => [
+      lang,
+      (game.options || [])
+        .map(o => {
+          const c = o.choices.find(x => x.value === options[o.key]);
+          return c ? `${text(o.label, lang)}: ${text(c.label, lang)}` : null;
+        })
+        .filter(Boolean)
+        .join(' · '),
+    ]),
+  );
 }
 
-module.exports = { get, all, reload, defaultId, catalog, defaultOptions, isChoice, optionsText, teamMode, INSTALLED_DIR: loader.INSTALLED_DIR };
+module.exports = { get, all, reload, defaultId, catalog, defaultOptions, isChoice, optionsText, teamMode, text, INSTALLED_DIR: loader.INSTALLED_DIR };
