@@ -109,14 +109,25 @@
     </div>
   </section>
 
-  <div id="loading">Đang tải… / Loading…</div>
+  <div id="loading"></div>
 
   <script>
-    // Có lỗi lúc tải thì hiện lên màn hình thay vì kẹt ở "Đang tải…".
+    // Chữ "Đang tải…" hiện trước khi JS chính chạy: chọn ngôn ngữ giống /js/core/i18n.js
+    // (?lang= trên link → đã chọn trước đó → ngôn ngữ trình duyệt). Có lỗi lúc tải thì hiện lên màn hình.
     (function () {
+      var lang = new URLSearchParams(location.search).get('lang');
+      if (lang !== 'vi' && lang !== 'en') {
+        try { lang = JSON.parse(localStorage.getItem('fg:lang')); } catch (e) { lang = null; }
+      }
+      if (lang !== 'vi' && lang !== 'en') {
+        var prefs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+        lang = prefs.some(function (l) { return /^vi\b/i.test(l); }) ? 'vi' : 'en';
+      }
+      var vi = lang === 'vi';
+      document.getElementById('loading').textContent = vi ? 'Đang tải…' : 'Loading…';
       function show(msg) {
         var el = document.getElementById('loading');
-        if (el && !el.hidden) el.textContent = 'Lỗi / Error: ' + msg + ' (Ctrl+Shift+R)';
+        if (el && !el.hidden) el.textContent = (vi ? 'Lỗi: ' : 'Error: ') + msg + ' (Ctrl+Shift+R)';
       }
       window.addEventListener('error', function (e) { show(e.message || (e.target && e.target.src) || 'file'); }, true);
       window.addEventListener('unhandledrejection', function (e) { show(e.reason && e.reason.message || String(e.reason)); });
