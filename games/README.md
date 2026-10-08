@@ -34,14 +34,9 @@ games/<id>/                   <id>: tiếng Anh, chữ thường, nối bằng "
   assets/                     (tuỳ chọn) model .glb, json, ảnh + CREDITS.md
 ```
 
-Đăng ký game: thêm 1 dòng vào [games/index.js](index.js). Thứ tự trong file là thứ tự trên thanh chọn game.
-```js
-module.exports = [
-  require('./animal-race/service'),
-  // …
-  require('./tap-race/service'),
-];
-```
+**Không cần đăng ký:** server tự nhận mọi thư mục có `service/index.js` trong `games/`. Muốn đặt thứ tự trên thanh chọn game thì thêm id vào `ORDER` trong [games/index.js](index.js); không có trong `ORDER` thì xếp sau theo id.
+
+**Gửi game cho chủ server mà không cần sửa code chính:** nén cả thư mục `games/<id>/` thành `<id>.zip` (zip thường, không mật khẩu; có hay không có thư mục ngoài cùng đều được), chủ server upload ở trang **`/admin`**. Game được giải nén vào `games-installed/<id>/` và dùng được ngay. Đường dẫn `require('../../../src/state-codec')` vẫn đúng vì `games-installed/` nằm cùng cấp với `games/`.
 
 Trình duyệt tải được các đường dẫn:
 - `/games/<id>/screen/…`
@@ -260,7 +255,7 @@ export function create(ctx) {
 
 ## 6. Game mẫu đầy đủ: "Bấm nhanh"
 
-Ai bấm nút đủ N lần trước thì thắng. Chép 3 file dưới vào `games/tap-race/`, tạo 2 file `style.css` (có thể để trống), thêm `require('./tap-race/service')` vào `games/index.js`.
+Ai bấm nút đủ N lần trước thì thắng. Chép 3 file dưới vào `games/tap-race/`, tạo 2 file `style.css` (có thể để trống), khởi động lại server là game hiện trên thanh chọn game.
 
 ### `games/tap-race/service/index.js`
 ```js
@@ -481,7 +476,7 @@ import { loadAnimalTemplate, loadModel, cloneModel, Label, textSprite, Particles
 
 - [ ] Tên thư mục, file, biến bằng tiếng Anh, viết đầy đủ. Chữ hiện cho người chơi bằng tiếng Việt.
 - [ ] `service/index.js` có `id` trùng tên thư mục, có `category`, `description`, `options` (nếu cần).
-- [ ] Đã thêm vào `games/index.js`.
+- [ ] `id` không trùng game nào đang có (trùng game có sẵn thì /admin không cho cài).
 - [ ] Chặn `input()` khi chưa bắt đầu hoặc đã xong.
 - [ ] Có bot (nếu `bots: true`) và bot chơi được tới khi kết thúc.
 - [ ] Ván luôn kết thúc: có giới hạn thời gian hoặc điều kiện thắng chắc chắn xảy ra, rồi gọi `api.finish()` đúng 1 lần.

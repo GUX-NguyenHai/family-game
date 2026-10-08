@@ -16,9 +16,18 @@ services:
       - ADSENSE_SLOT_PLAY=${ADSENSE_SLOT_PLAY:-}
       # Email liên hệ hiện ở chân trang giới thiệu/chính sách bảo mật (tuỳ chọn).
       - CONTACT_EMAIL=${CONTACT_EMAIL:-}
+      # Mật khẩu trang /admin (upload game .zip). Trống = tắt trang quản trị.
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+    volumes:
+      # Game upload qua /admin. Volume riêng nên build lại, git pull, xoá image đều không mất.
+      # (Chỉ mất nếu chạy "docker compose down -v" hoặc "docker volume rm".)
+      - games-installed:/app/games-installed
     mem_limit: 256m
     logging:
       driver: json-file
       options:
         max-size: "5m"
         max-file: "2"
+
+volumes:
+  games-installed:

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Party Game – Quản trị</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #141a2a; color: #f5f7fb; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+    h1 { margin: 0 0 4px; }
+    h2 { margin: 32px 0 12px; font-size: 1.2rem; }
+    p { color: #a9b3c7; }
+    .card { padding: 18px; border-radius: 16px; background: #1f2740; }
+    input, button { font: inherit; }
+    input[type="password"] { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.25); color: inherit; }
+    button { padding: 10px 16px; border: 0; border-radius: 10px; font-weight: 700; background: rgba(255, 255, 255, 0.14); color: inherit; cursor: pointer; }
+    button.primary { background: #ffb020; color: #1b1300; }
+    button.danger { background: transparent; color: #ff6b6b; padding: 6px 10px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+    .msg { min-height: 1.4em; margin: 12px 0 0; font-weight: 600; }
+    .msg.ok { color: #7ee08a; }
+    .msg.bad { color: #ff6b6b; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 10px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); vertical-align: middle; }
+    td.emoji { font-size: 1.6rem; width: 2em; }
+    td small { color: #a9b3c7; }
+    .tag { padding: 2px 8px; border-radius: 99px; font-size: 0.8rem; background: rgba(255, 255, 255, 0.1); color: #a9b3c7; white-space: nowrap; }
+    .tag.up { background: rgba(255, 176, 32, 0.2); color: #ffb020; }
+    code { background: rgba(255, 255, 255, 0.08); padding: 1px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>⚙️ Quản trị game</h1>
+    <p>Upload game (.zip) để dùng ngay, không cần build lại. Code trong game chạy trên server: chỉ upload game của người trong team.</p>
+
+    <section id="login" class="card">
+      <label>Mật khẩu quản trị (ADMIN_PASSWORD trong .env)
+        <input id="password" type="password" autocomplete="current-password">
+      </label>
+      <div class="row"><button id="btnLogin" class="primary">Vào</button></div>
+      <p id="loginMsg" class="msg bad"></p>
+    </section>
+
+    <div id="panel" hidden>
+      <h2>📦 Upload game</h2>
+      <div class="card">
+        <p>File zip chứa thư mục game (<code>service/</code>, <code>screen/</code>, <code>controller/</code>, <code>assets/</code>, <code>README.md</code>). Upload lại cùng id là cập nhật game.</p>
+        <div class="row">
+          <input id="file" type="file" accept=".zip,application/zip">
+          <button id="btnUpload" class="primary">Upload</button>
+        </div>
+        <p id="uploadMsg" class="msg"></p>
+      </div>
+
+      <h2>🎮 Danh sách game</h2>
+      <div class="card"><table><tbody id="list"></tbody></table></div>
+    </div>
+  </main>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    let password = sessionStorage.getItem('fg:admin') || '';
+
+    async function api(method, url, body) {
+      const res = await fetch(url, { method, body, headers: { 'x-admin-password': password } });
+      let data = {};
+      try { data = await res.json(); } catch {}
+      if (res.status === 401 || res.status === 503) throw Object.assign(new Error(data.error || 'Không vào được'), { auth: true });
+      return data;
+    }
+
+    function msg(el, text, ok) {
+      el.textContent = text || '';
+      el.className = `msg ${ok ? 'ok' : 'bad'}`;
+    }
+
+    async function refresh() {
+      const { games } = await api('GET', '/admin/api/games');
+      $('#list').innerHTML = games.map(g => `<tr>
+        <td class="emoji">${esc(g.emoji)}</td>
+        <td><b>${esc(g.name)}</b><br><small>${esc(g.id)}${g.installedAt ? ` · upload ${new Date(g.installedAt).toLocaleString('vi-VN')}` : ''}</small></td>
+        <td>${g.source === 'installed' ? '<span class="tag up">Upload</span>' : '<span class="tag">Có sẵn</span>'}</td>
+        <td>${g.source === 'installed' ? `<button class="danger" data-id="${esc(g.id)}">Xoá</button>` : ''}</td>
+      </tr>`).join('');
+    }
+
+    async function login() {
+      password = $('#password').value || password;
+      try {
+        await refresh();
+        sessionStorage.setItem('fg:admin', password);
+        $('#login').hidden = true;
+        $('#panel').hidden = false;
+      } catch (err) {
+        msg($('#loginMsg'), err.message);
+      }
+    }
+    $('#btnLogin').onclick = login;
+    // Không trả về false (trả false trong onkeydown là chặn luôn phím vừa gõ).
+    $('#password').onkeydown = e => {
+      if (e.key === 'Enter') login();
+    };
+    if (password) login();
+
+    async function upload(force) {
+      const file = $('#file').files[0];
+      if (!file) return msg($('#uploadMsg'), 'Chọn file .zip trước đã.');
+      $('#btnUpload').disabled = true;
+      msg($('#uploadMsg'), 'Đang upload…', true);
+      try {
+        const r = await api('POST', `/admin/api/upload${force ? '?force=1' : ''}`, file);
+        if (r.confirm) {
+          if (confirm(r.confirm.join('\n\n'))) return upload(true);
+          return msg($('#uploadMsg'), 'Đã huỷ.');
+        }
+        if (!r.ok) return msg($('#uploadMsg'), r.error || 'Upload lỗi.');
+        msg($('#uploadMsg'), `Đã cài "${r.name}" (${r.id}). Các màn hình đang mở sẽ tự tải lại để thấy game mới.`, true);
+        $('#file').value = '';
+        refresh();
+      } catch (err) {
+        msg($('#uploadMsg'), err.message);
+      } finally {
+        $('#btnUpload').disabled = false;
+      }
+    }
+    $('#btnUpload').onclick = () => upload(false);
+
+    $('#list').onclick = async e => {
+      const btn = e.target.closest('button[data-id]');
+      if (!btn || !confirm(`Xoá game "${btn.dataset.id}"? Phòng đang chọn game này sẽ chuyển về game mặc định.`)) return;
+      const r = await api('DELETE', `/admin/api/games/${encodeURIComponent(btn.dataset.id)}`);
+      msg($('#uploadMsg'), r.ok ? `Đã xoá ${btn.dataset.id}.` : r.error, r.ok);
+      refresh();
+    };
+  </script>
+</body>
+</html>

@@ -1,4 +1,9 @@
 const path = require('path');
+// Chạy local (npm run dev): đọc biến môi trường từ .env cạnh file này, phải trước khi nạp src/ (đọc env lúc nạp).
+// Trên Docker không có file này trong image, biến môi trường do docker-compose đưa vào.
+try {
+  process.loadEnvFile?.(path.join(__dirname, '.env'));
+} catch {}
 const http = require('http');
 const os = require('os');
 const express = require('express');
@@ -9,6 +14,8 @@ const games = require('./src/games');
 const license = require('./src/license');
 const ads = require('./src/ads');
 const pages = require('./src/pages');
+const admin = require('./src/admin');
+const { APP_VERSION } = require('./src/config');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -18,11 +25,42 @@ app.disable('x-powered-by');
 const server = http.createServer(app);
 const io = new Server(server, { pingInterval: 10000, pingTimeout: 8000 });
 
-// Trang giới thiệu + chính sách bảo mật: HTML dựng sẵn trên server (xem src/pages.js), dựng 1 lần rồi dùng lại.
-const landingHtml = pages.landing();
+// Mỗi lần server khởi động, hoặc vừa upload/xoá game ở /admin, có mã phiên bản mới. Trang đang mở kết nối lại
+// (hoặc nhận 'hello' mới) mà thấy khác mã thì tự tải lại, để không chạy code giao diện cũ.
+let BUILD_ID = Date.now().toString(36);
+io.on('connection', socket => socket.emit('hello', { build: BUILD_ID, version: APP_VERSION }));
+
+// Trang giới thiệu + chính sách bảo mật: HTML dựng trên server (xem src/pages.js). Dựng lại khi danh sách game đổi.
+let landingHtml = pages.landing();
 const privacyHtml = pages.privacy();
 app.get('/', (req, res) => res.type('html').setHeader('Cache-Control', 'no-cache').send(landingHtml));
 app.get('/privacy', (req, res) => res.type('html').setHeader('Cache-Control', 'no-cache').send(privacyHtml));
+
+// ---------- Quản trị: upload/xoá game (/admin, mật khẩu ADMIN_PASSWORD trong .env, xem src/admin.js) ----------
+// Sau khi đổi game: dựng lại trang giới thiệu + bảo mọi trang đang mở tải lại (phòng chơi vẫn giữ nguyên trong RAM).
+function gamesChanged() {
+  landingHtml = pages.landing();
+  BUILD_ID = Date.now().toString(36);
+  io.emit('hello', { build: BUILD_ID, version: APP_VERSION });
+}
+app.get('/admin/api/games', admin.guard, (req, res) => res.json({ games: admin.list() }));
+app.post('/admin/api/upload', admin.guard, express.raw({ type: () => true, limit: '60mb' }), (req, res) => {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ ok: false, error: 'Chưa chọn file.' });
+  const result = admin.install(req.body, req.query.force === '1');
+  if (result.ok) {
+    console.log(`📦 Đã cài game ${result.id} (${result.name}) qua /admin`);
+    gamesChanged();
+  }
+  res.json(result);
+});
+app.delete('/admin/api/games/:id', admin.guard, (req, res) => {
+  const result = admin.remove(req.params.id);
+  if (result.ok) {
+    console.log(`🗑️  Đã xoá game ${req.params.id} qua /admin`);
+    gamesChanged();
+  }
+  res.json(result);
+});
 
 // Quảng cáo Google AdSense (mã đặt trong .env, xem src/ads.js). Chưa có mã thì /ads.txt trả 404.
 app.get('/api/ads', (req, res) => res.json(ads.publicConfig()));
@@ -41,16 +79,20 @@ app.use(
   }),
 );
 // Giao diện riêng của từng game: chỉ mở thư mục screen/, controller/ và assets/ (luật chơi trong service/ không ra ngoài).
-for (const g of games.all()) {
-  for (const side of ['screen', 'controller', 'assets']) {
-    app.use(
-      `/games/${g.id}/${side}`,
-      express.static(path.join(__dirname, 'games', g.id, side), {
-        setHeaders: res => res.setHeader('Cache-Control', 'no-cache'),
-      }),
-    );
+// Tra theo danh sách game hiện tại (kể cả game vừa upload ở /admin), nên không cần khởi động lại server.
+const GAME_SIDES = new Set(['screen', 'controller', 'assets']);
+const gameStatic = new Map(); // thư mục → middleware express.static
+app.use('/games/:id/:side', (req, res, next) => {
+  const g = games.get(req.params.id);
+  if (!g || !GAME_SIDES.has(req.params.side)) return next();
+  const dir = path.join(g.dir, req.params.side);
+  let serve = gameStatic.get(dir);
+  if (!serve) {
+    serve = express.static(dir, { setHeaders: r => r.setHeader('Cache-Control', 'no-cache') });
+    gameStatic.set(dir, serve);
   }
-}
+  serve(req, res, next);
+});
 app.get('/api/games', (req, res) => res.json(games.catalog()));
 app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules/three'), { maxAge: '1d' }));
 // Ưu tiên model đã tối ưu (npm run models), không có thì dùng file gốc trong animal/.
@@ -78,12 +120,6 @@ function lanIps() {
 // Khi màn hình host mở bằng localhost, QR cần IP LAN để điện thoại vào được.
 app.get('/api/lan', (req, res) => res.json({ ips: lanIps() }));
 
-// Mỗi lần server khởi động có mã phiên bản mới. Trang đang mở kết nối lại mà thấy khác mã
-// thì tự tải lại, để không chạy code giao diện cũ sau khi build/deploy.
-const BUILD_ID = Date.now().toString(36);
-const { APP_VERSION } = require('./src/config');
-io.on('connection', socket => socket.emit('hello', { build: BUILD_ID, version: APP_VERSION }));
-
 rooms.attach(io);
 
 server.listen(PORT, HOST, () => {
@@ -98,4 +134,5 @@ server.listen(PORT, HOST, () => {
     );
   }
   if (!ads.enabled()) console.log('ℹ️  Chưa đặt ADSENSE_CLIENT: không hiện quảng cáo.');
+  if (!admin.enabled()) console.log('ℹ️  Chưa đặt ADMIN_PASSWORD: trang /admin (upload game) đang tắt.');
 });

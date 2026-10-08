@@ -95,6 +95,7 @@ src/                          ── PHẦN CHUNG phía server ──
   games.js                    đọc danh sách game, kiểm tra khai báo, tuỳ chọn
   license.js                  mã Pro (ký HMAC, không cần database)
   ads.js, pages.js            quảng cáo AdSense (mã từ .env, /ads.txt); trang giới thiệu "/" và "/privacy"
+  admin.js, unzip.js          trang /admin: upload game .zip (giải nén vào games-installed/), xoá game đã upload
   state-codec.js              mã hoá trạng thái gửi cho TV thành nhị phân gọn (theo schema của từng game)
 public/                       ── PHẦN CHUNG phía trình duyệt ──
   host.html, play.html        khung trang TV và điện thoại
@@ -109,7 +110,7 @@ public/                       ── PHẦN CHUNG phía trình duyệt ──
   js/core/ads.js              ô quảng cáo ở phòng chờ (TV + điện thoại)
   assets/animals.json         danh sách con vật (avatar người chơi) + hoạt ảnh
 games/                        ── MỖI GAME MỘT THƯ MỤC ──
-  index.js                    danh sách game được bật (thêm game = thêm 1 dòng)
+  index.js                    tự tìm game (games/ + games-installed/), thứ tự hiện (ORDER)
   README.md                   ★ hướng dẫn chi tiết cách làm game
   <id>/
     README.md                 luật chơi, tham số chỉnh
@@ -122,6 +123,7 @@ games/                        ── MỖI GAME MỘT THƯ MỤC ──
     assets/                   schema.json (định dạng trạng thái nhị phân), model .glb, json, ảnh + CREDITS.md
 animal/                       model con vật gốc (Quaternius, CC0)
 build/models/                 model con vật đã tối ưu (npm run models tạo ra)
+games-installed/              game upload qua /admin (không lên git, không vào image)
 deploy/                       cấu hình nginx, systemd
 Dockerfile, docker-compose.yml
 ```
@@ -136,7 +138,9 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 2. Viết `service/index.js`: khai báo game (tên, emoji, nhóm, số người, tuỳ chọn…) và hàm `createMatch()` chứa luật chơi.
 3. Viết `screen/index.js` + `style.css`: vẽ game trên TV.
 4. Viết `controller/index.js` + `style.css`: tay cầm trên điện thoại.
-5. Thêm `require('./<id>/service')` vào [games/index.js](games/index.js), khởi động lại server. Game tự hiện trên thanh chọn game.
+5. Khởi động lại server. Game **tự được nhận** (mọi thư mục có `service/index.js`) và hiện trên thanh chọn game. Muốn xếp thứ tự thì thêm id vào `ORDER` trong [games/index.js](games/index.js).
+
+**Người trong team gửi game mà không cần sửa code chính:** nén thư mục `games/<id>/` thành `<id>.zip`, chủ server vào **`/admin`** (mật khẩu `ADMIN_PASSWORD` trong `.env`) và upload. Game dùng được ngay, không phải build lại; các màn hình đang mở tự tải lại. Game upload nằm trong `games-installed/` (volume Docker riêng), nên `git pull` và build lại không mất. Upload lại cùng id là cập nhật. Trùng id với game có sẵn thì không cho cài; trùng id game đã upload hoặc trùng tên thì hỏi lại trước khi cài. Lưu ý: code `service/` của game chạy trên server, chỉ upload game của người tin được.
 
 **Không cần sửa phần chung** (`src/`, `public/js/core/`) để làm một game bình thường. Chỉ sửa phần chung khi cần một khả năng mới mà **nhiều game** sẽ dùng (như đội, lựa chọn riêng). Khi đó phải cập nhật luôn [games/README.md](games/README.md).
 
@@ -215,6 +219,7 @@ npm run make-code -- --days 30                                          # trên 
   ADSENSE_SLOT_HOST=1234567890             # đơn vị quảng cáo cho TV (tạo sau khi được duyệt)
   ADSENSE_SLOT_PLAY=1234567890             # đơn vị quảng cáo cho điện thoại
   CONTACT_EMAIL=                           # (tuỳ chọn) email liên hệ ở chân trang
+  ADMIN_PASSWORD=                          # mật khẩu trang /admin (upload game), trống = tắt
   ```
   Sửa `.env` xong chạy lại `docker compose up -d` để container nhận giá trị mới.
 - Có `ADSENSE_CLIENT` thì server tự trả `/ads.txt` và chèn thẻ AdSense vào trang giới thiệu `/` (Google kiểm tra thẻ này lúc duyệt).
@@ -244,7 +249,7 @@ Nên đọc theo thứ tự này:
 4. Khi cần hiểu sâu phần chung: [src/rooms.js](src/rooms.js) (server), [public/js/core/host.js](public/js/core/host.js) (TV), [public/js/core/play.js](public/js/core/play.js) (điện thoại).
 
 **Khi sửa code:**
-- Làm game mới thì chỉ thêm thư mục trong `games/` và 1 dòng trong `games/index.js`.
+- Làm game mới thì chỉ thêm thư mục trong `games/` (tự được nhận), hoặc nén thư mục đó để upload ở `/admin`.
 - Đổi hợp đồng ở phần chung thì cập nhật [games/README.md](games/README.md) và kiểm tra **mọi game** còn chạy.
 - Mỗi game có README riêng ghi luật chơi và tham số. Sửa luật thì sửa luôn README của game đó.
 - Giữ đúng các quy ước ở mục 5.

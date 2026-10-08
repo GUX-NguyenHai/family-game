@@ -68,8 +68,14 @@ function createRoom(code, token) {
   return room;
 }
 
+// Game đang chọn của phòng. Game vừa bị xoá ở /admin thì phòng chuyển về game mặc định.
 function gameOf(room) {
-  return games.get(room.gameId);
+  let game = games.get(room.gameId);
+  if (!game) {
+    room.gameId = games.defaultId();
+    game = games.get(room.gameId);
+  }
+  return game;
 }
 
 function optionsOf(room) {

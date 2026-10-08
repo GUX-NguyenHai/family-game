@@ -26,6 +26,8 @@ COPY package.json server.js ./
 COPY src ./src
 COPY games ./games
 COPY public ./public
+# Thư mục game upload qua /admin: gắn volume riêng (docker-compose.yml) nên build lại không mất; cho user node ghi được.
+RUN mkdir -p /app/games-installed && chown node:node /app/games-installed
 
 USER node
 EXPOSE 3000
