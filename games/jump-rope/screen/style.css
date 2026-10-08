@@ -1,0 +1,60 @@
+/* Nhảy dây – màn hình chung. Biến màu (--panel, --muted, --accent) lấy từ /css/host.css. */
+#game[data-game="jump-rope"] { background: #9fd8ff; }
+
+.rope-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.rope-hud { position: absolute; inset: 0; pointer-events: none; }
+
+/* Bảng màn chơi: giữa phía trên */
+.rope-board {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 60vw);
+  padding: 10px 16px 12px;
+  border-radius: 16px;
+  background: var(--panel);
+  text-align: center;
+}
+.rope-level { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
+.rope-level b { font-size: 1.6rem; color: var(--accent); }
+.rope-level span { font-weight: 600; }
+.rope-time {
+  height: 8px;
+  margin: 8px 0 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+.rope-time i { display: block; height: 100%; background: var(--accent); transition: width 0.2s linear; }
+.rope-info { color: var(--muted); font-weight: 600; }
+
+/* Chữ lớn lúc nghỉ giữa 2 màn */
+.rope-banner {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 40px;
+  border-radius: 24px;
+  background: var(--panel);
+  text-align: center;
+  animation: rope-pop 0.4s ease-out;
+}
+.rope-banner b { font-size: min(14vw, 6rem); line-height: 1; color: var(--accent); }
+.rope-banner span { font-size: 1.6rem; font-weight: 700; }
+@keyframes rope-pop {
+  from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}

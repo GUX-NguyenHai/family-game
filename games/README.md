@@ -502,4 +502,6 @@ import { loadAnimalTemplate, loadModel, cloneModel, Label, textSprite, Particles
 | [tug-of-war](tug-of-war/) 🪢 | Ngắn gọn nhất. Đội cố định 2 màu (`count: 2`, `equal: true`), lắc để tính lực, cảnh 3D đơn giản |
 | [coconut-climb](coconut-climb/) 🌴 | Lựa chọn riêng (`prefs.figure`), danh sách đồ trong `assets/figures.json`, model tải về có hoặc không có hoạt ảnh |
 | [boat-race](boat-race/) 🚣 | Đội bật/tắt theo tuỳ chọn (`enabled`), nhiều tuỳ chọn, lái bằng nghiêng, vật cản, va chạm |
-| [animal-race](animal-race/) 🏁 | Điều khiển hoàn toàn bằng cử động (lắc chạy, hất/giật máy nhảy), không nút bấm, bản đồ nhỏ, camera bám đoàn dẫn đầu |
+| [animal-race](animal-race/) 🏁 | Điều khiển hoàn toàn bằng cử động (lắc chạy, hất/giật máy nhảy), không nút bấm, camera bám đoàn dẫn đầu, khung nhỏ cho người bị tụt lại (`/js/core/mini-views.js`) |
+| [sack-race](sack-race/) 🛍️ | Nhịp điệu bằng cử chỉ nhảy; server gửi sự kiện riêng cho điện thoại để hẹn giờ rung báo nhịp; khung nhỏ dùng chung |
+| [jump-rope](jump-rope/) 🤸 | Chỉ dùng cử chỉ nhảy, chia màn chơi, server chấm theo thời điểm; TV tự quay dây theo tốc độ server gửi (không vẽ giật theo từng gói tin) |

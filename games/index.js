@@ -5,4 +5,6 @@ module.exports = [
   require('./boat-race/service'),
   require('./tug-of-war/service'),
   require('./coconut-climb/service'),
+  require('./jump-rope/service'),
+  require('./sack-race/service'),
 ];

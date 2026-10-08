@@ -1,0 +1,61 @@
+/* Nhảy bao bố – tay cầm (không có nút bấm). Biến màu (--accent, --muted...) lấy từ /css/play.css. */
+
+/* Màn chơi */
+.sack {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 12px 0;
+  touch-action: none;
+}
+.sack-top { display: flex; align-items: center; gap: 12px; }
+.sack-pos { font-size: 2.2rem; font-weight: 900; min-width: 3.5em; }
+.sack-prog { height: 14px; }
+.sack-prog i { background: #42d4f4; }
+.sack-combo { min-height: 1.6em; margin-top: 10px; text-align: center; font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+.sack-nosensor {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 209, 102, 0.12);
+  color: #ffd166;
+  font-size: 0.85rem;
+}
+
+/* Khung lớn giữa màn hình: nhắc cách chơi; nháy xanh khi vừa nhảy, vàng lúc đáp đất, đỏ khi ngã */
+.sack-pad {
+  flex: 1;
+  min-height: 240px;
+  margin-top: 10px;
+  padding: 16px;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #2b3558, #1f2740);
+  color: #e6ecff;
+  font-size: 1.4rem;
+  text-align: center;
+  transition: background 0.12s, transform 0.12s;
+}
+.sack-pad span { font-size: 5rem; line-height: 1; }
+.sack-pad small { color: var(--muted); font-size: 0.95rem; }
+.sack-pad.jumping { background: linear-gradient(180deg, #42d4f4, #1f8fb0); color: #06222a; transform: translateY(-10px); }
+.sack-pad.land { background: linear-gradient(180deg, #ffd166, #e0a020); color: #2a1d00; }
+.sack-pad.fall { background: linear-gradient(180deg, #6b2333, #3a1520); }
+.sack-pad.win { background: linear-gradient(180deg, #8a6a12, #4a3a0a); }
+
+/* Phòng chờ: thử nhảy */
+.sack-jump-hit {
+  position: absolute;
+  right: 6px;
+  top: -4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: #42d4f4;
+  color: #06222a;
+  font-size: 0.8rem;
+}
+.sack-jump-bar { background: #42d4f4 !important; }

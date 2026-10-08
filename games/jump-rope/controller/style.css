@@ -1,0 +1,61 @@
+/* Nhảy dây – tay cầm (không có nút bấm). Biến màu (--accent, --muted...) lấy từ /css/play.css. */
+
+/* Màn chơi */
+.rope {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 12px 0;
+  touch-action: none;
+}
+.rope-top { display: flex; align-items: baseline; gap: 10px; }
+.rope-top b { font-size: 2rem; font-weight: 900; color: var(--accent); }
+.rope-top span { font-weight: 700; }
+.rope-time { height: 12px; margin-top: 8px; }
+.rope-time i { background: var(--accent); transition: width 0.2s linear; }
+.rope-info { margin: 10px 0 0; color: var(--muted); font-weight: 600; }
+.rope-nosensor {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 209, 102, 0.12);
+  color: #ffd166;
+  font-size: 0.85rem;
+}
+
+/* Khung lớn giữa màn hình: nhắc cách chơi; nháy xanh khi vừa nhảy, đỏ khi bị loại */
+.rope-pad {
+  flex: 1;
+  min-height: 240px;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #2b3558, #1f2740);
+  color: #e6ecff;
+  font-size: 1.4rem;
+  text-align: center;
+  transition: background 0.15s, transform 0.15s;
+}
+.rope-pad span { font-size: 5rem; line-height: 1; }
+.rope-pad small { color: var(--muted); font-size: 0.95rem; }
+.rope-pad.jumping { background: linear-gradient(180deg, #42d4f4, #1f8fb0); color: #06222a; transform: translateY(-10px); }
+.rope-pad.out { background: linear-gradient(180deg, #6b2333, #3a1520); }
+.rope-pad.win { background: linear-gradient(180deg, #8a6a12, #4a3a0a); }
+
+/* Phòng chờ: thử nhảy */
+.rope-jump-hit {
+  position: absolute;
+  right: 6px;
+  top: -4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: #42d4f4;
+  color: #06222a;
+  font-size: 0.8rem;
+}
+.rope-jump-bar { background: #42d4f4 !important; }

@@ -1,0 +1,16 @@
+{
+  "_ghi_chu": "Trạng thái gửi cho TV dạng nhị phân (xem src/state-codec.js). Mỗi hàng là 1 người nhảy, theo thứ tự setup().players. level: màn hiện tại (lúc nghỉ = màn sắp chơi); rev: số vòng dây đã quay (số nguyên = dây chạm đất, bước 0.001); rate: tốc độ dây (vòng/giây, 0 = đứng yên); timeLeft: ms còn lại của màn (bước 10ms); alive: số người còn trụ; f: cờ (1 = bị loại); n: số lần nhảy qua.",
+  "rows": "p",
+  "head": [
+    ["phase", "enum", ["countdown", "playing", "break", "finished"]],
+    ["level", "u8"],
+    ["rev", "u32", 1000],
+    ["rate", "u16", 1000],
+    ["timeLeft", "u16", 0.1],
+    ["alive", "u8"]
+  ],
+  "row": [
+    ["f", "u8"],
+    ["n", "u16"]
+  ]
+}
