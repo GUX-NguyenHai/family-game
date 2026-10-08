@@ -1,5 +1,5 @@
 // Trang quản trị /admin: upload game (.zip) để dùng ngay, không cần sửa code hay build lại Docker; xoá game đã upload.
-// Mật khẩu: biến môi trường ADMIN_PASSWORD (đặt trong .env). Chưa đặt thì tắt trang quản trị.
+// Mật khẩu: biến môi trường ADMIN_PASSWORD (.env khi chạy local, .env.prod trên server). Chưa đặt thì tắt trang quản trị.
 // Game upload nằm trong thư mục games-installed/ (ngoài git, ngoài Docker image), mỗi game một thư mục <id>.
 // Lưu ý: code trong service/ của game chạy thẳng trên server, chỉ upload game của người trong team.
 const fs = require('fs');

@@ -7,10 +7,11 @@ services:
     ports:
       # Chỉ mở cho nginx trên cùng máy. Muốn truy cập thẳng từ ngoài thì đổi thành "3000:3000".
       - "127.0.0.1:3000:3000"
+    # Biến môi trường lấy từ file .env cạnh file này. Trên server: cp .env.prod .env trước khi build (xem README).
     environment:
-      # Khoá ký mã Pro, đặt trong file .env cạnh file này (không đưa lên git). Trống = tắt Pro.
+      # Khoá ký mã Pro. Trống = tắt Pro.
       - LICENSE_SECRET=${LICENSE_SECRET:-}
-      # Quảng cáo Google AdSense (cũng trong .env). Trống = không hiện quảng cáo.
+      # Quảng cáo Google AdSense. Trống = không hiện quảng cáo.
       - ADSENSE_CLIENT=${ADSENSE_CLIENT:-}
       - ADSENSE_SLOT_HOST=${ADSENSE_SLOT_HOST:-}
       - ADSENSE_SLOT_PLAY=${ADSENSE_SLOT_PLAY:-}

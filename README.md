@@ -140,7 +140,7 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 4. Viết `controller/index.js` + `style.css`: tay cầm trên điện thoại.
 5. Khởi động lại server. Game **tự được nhận** (mọi thư mục có `service/index.js`) và hiện trên thanh chọn game. Muốn xếp thứ tự thì thêm id vào `ORDER` trong [games/index.js](games/index.js).
 
-**Người trong team gửi game mà không cần sửa code chính:** nén thư mục `games/<id>/` thành `<id>.zip`, chủ server vào **`/admin`** (mật khẩu `ADMIN_PASSWORD` trong `.env`) và upload. Game dùng được ngay, không phải build lại; các màn hình đang mở tự tải lại. Game upload nằm trong `games-installed/` (volume Docker riêng), nên `git pull` và build lại không mất. Upload lại cùng id là cập nhật. Trùng id với game có sẵn thì không cho cài; trùng id game đã upload hoặc trùng tên thì hỏi lại trước khi cài. Lưu ý: code `service/` của game chạy trên server, chỉ upload game của người tin được.
+**Người trong team gửi game mà không cần sửa code chính:** nén thư mục `games/<id>/` thành `<id>.zip`, chủ server vào **`/admin`** (mật khẩu `ADMIN_PASSWORD` trong `.env.prod`) và upload. Game dùng được ngay, không phải build lại; các màn hình đang mở tự tải lại. Game upload nằm trong `games-installed/` (volume Docker riêng), nên `git pull` và build lại không mất. Upload lại cùng id là cập nhật. Trùng id với game có sẵn thì không cho cài; trùng id game đã upload hoặc trùng tên thì hỏi lại trước khi cài. Lưu ý: code `service/` của game chạy trên server, chỉ upload game của người tin được.
 
 **Không cần sửa phần chung** (`src/`, `public/js/core/`) để làm một game bình thường. Chỉ sửa phần chung khi cần một khả năng mới mà **nhiều game** sẽ dùng (như đội, lựa chọn riêng). Khi đó phải cập nhật luôn [games/README.md](games/README.md).
 
@@ -197,11 +197,11 @@ Tóm tắt 5 bước. **Hướng dẫn đầy đủ kèm game mẫu chép đư�
 - Mã được **ký bằng `LICENSE_SECRET`**, chứa sẵn hạn dùng và số người, nên không cần database. Việc bán và thanh toán nằm ngoài game.
 - Server tối đa `MAX_ROOMS` = 50 phòng cùng lúc.
 
-**Đặt khoá bí mật trên server (một lần):**
+**Biến môi trường:** cả local (`npm run dev`) và Docker đều đọc file `.env`. Trên server, giá trị nằm trong **`.env.prod`** (đi theo git), mỗi lần build chép sang `.env`:
 ```bash
-echo "LICENSE_SECRET=$(openssl rand -hex 32)" >> .env     # cạnh docker-compose.yml, KHÔNG đưa lên git
-docker compose up -d --build
+git pull && cp .env.prod .env && docker compose up -d --build --force-recreate
 ```
+Đặt khoá ký mã Pro: `echo "LICENSE_SECRET=$(openssl rand -hex 32)" >> .env.prod` rồi commit, build lại trên server.
 Chưa có khoá thì server tắt Pro. Đổi khoá thì mọi mã cũ mất hiệu lực.
 
 **Tạo mã:**
@@ -214,7 +214,7 @@ npm run make-code -- --days 30                                          # trên 
 ### Quảng cáo (Google AdSense)
 - Chỉ hiện ở **phòng chờ**, trên TV (dưới mã QR) và điện thoại (cuối trang). Không hiện lúc chơi. Phòng Pro cũng có quảng cáo.
 - Bắt đầu chơi thì gỡ ô quảng cáo, về phòng chờ thì tạo ô mới. Không tự làm mới quảng cáo (quy định AdSense).
-- Mã đặt trong `.env`, chưa có thì không hiện gì và không tải gì của Google:
+- Mã đặt trong `.env.prod` (server) hoặc `.env` (local), chưa có thì không hiện gì và không tải gì của Google:
   ```bash
   ADSENSE_CLIENT=ca-pub-1234567890123456   # mã nhà xuất bản: cần để Google duyệt trang
   ADSENSE_SLOT_HOST=1234567890             # đơn vị quảng cáo cho TV (tạo sau khi được duyệt)
@@ -222,7 +222,7 @@ npm run make-code -- --days 30                                          # trên 
   CONTACT_EMAIL=                           # (tuỳ chọn) email liên hệ ở chân trang
   ADMIN_PASSWORD=                          # mật khẩu trang /admin (upload game), trống = tắt
   ```
-  Sửa `.env` xong chạy lại `docker compose up -d` để container nhận giá trị mới.
+  Sửa `.env.prod` xong commit, trên server `git pull && cp .env.prod .env` rồi `docker compose up -d --force-recreate` để container nhận giá trị mới.
 - Có `ADSENSE_CLIENT` thì server tự trả `/ads.txt` và chèn thẻ AdSense vào trang giới thiệu `/` (Google kiểm tra thẻ này lúc duyệt).
 - Trang giới thiệu `/` và chính sách bảo mật `/privacy` dựng trên server ([src/pages.js](src/pages.js)); danh sách game lấy từ khai báo của từng game nên thêm game là trang tự cập nhật.
 - Bảng hỏi đồng ý cookie cho châu Âu/Anh: bật trong AdSense, mục "Quyền riêng tư và thông báo", không cần code.
