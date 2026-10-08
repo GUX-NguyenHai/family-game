@@ -1,0 +1,30 @@
+/* __NAME__ – màn hình chung. Biến màu (--panel, --muted, --accent) lấy từ /css/host.css.
+   Mọi class có tiền tố __PREFIX__- để không đè lên game khác. */
+#game[data-game="__ID__"] { background: linear-gradient(180deg, #2a3a6e, #141a2a); }
+
+.__PREFIX__-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 6vh 6vw; }
+.__PREFIX__-timer {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 18px;
+  border-radius: 99px;
+  background: var(--panel);
+  font-size: 2rem;
+  font-weight: 800;
+}
+.__PREFIX__-timer.low { color: #ff6b6b; }
+.__PREFIX__-bars { display: flex; align-items: flex-end; justify-content: center; gap: 2.5vw; width: 100%; height: 60vh; }
+.__PREFIX__-col { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; min-width: 0; flex: 0 1 90px; font-weight: 700; }
+.__PREFIX__-bar {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  border: 3px solid var(--c);
+}
+.__PREFIX__-bar i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--c); transition: height 0.12s linear; }
+.__PREFIX__-col span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

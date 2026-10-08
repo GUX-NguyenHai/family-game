@@ -1,0 +1,13 @@
+{
+  "_ghi_chu": "Trạng thái gửi cho TV dạng nhị phân (xem src/state-codec.js). Mỗi hàng là 1 người, theo thứ tự setup().players. timeLeft: ms còn lại (bước 10ms); v: mức đã đổ (0..1); d: mức lắc hiện tại (0..1); r: hạng (null = chưa đầy).",
+  "rows": "p",
+  "head": [
+    ["phase", "enum", ["countdown", "playing", "finished"]],
+    ["timeLeft", "u16", 0.1]
+  ],
+  "row": [
+    ["v", "u8", 100],
+    ["d", "u8", 100],
+    ["r", "u8?"]
+  ]
+}

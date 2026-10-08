@@ -242,6 +242,8 @@ npm run make-code -- --days 30                                          # trên 
 
 ## 9. Dành cho AI / người mới đọc code
 
+**Dùng Claude Code:** [CLAUDE.md](CLAUDE.md) được Claude tự đọc mỗi lần mở dự án (quy ước, lệnh, bản đồ code). Làm game mới thì gõ **`/new-game`** hoặc nói "làm game mới": skill trong [.claude/skills/new-game/](.claude/skills/new-game/SKILL.md) có quy trình từng bước và bộ khung game chạy được ngay để chép ra `games/<id>/`.
+
 Nên đọc theo thứ tự này:
 1. **README này**, để nắm ý tưởng, luồng dữ liệu và quy ước.
 2. **[games/README.md](games/README.md)**, phần **hợp đồng giữa game và phần chung**: game phải export gì, nhận gì, gửi gì. Đây là tài liệu quan trọng nhất khi làm game.
